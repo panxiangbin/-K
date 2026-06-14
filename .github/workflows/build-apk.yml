@@ -68,16 +68,5 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
 
-      - name: 发布 Release
-        if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: 河南五十K v1.0.${{ github.run_number }}
-          files: android/app/build/outputs/apk/debug/app-debug.apk
-          body: |
-            ## 河南五十K 安装包
-
-            📱 下载 `app-debug.apk` 直接安装到安卓手机
-
-            > 安装时需要在手机设置里允许"安装未知来源应用"
+      - name: 打印下载提示
+        run: echo "✅ APK 构建成功！在 Actions 页面底部 Artifacts 区域下载 APK"
