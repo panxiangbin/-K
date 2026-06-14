@@ -5,18 +5,18 @@ import Game from './pages/Game';
 import Settlement from './pages/Settlement';
 
 export default function App() {
-  const [page, setPage] = useState('lobby'); // lobby | game | settlement
+  const [page, setPage] = useState('lobby');
   const [gameState, setGameState] = useState(null);
   const [myHand, setMyHand] = useState([]);
-  const [myInfo, setMyInfo] = useState(null); // { playerId, roomId, playerIndex }
+  const [myInfo, setMyInfo] = useState(null);
   const [settlementData, setSettlementData] = useState(null);
-  const [notifications, setNotifications] = useState([]);
-  const notifId = useRef(0);
+  const [toasts, setToasts] = useState([]);
+  const toastId = useRef(0);
 
-  const addNotif = useCallback((text, color = '#00d4ff') => {
-    const id = notifId.current++;
-    setNotifications(n => [...n, { id, text, color }]);
-    setTimeout(() => setNotifications(n => n.filter(x => x.id !== id)), 2500);
+  const toast = useCallback((text, type = 'info') => {
+    const id = toastId.current++;
+    setToasts(t => [...t, { id, text, type }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2800);
   }, []);
 
   const onMessage = useCallback((msg) => {
@@ -31,7 +31,7 @@ export default function App() {
       case 'game_start':
         setGameState(msg.state);
         setPage('game');
-        addNotif('游戏开始！', '#00ff88');
+        toast('游戏开始！', 'success');
         break;
       case 'your_hand':
         setMyHand(msg.hand);
@@ -41,14 +41,14 @@ export default function App() {
         break;
       case 'cards_played':
         setGameState(msg.state);
-        if (msg.pattern?.type === 'bomb') addNotif(`💥 ${msg.playerName} 炸弹！`, '#ff4466');
+        if (msg.pattern?.type === 'bomb') toast('💥 ' + msg.playerName + ' 打出炸弹！', 'bomb');
         break;
       case 'player_passed':
-        addNotif(`${msg.playerName} 过牌`, '#6888aa');
+        toast(msg.playerName + ' 过牌', 'dim');
         break;
       case 'pile_won':
         setGameState(msg.state);
-        if (msg.score > 0) addNotif(`${msg.winnerName} +${msg.score}分`, '#ffd700');
+        if (msg.score > 0) toast(msg.winnerName + ' 赢得 ' + msg.score + ' 分！', 'gold');
         break;
       case 'round_end':
         setSettlementData(msg.result);
@@ -56,73 +56,48 @@ export default function App() {
         setPage('settlement');
         break;
       case 'error':
-        addNotif(`❌ ${msg.msg}`, '#ff4466');
+        toast(msg.msg, 'error');
         break;
     }
-  }, [addNotif]);
+  }, [toast]);
 
   const { send, connected } = useWebSocket(onMessage);
 
-  return (
-    <div style={{ height: '100%', position: 'relative' }}>
-      {/* 星空背景 */}
-      <StarBg />
+  const toastColors = { info: '#00e5ff', success: '#22c55e', error: '#ef4444', gold: '#f5c842', bomb: '#ff6b35', dim: '#888' };
 
-      {/* 连接状态 */}
+  return (
+    <div style={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
+      {/* 连接指示灯 */}
       <div style={{
-        position: 'fixed', top: 8, right: 8, zIndex: 999,
-        fontSize: 11, color: connected ? '#00ff88' : '#ff4466',
-        background: '#0008', padding: '2px 8px', borderRadius: 8,
+        position: 'fixed', top: 10, right: 12, zIndex: 1000,
+        display: 'flex', alignItems: 'center', gap: 5,
+        fontSize: 11, color: connected ? '#22c55e' : '#ef4444',
+        background: '#00000066', backdropFilter: 'blur(8px)',
+        padding: '3px 10px', borderRadius: 20,
+        border: `1px solid ${connected ? '#22c55e44' : '#ef444444'}`,
       }}>
-        {connected ? '● 已连接' : '● 连接中...'}
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: connected ? '#22c55e' : '#ef4444', display: 'inline-block', animation: connected ? 'none' : 'pulse 1s infinite' }} />
+        {connected ? '已连接' : '连接中'}
       </div>
 
-      {/* 浮动通知 */}
-      <div style={{ position: 'fixed', top: 40, left: '50%', transform: 'translateX(-50%)', zIndex: 999, display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', pointerEvents: 'none' }}>
-        {notifications.map(n => (
-          <div key={n.id} style={{
-            color: n.color, fontWeight: 700, fontSize: 16,
-            textShadow: `0 0 10px ${n.color}`,
-            animation: 'float-up 2.5s ease-out forwards',
-            background: '#000a', padding: '4px 16px', borderRadius: 20,
-          }}>{n.text}</div>
+      {/* Toast 通知 */}
+      <div style={{ position: 'fixed', top: 40, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', pointerEvents: 'none' }}>
+        {toasts.map(t => (
+          <div key={t.id} style={{
+            padding: '8px 20px', borderRadius: 24, fontWeight: 600, fontSize: 14,
+            color: toastColors[t.type] || '#fff',
+            background: '#111827ee', backdropFilter: 'blur(8px)',
+            border: `1px solid ${toastColors[t.type] || '#fff'}44`,
+            boxShadow: `0 4px 20px ${toastColors[t.type] || '#fff'}33`,
+            animation: 'float-up 2.8s ease-out forwards',
+            whiteSpace: 'nowrap',
+          }}>{t.text}</div>
         ))}
       </div>
 
-      {page === 'lobby' && (
-        <Lobby send={send} gameState={gameState} myInfo={myInfo} />
-      )}
-      {page === 'game' && (
-        <Game send={send} gameState={gameState} myHand={myHand} setMyHand={setMyHand} myInfo={myInfo} addNotif={addNotif} />
-      )}
-      {page === 'settlement' && (
-        <Settlement data={settlementData} send={send} myInfo={myInfo} gameState={gameState} />
-      )}
-    </div>
-  );
-}
-
-function StarBg() {
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden',
-      background: 'radial-gradient(ellipse at 20% 50%, #0d1a4a 0%, #0a0f2e 60%, #050810 100%)',
-      pointerEvents: 'none',
-    }}>
-      {[...Array(60)].map((_, i) => (
-        <div key={i} style={{
-          position: 'absolute',
-          width: Math.random() * 2 + 1,
-          height: Math.random() * 2 + 1,
-          borderRadius: '50%',
-          background: '#fff',
-          opacity: Math.random() * 0.6 + 0.2,
-          left: `${Math.random() * 100}%`,
-          top: `${Math.random() * 100}%`,
-          animation: `pulse-glow ${2 + Math.random() * 3}s ease-in-out infinite`,
-          animationDelay: `${Math.random() * 3}s`,
-        }} />
-      ))}
+      {page === 'lobby' && <Lobby send={send} gameState={gameState} myInfo={myInfo} />}
+      {page === 'game' && <Game send={send} gameState={gameState} myHand={myHand} setMyHand={setMyHand} myInfo={myInfo} toast={toast} />}
+      {page === 'settlement' && <Settlement data={settlementData} send={send} myInfo={myInfo} gameState={gameState} />}
     </div>
   );
 }
