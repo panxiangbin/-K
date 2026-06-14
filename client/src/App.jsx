@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import Lobby from './pages/Lobby';
 import Game from './pages/Game';
@@ -11,12 +11,20 @@ export default function App() {
   const [myInfo, setMyInfo] = useState(null);
   const [settlementData, setSettlementData] = useState(null);
   const [toasts, setToasts] = useState([]);
-  const toastId = useRef(0);
+  const [canInstall, setCanInstall] = useState(false);
+  const tid = useRef(0);
+
+  useEffect(() => {
+    const check = setInterval(() => {
+      if (window.__pwaPrompt) { setCanInstall(true); clearInterval(check); }
+    }, 500);
+    return () => clearInterval(check);
+  }, []);
 
   const toast = useCallback((text, type = 'info') => {
-    const id = toastId.current++;
+    const id = tid.current++;
     setToasts(t => [...t, { id, text, type }]);
-    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2800);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2500);
   }, []);
 
   const onMessage = useCallback((msg) => {
@@ -31,7 +39,7 @@ export default function App() {
       case 'game_start':
         setGameState(msg.state);
         setPage('game');
-        toast('游戏开始！', 'success');
+        toast('🎮 游戏开始！', 'success');
         break;
       case 'your_hand':
         setMyHand(msg.hand);
@@ -41,58 +49,76 @@ export default function App() {
         break;
       case 'cards_played':
         setGameState(msg.state);
-        if (msg.pattern?.type === 'bomb') toast('💥 ' + msg.playerName + ' 打出炸弹！', 'bomb');
+        if (msg.pattern?.type === 'bomb') toast('💥 ' + msg.playerName + ' 炸弹！', 'bomb');
         break;
       case 'player_passed':
         toast(msg.playerName + ' 过牌', 'dim');
         break;
       case 'pile_won':
         setGameState(msg.state);
-        if (msg.score > 0) toast(msg.winnerName + ' 赢得 ' + msg.score + ' 分！', 'gold');
+        if (msg.score > 0) toast('🪙 ' + msg.winnerName + ' +' + msg.score + '分', 'gold');
         break;
       case 'round_end':
         setSettlementData(msg.result);
         setGameState(msg.state);
-        setPage('settlement');
+        setTimeout(() => setPage('settlement'), 600);
         break;
       case 'error':
-        toast(msg.msg, 'error');
+        toast('⚠ ' + msg.msg, 'error');
         break;
     }
   }, [toast]);
 
   const { send, connected } = useWebSocket(onMessage);
 
-  const toastColors = { info: '#00e5ff', success: '#22c55e', error: '#ef4444', gold: '#f5c842', bomb: '#ff6b35', dim: '#888' };
+  const TOAST_STYLE = {
+    info: { color: '#60a5fa', bg: '#1e3a5f' },
+    success: { color: '#4ade80', bg: '#14532d' },
+    error: { color: '#f87171', bg: '#7f1d1d' },
+    gold: { color: '#fbbf24', bg: '#78350f' },
+    bomb: { color: '#fb923c', bg: '#7c2d12' },
+    dim: { color: '#94a3b8', bg: '#1e293b' },
+  };
 
   return (
     <div style={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
-      {/* 连接指示灯 */}
+      {/* 网络状态 */}
       <div style={{
-        position: 'fixed', top: 10, right: 12, zIndex: 1000,
-        display: 'flex', alignItems: 'center', gap: 5,
-        fontSize: 11, color: connected ? '#22c55e' : '#ef4444',
-        background: '#00000066', backdropFilter: 'blur(8px)',
-        padding: '3px 10px', borderRadius: 20,
-        border: `1px solid ${connected ? '#22c55e44' : '#ef444444'}`,
+        position: 'fixed', top: 8, right: 8, zIndex: 1000,
+        fontSize: 11, padding: '3px 8px', borderRadius: 12,
+        background: '#00000088', backdropFilter: 'blur(8px)',
+        color: connected ? '#4ade80' : '#f87171',
+        border: `1px solid ${connected ? '#4ade8033' : '#f8717133'}`,
+        display: 'flex', alignItems: 'center', gap: 4,
       }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: connected ? '#22c55e' : '#ef4444', display: 'inline-block', animation: connected ? 'none' : 'pulse 1s infinite' }} />
-        {connected ? '已连接' : '连接中'}
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block', animation: connected ? 'none' : 'pulse 1s infinite' }} />
+        {connected ? '在线' : '连接中...'}
       </div>
 
-      {/* Toast 通知 */}
-      <div style={{ position: 'fixed', top: 40, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', pointerEvents: 'none' }}>
-        {toasts.map(t => (
-          <div key={t.id} style={{
-            padding: '8px 20px', borderRadius: 24, fontWeight: 600, fontSize: 14,
-            color: toastColors[t.type] || '#fff',
-            background: '#111827ee', backdropFilter: 'blur(8px)',
-            border: `1px solid ${toastColors[t.type] || '#fff'}44`,
-            boxShadow: `0 4px 20px ${toastColors[t.type] || '#fff'}33`,
-            animation: 'float-up 2.8s ease-out forwards',
-            whiteSpace: 'nowrap',
-          }}>{t.text}</div>
-        ))}
+      {/* 安装 APP 按钮 */}
+      {canInstall && page === 'lobby' && (
+        <button onClick={() => window.__pwaPrompt?.()} style={{
+          position: 'fixed', top: 8, left: 8, zIndex: 1000,
+          fontSize: 11, padding: '4px 10px', borderRadius: 12,
+          background: '#f5c518', color: '#000', fontWeight: 700,
+          border: 'none', cursor: 'pointer',
+        }}>📲 安装APP</button>
+      )}
+
+      {/* Toast */}
+      <div style={{ position: 'fixed', top: 36, left: '50%', transform: 'translateX(-50%)', zIndex: 999, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', pointerEvents: 'none' }}>
+        {toasts.map(t => {
+          const s = TOAST_STYLE[t.type] || TOAST_STYLE.info;
+          return (
+            <div key={t.id} style={{
+              padding: '7px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600,
+              color: s.color, background: s.bg + 'ee',
+              border: `1px solid ${s.color}44`,
+              animation: 'floatUp 2.5s ease-out forwards',
+              whiteSpace: 'nowrap', backdropFilter: 'blur(6px)',
+            }}>{t.text}</div>
+          );
+        })}
       </div>
 
       {page === 'lobby' && <Lobby send={send} gameState={gameState} myInfo={myInfo} />}
