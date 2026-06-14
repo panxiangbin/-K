@@ -30,13 +30,28 @@ jobs:
         working-directory: client
         run: npm ci && npm run build
 
-      - name: 安装 Capacitor
-        run: npm install @capacitor/core @capacitor/cli @capacitor/android
+      - name: 安装 Capacitor（固定版本）
+        run: npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
 
       - name: 初始化 Android 项目
         run: |
           npx cap add android
           npx cap sync android
+
+      - name: 修复 Kotlin stdlib 版本冲突
+        run: |
+          cat >> android/build.gradle << 'GRADLE'
+
+          subprojects {
+              configurations.all {
+                  resolutionStrategy {
+                      force "org.jetbrains.kotlin:kotlin-stdlib:1.8.22"
+                      force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
+                      force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
+                  }
+              }
+          }
+          GRADLE
 
       - name: 设置 Gradle 可执行权限
         working-directory: android
