@@ -4,7 +4,7 @@
   "description": "河南五十K多人联网卡牌游戏",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "landscape",
   "background_color": "#0d1117",
   "theme_color": "#0d1117",
   "icons": [

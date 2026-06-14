@@ -1,5 +1,19 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 
+const RAILWAY_URL = 'wss://henan-50k-production-9ecf.up.railway.app';
+
+function getWsUrl() {
+  const { protocol, hostname, port, host } = window.location;
+  // Vite 开发模式
+  if (port === '5173') return 'ws://localhost:3002';
+  // Capacitor APK / 本地 localhost (非开发)
+  if (protocol === 'capacitor:' || hostname === 'localhost' || hostname === '127.0.0.1') {
+    return RAILWAY_URL;
+  }
+  // 生产 Web（Railway 等）
+  return `${protocol === 'https:' ? 'wss:' : 'ws:'}//${host}`;
+}
+
 export function useWebSocket(onMessage) {
   const ws = useRef(null);
   const [connected, setConnected] = useState(false);
@@ -7,10 +21,7 @@ export function useWebSocket(onMessage) {
   onMsg.current = onMessage;
 
   useEffect(() => {
-    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    // 开发时 vite 在 5173，服务器在 3002；生产时同 host
-    const host = window.location.port === '5173' ? `${window.location.hostname}:3002` : window.location.host;
-    const url = `${proto}://${host}`;
+    const url = getWsUrl();
 
     function connect() {
       const socket = new WebSocket(url);
