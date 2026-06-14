@@ -23,7 +23,7 @@ jobs:
       - name: 配置 Java
         uses: actions/setup-java@v4
         with:
-          java-version: 17
+          java-version: 21
           distribution: temurin
 
       - name: 安装并构建前端
