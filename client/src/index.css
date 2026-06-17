@@ -1,26 +1,95 @@
-:root{
-  --felt:#1a4a2a; --felt2:#153820; --felt3:#0f2a18;
-  --gold:#f5c518; --gold2:#e8a800;
-  --red:#e53935; --blue:#1e88e5;
-  --text:#f0ede0; --dim:#8a8070;
+:root {
+  --felt: #1a4a2a;
+  --felt2: #153820;
+  --felt3: #0f2a18;
+  --gold: #f5c518;
+  --gold2: #e8a800;
+  --red: #e53935;
+  --blue: #1e88e5;
+  --text: #f0ede0;
+  --dim: #8a8070;
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
-html,body,#root{height:100%;overflow:hidden;user-select:none;color:var(--text)}
-button{cursor:pointer;border:none;font-family:inherit;outline:none}
-input{font-family:inherit;outline:none}
 
-@keyframes fadeIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
-@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-@keyframes slide-up{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-90px) scale(1.3)}}
-@keyframes float-up{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-90px) scale(1.3)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-@keyframes glowGold{0%,100%{box-shadow:0 0 8px #f5c51866,0 0 20px #f5c51833}50%{box-shadow:0 0 20px #f5c518aa,0 0 40px #f5c51866}}
-@keyframes glow-pulse{0%,100%{box-shadow:0 0 8px #f5c51866,0 0 20px #f5c51833}50%{box-shadow:0 0 20px #f5c518aa,0 0 40px #f5c51866}}
-@keyframes bombFlash{0%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1.3)}100%{opacity:0;transform:scale(2.5)}}
-@keyframes bomb-flash{0%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1.3)}100%{opacity:0;transform:scale(2.5)}}
-@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
-@keyframes twinkle{0%,100%{opacity:.15;transform:scale(1)}50%{opacity:.7;transform:scale(1.5)}}
-@keyframes cardDeal{from{opacity:0;transform:translateY(-40px) rotate(-5deg)}to{opacity:1;transform:translateY(0) rotate(0)}}
-@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-@keyframes myTurnPulse{0%,100%{border-color:#f5c51844}50%{border-color:#f5c518cc}}
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+  color: var(--text);
+  touch-action: pan-x pan-y;
+  background-color: #000;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  outline: none;
+  user-select: none;
+}
+
+input {
+  font-family: inherit;
+  outline: none;
+}
+
+.felt-texture {
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
+  background-size: 8px 8px;
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-120px) scale(1.5); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(245,197,24,0.4), 0 0 20px rgba(245,197,24,0.2); }
+  50% { box-shadow: 0 0 25px rgba(245,197,24,0.8), 0 0 50px rgba(245,197,24,0.4); }
+}
+
+@keyframes bomb-flash {
+  0% { background: rgba(255,100,0,0); }
+  50% { background: rgba(255,100,0,0.5); }
+  100% { background: rgba(255,100,0,0); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(10px); }
+  60% { transform: translateX(-7px); }
+  80% { transform: translateX(7px); }
+}
+
+@keyframes cardDeal {
+  from { opacity: 0; transform: translateY(-100px) rotate(-10deg); }
+  to { opacity: 1; transform: translateY(0) rotate(0); }
+}
+
+@keyframes myTurnPulse {
+  0%, 100% { border-color: rgba(245,197,24,0.2); }
+  50% { border-color: rgba(245,197,24,0.8); }
+}
