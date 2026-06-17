@@ -18,15 +18,16 @@
     /* 强制横屏提示：如果用户是竖屏，提示旋转 */
     #rotate-tip{display:none;position:fixed;inset:0;background:#0d1117;z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:16px;color:#f5c518;font-size:18px;font-weight:700;text-align:center}
     #rotate-tip span{font-size:60px;animation:spin 2s linear infinite}
+    #force-enter{margin-top:20px;padding:12px 32px;background:#f5c518;color:#000;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer}
     @keyframes spin{to{transform:rotate(360deg)}}
-    @media(orientation:portrait){#rotate-tip{display:flex}}
   </style>
 </head>
 <body>
   <!-- 竖屏提示 -->
   <div id="rotate-tip">
     <span>📱</span>
-    请旋转手机横屏游戏
+    <p>请旋转手机横屏游戏</p>
+    <button id="force-enter">直接进入游戏</button>
   </div>
 
   <div id="root"></div>
@@ -44,10 +45,20 @@
       deferredPrompt = e;
       window.__pwaPrompt = () => { deferredPrompt && deferredPrompt.prompt(); };
     });
-    // 尝试锁定横屏（仅 Android Chrome 支持）
-    if(screen.orientation && screen.orientation.lock){
-      screen.orientation.lock('landscape').catch(()=>{});
-    }
+    // 用 JS 检测方向，避免 Capacitor WebView 里 CSS 媒体查询失效
+    (function(){
+      function checkOri(){
+        var tip = document.getElementById('rotate-tip');
+        var portrait = window.innerHeight > window.innerWidth;
+        tip.style.display = portrait ? 'flex' : 'none';
+      }
+      window.addEventListener('resize', checkOri);
+      window.addEventListener('orientationchange', function(){ setTimeout(checkOri, 300); });
+      document.addEventListener('DOMContentLoaded', checkOri);
+      document.getElementById('force-enter').addEventListener('click', function(){
+        document.getElementById('rotate-tip').style.display = 'none';
+      });
+    })();
   </script>
 </body>
 </html>
