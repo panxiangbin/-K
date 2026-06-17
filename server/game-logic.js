@@ -1,16 +1,24 @@
-// 牌面大小顺序
+// 牌序（从小到大）
 const CARD_ORDER = ['3','4','5','6','7','8','9','10','J','Q','K','A','2','小王','大王'];
 const SCORE_MAP = { '5': 5, '10': 10, 'K': 10 };
 
-function cardValue(card) {
-  return CARD_ORDER.indexOf(card.rank);
+// 炸弹等级（从小到大）
+const BOMB_LEVEL = { '50K': 1, 'color4': 2, 'same8': 3, 'joker4': 4 };
+
+function cardValue(rank) {
+  return CARD_ORDER.indexOf(rank);
 }
+
+function isBlack(suit) { return suit === '♠' || suit === '♣'; }
+function isRed(suit)   { return suit === '♥' || suit === '♦'; }
+
+// 花色顺序（用于五十K比较）
+const SUIT_ORDER = { '♠': 4, '♥': 3, '♣': 2, '♦': 1 };
 
 function createDeck() {
   const suits = ['♠','♥','♦','♣'];
   const ranks = ['3','4','5','6','7','8','9','10','J','Q','K','A','2'];
   const deck = [];
-  // 两副牌
   for (let d = 0; d < 2; d++) {
     for (const suit of suits) {
       for (const rank of ranks) {
@@ -20,7 +28,7 @@ function createDeck() {
     deck.push({ rank: '小王', suit: 'joker', id: `${d}-small-joker` });
     deck.push({ rank: '大王', suit: 'joker', id: `${d}-big-joker` });
   }
-  return deck;
+  return deck; // 108张
 }
 
 function shuffle(deck) {
@@ -33,122 +41,231 @@ function shuffle(deck) {
 }
 
 function dealCards(playerCount) {
-  const deck = shuffle(createDeck()); // 108张
-  let perPlayer, leftover;
-  if (playerCount === 3) {
-    perPlayer = 36; leftover = 0; // 108/3=36, 无剩余
-  } else {
-    perPlayer = 27; leftover = 0; // 108/4=27, 无剩余
-  }
+  const deck = shuffle(createDeck());
+  const perPlayer = playerCount === 3 ? 36 : 27;
   const hands = [];
   for (let i = 0; i < playerCount; i++) {
     hands.push(deck.slice(i * perPlayer, (i + 1) * perPlayer));
   }
-  const extra = deck.slice(playerCount * perPlayer);
-  return { hands, extra };
+  // 翻明牌：从最后一张开始找非王的牌
+  let flipIdx = deck.length - 1;
+  while (flipIdx >= 0 && deck[flipIdx].suit === 'joker') flipIdx--;
+  const flipCard = deck[flipIdx] || deck[deck.length - 1];
+  return { hands, flipCard };
 }
 
-// 排序手牌
 function sortCards(cards) {
-  return [...cards].sort((a, b) => cardValue(a) - cardValue(b));
+  return [...cards].sort((a, b) => cardValue(a.rank) - cardValue(b.rank));
 }
 
-// 判断牌型
+// ─── 判断牌型 ────────────────────────────────────────────────
 function detectPattern(cards) {
   if (!cards || cards.length === 0) return null;
   const n = cards.length;
 
   // 单张
-  if (n === 1) return { type: 'single', rank: cards[0].rank, len: 1 };
+  if (n === 1) return { type: 'single', rank: cards[0].rank };
 
-  // 检查是否全是王的炸弹（大王+小王）
-  const isJokerBomb = n === 2 && cards.some(c => c.rank === '大王') && cards.some(c => c.rank === '小王');
-  if (isJokerBomb) return { type: 'bomb', rank: '小王', len: 2, isBiggest: true };
-
-  // 按点数分组
-  const rankCounts = {};
-  for (const c of cards) {
-    rankCounts[c.rank] = (rankCounts[c.rank] || 0) + 1;
-  }
-  const ranks = Object.keys(rankCounts);
-
-  // 炸弹（四张+）
-  if (ranks.length === 1) {
-    if (n >= 4) return { type: 'bomb', rank: ranks[0], len: n, isBiggest: false };
-    if (n === 3) return { type: 'triple', rank: ranks[0] };
-    if (n === 2) return { type: 'pair', rank: ranks[0] };
+  // 对子
+  if (n === 2) {
+    if (cards[0].rank === cards[1].rank) return { type: 'pair', rank: cards[0].rank };
+    return null;
   }
 
-  // 顺子（5张以上连续单张，不含王和2）
-  if (n >= 5 && ranks.length === n) {
-    const vals = ranks.map(r => CARD_ORDER.indexOf(r));
-    const noJokerNo2 = vals.every(v => v < CARD_ORDER.indexOf('2'));
-    if (noJokerNo2) {
-      const sorted = vals.sort((a, b) => a - b);
-      let isSeq = true;
-      for (let i = 1; i < sorted.length; i++) {
-        if (sorted[i] !== sorted[i-1] + 1) { isSeq = false; break; }
-      }
-      if (isSeq) return { type: 'straight', rank: CARD_ORDER[sorted[0]], len: n };
+  // 三张
+  if (n === 3) {
+    // 先检查五十K炸弹
+    const f50k = detect50K(cards);
+    if (f50k) return f50k;
+    // 三同
+    if (cards.every(c => c.rank === cards[0].rank)) return { type: 'triple', rank: cards[0].rank };
+    return null;
+  }
+
+  // 四张
+  if (n === 4) {
+    // 4张王炸弹
+    const jokers = cards.filter(c => c.suit === 'joker');
+    if (jokers.length === 4) {
+      const hasBig = jokers.filter(c => c.rank === '大王').length === 2;
+      const hasSmall = jokers.filter(c => c.rank === '小王').length === 2;
+      if (hasBig && hasSmall) return { type: 'bomb', bombType: 'joker4', rank: '大王', suit: null };
     }
-  }
-
-  // 连对（3对以上）
-  const pairRanks = ranks.filter(r => rankCounts[r] === 2);
-  if (pairRanks.length === ranks.length && pairRanks.length >= 3) {
-    const vals = pairRanks.map(r => CARD_ORDER.indexOf(r));
-    const noJokerNo2 = vals.every(v => v < CARD_ORDER.indexOf('2'));
-    if (noJokerNo2) {
-      const sorted = vals.sort((a, b) => a - b);
-      let isSeq = true;
-      for (let i = 1; i < sorted.length; i++) {
-        if (sorted[i] !== sorted[i-1] + 1) { isSeq = false; break; }
-      }
-      if (isSeq) return { type: 'pairs', rank: CARD_ORDER[sorted[0]], len: pairRanks.length };
+    // 4张同点
+    if (cards.every(c => c.rank === cards[0].rank)) {
+      const rank = cards[0].rank;
+      const allBlack = cards.every(c => isBlack(c.suit));
+      const allRed   = cards.every(c => isRed(c.suit));
+      if (allBlack) return { type: 'bomb', bombType: 'color4', rank, color: 'black' };
+      if (allRed)   return { type: 'bomb', bombType: 'color4', rank, color: 'red' };
+      // 四张同点但混色 → 不合法（不算炸弹，也不算普通牌型）
+      return null;
     }
+    return null;
   }
 
-  return null; // 不合法
+  // 八张（同点炸弹）
+  if (n === 8) {
+    if (cards.every(c => c.rank === cards[0].rank)) {
+      return { type: 'bomb', bombType: 'same8', rank: cards[0].rank };
+    }
+    return null;
+  }
+
+  // 禁止：顺子、连对、其他组合
+  return null;
 }
 
-// 比较两个牌型大小，返回true表示newPattern > oldPattern
+// 检测同花色五十K（5+10+K 同花色）
+function detect50K(cards) {
+  if (cards.length !== 3) return null;
+  const ranks = cards.map(c => c.rank).sort().join(',');
+  if (ranks !== '10,5,K' && ranks !== '10,K,5' && ranks !== '5,10,K') {
+    // 排序后是否为 5,10,K
+    const sorted = [...cards].sort((a,b) => cardValue(a.rank) - cardValue(b.rank));
+    if (sorted.map(c => c.rank).join(',') !== '5,10,K') return null;
+  }
+  const sorted = [...cards].sort((a,b) => cardValue(a.rank) - cardValue(b.rank));
+  if (sorted.map(c => c.rank).join(',') !== '5,10,K') return null;
+  const suit = sorted[0].suit;
+  if (sorted.every(c => c.suit === suit) && suit !== 'joker') {
+    return { type: 'bomb', bombType: '50K', rank: 'K', suit };
+  }
+  return null;
+}
+
+// ─── 比较牌型 ────────────────────────────────────────────────
+// 返回 true 表示 newP 能压 oldP
 function comparePatterns(newP, oldP) {
-  if (!oldP) return true; // 首出
+  if (!oldP) return true; // 先手，任何合法牌型都可出
 
-  // 炸弹压一切非炸弹
-  if (newP.type === 'bomb' && oldP.type !== 'bomb') return true;
-  if (newP.type !== 'bomb' && oldP.type === 'bomb') return false;
+  const newBomb = newP.type === 'bomb';
+  const oldBomb = oldP.type === 'bomb';
 
-  // 同为炸弹：先比张数，再比点数
-  if (newP.type === 'bomb' && oldP.type === 'bomb') {
-    if (newP.isBiggest) return true;
-    if (oldP.isBiggest) return false;
-    if (newP.len !== oldP.len) return newP.len > oldP.len;
-    return CARD_ORDER.indexOf(newP.rank) > CARD_ORDER.indexOf(oldP.rank);
+  // 炸弹压非炸弹
+  if (newBomb && !oldBomb) return true;
+  if (!newBomb && oldBomb) return false;
+
+  // 同为炸弹：比较等级
+  if (newBomb && oldBomb) {
+    const nl = BOMB_LEVEL[newP.bombType];
+    const ol = BOMB_LEVEL[oldP.bombType];
+    if (nl !== ol) return nl > ol;
+    // 同等级炸弹内部比较
+    if (newP.bombType === 'joker4') return false; // 只有一种四王，相等
+    if (newP.bombType === 'same8') return cardValue(newP.rank) > cardValue(oldP.rank);
+    if (newP.bombType === 'color4') {
+      // 黑 > 红；同色比点数
+      const colorOrder = { black: 2, red: 1 };
+      if (newP.color !== oldP.color) return colorOrder[newP.color] > colorOrder[oldP.color];
+      return cardValue(newP.rank) > cardValue(oldP.rank);
+    }
+    if (newP.bombType === '50K') {
+      // ♠ > ♥ > ♣ > ♦
+      return (SUIT_ORDER[newP.suit] || 0) > (SUIT_ORDER[oldP.suit] || 0);
+    }
   }
 
-  // 类型不同，无法比较（不合法）
+  // 非炸弹：必须同类型
   if (newP.type !== oldP.type) return false;
 
-  // 顺子/连对需相同长度
-  if ((newP.type === 'straight' || newP.type === 'pairs') && newP.len !== oldP.len) return false;
-
-  return CARD_ORDER.indexOf(newP.rank) > CARD_ORDER.indexOf(oldP.rank);
+  // 单/对/三：直接比点数
+  return cardValue(newP.rank) > cardValue(oldP.rank);
 }
 
-// 计算一墩牌中的得分
+// ─── 检查玩家手牌中是否存在能压当前牌的出法 ─────────────────
+function canBeat(hand, lastPattern) {
+  if (!lastPattern) return true; // 先手，总能出
+  // 逐一枚举手牌中所有合法子集（性能优化：只枚举相同张数）
+  const n = lastPattern.type === 'bomb' ? null : getPatternLen(lastPattern);
+  const candidates = n ? getCombinations(hand, n) : getAllBombs(hand);
+  for (const combo of candidates) {
+    const p = detectPattern(combo);
+    if (p && comparePatterns(p, lastPattern)) return true;
+  }
+  // 如果上家是非炸弹，还要检查炸弹
+  if (lastPattern.type !== 'bomb') {
+    for (const combo of getAllBombs(hand)) {
+      const p = detectPattern(combo);
+      if (p && comparePatterns(p, lastPattern)) return true;
+    }
+  }
+  return false;
+}
+
+function getPatternLen(p) {
+  if (p.type === 'single') return 1;
+  if (p.type === 'pair') return 2;
+  if (p.type === 'triple') return 3;
+  return null;
+}
+
+// 获取手牌中所有可能的炸弹组合
+function getAllBombs(hand) {
+  const results = [];
+  // 4张王
+  const big = hand.filter(c => c.rank === '大王');
+  const small = hand.filter(c => c.rank === '小王');
+  if (big.length >= 2 && small.length >= 2) {
+    results.push([big[0], big[1], small[0], small[1]]);
+  }
+  // 8张同点
+  const rankGroups = {};
+  for (const c of hand) {
+    if (!rankGroups[c.rank]) rankGroups[c.rank] = [];
+    rankGroups[c.rank].push(c);
+  }
+  for (const [, group] of Object.entries(rankGroups)) {
+    if (group.length >= 8) results.push(group.slice(0, 8));
+    // 4张同色
+    const blacks = group.filter(c => isBlack(c.suit));
+    const reds   = group.filter(c => isRed(c.suit));
+    if (blacks.length >= 4) results.push(blacks.slice(0, 4));
+    if (reds.length >= 4)   results.push(reds.slice(0, 4));
+  }
+  // 同花色五十K
+  const suits = ['♠','♥','♣','♦'];
+  for (const suit of suits) {
+    const five = hand.find(c => c.rank === '5' && c.suit === suit);
+    const ten  = hand.find(c => c.rank === '10' && c.suit === suit);
+    const king = hand.find(c => c.rank === 'K' && c.suit === suit);
+    if (five && ten && king) results.push([five, ten, king]);
+  }
+  return results;
+}
+
+// 获取 n 张牌的组合
+function getCombinations(arr, n) {
+  if (n === 1) return arr.map(c => [c]);
+  if (n > arr.length) return [];
+  const result = [];
+  function pick(start, current) {
+    if (current.length === n) { result.push([...current]); return; }
+    for (let i = start; i < arr.length; i++) {
+      current.push(arr[i]);
+      pick(i + 1, current);
+      current.pop();
+    }
+  }
+  pick(0, []);
+  return result;
+}
+
+// 计算得分
 function calcPileScore(cards) {
   let score = 0;
-  for (const c of cards) {
-    score += SCORE_MAP[c.rank] || 0;
-  }
+  for (const c of cards) score += SCORE_MAP[c.rank] || 0;
   return score;
 }
 
-// 获得目标分数
+// 目标分数（达到即可晋级/胜利）
 function getTargetScores(playerCount) {
   if (playerCount === 3) return [30, 70, 100];
   return [20, 40, 60, 80];
 }
 
-module.exports = { createDeck, shuffle, dealCards, sortCards, detectPattern, comparePatterns, calcPileScore, getTargetScores, CARD_ORDER };
+module.exports = {
+  createDeck, shuffle, dealCards, sortCards,
+  detectPattern, comparePatterns, canBeat,
+  calcPileScore, getTargetScores, CARD_ORDER
+};

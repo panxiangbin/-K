@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const path = require('path');
-const { dealCards, sortCards, detectPattern, comparePatterns, calcPileScore, getTargetScores } = require('./game-logic');
+const { dealCards, sortCards, detectPattern, comparePatterns, canBeat, calcPileScore, getTargetScores } = require('./game-logic');
 
 const app = express();
 const server = http.createServer(app);
@@ -59,22 +59,31 @@ function getRoomPublicState(room) {
     lastPlayerId: room.lastPlayerId,
     pile: room.pile,
     roundScores: room.roundScores,
-    extra: room.extra,
+    flipCard: room.flipCard,
     roundNum: room.roundNum,
   };
 }
 
 function startGame(room) {
   const pc = room.players.length;
-  const { hands, extra } = dealCards(pc);
-  room.extra = extra;
+  const { hands, flipCard } = dealCards(pc);
+
   room.players.forEach((p, i) => {
     p.hand = sortCards(hands[i]);
     p.score = 0;
   });
-  // 第一个玩家拿明牌
-  room.players[0].hand = sortCards([...room.players[0].hand, ...extra]);
-  room.currentPlayer = 0;
+
+  // 翻明牌：找持有该牌的玩家，他先出
+  let firstPlayer = 0;
+  for (let i = 0; i < room.players.length; i++) {
+    if (room.players[i].hand.some(c => c.id === flipCard.id)) {
+      firstPlayer = i;
+      break;
+    }
+  }
+
+  room.flipCard = flipCard;
+  room.currentPlayer = firstPlayer;
   room.lastPlay = null;
   room.lastPlayerId = null;
   room.pile = [];
@@ -82,7 +91,7 @@ function startGame(room) {
   room.status = 'playing';
   room.roundNum = (room.roundNum || 0) + 1;
 
-  broadcast(room, { type: 'game_start', state: getRoomPublicState(room), extra });
+  broadcast(room, { type: 'game_start', state: getRoomPublicState(room), flipCard });
 
   // 各自发手牌
   for (const [ws, info] of clients.entries()) {
@@ -92,7 +101,7 @@ function startGame(room) {
     }
   }
 
-  broadcast(room, { type: 'turn_change', currentPlayer: 0, playerId: room.players[0].id });
+  broadcast(room, { type: 'turn_change', currentPlayer: firstPlayer, playerId: room.players[firstPlayer].id });
 }
 
 function endRound(room) {
@@ -226,6 +235,11 @@ wss.on('connection', (ws) => {
       const playerIdx = room.players.findIndex(p => p.id === clientInfo.playerId);
       if (playerIdx !== room.currentPlayer) return;
       if (!room.lastPlay) { send(ws, { type: 'error', msg: '先手不能过牌' }); return; }
+      // 必须压：有能压的牌不允许过
+      const player = room.players[playerIdx];
+      if (canBeat(player.hand, room.lastPlay)) {
+        send(ws, { type: 'error', msg: '你有能压的牌，必须出！' }); return;
+      }
 
       room.passCount++;
       broadcast(room, { type: 'player_passed', playerId: clientInfo.playerId, playerName: room.players[playerIdx].name });
