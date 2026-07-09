@@ -102,9 +102,17 @@ export default function App() {
   const { send, connected } = useWebSocket(onMessage);
 
   useEffect(() => {
-    if (!connected || myInfo || autoRejoinTried.current) return;
-    const saved = loadLastSession();
+    if (!connected) {
+      autoRejoinTried.current = false;
+      return;
+    }
+    if (autoRejoinTried.current) return;
+
+    const saved = myInfo?.roomId && myInfo?.playerId && myInfo?.playerToken
+      ? { roomId: myInfo.roomId, playerId: myInfo.playerId, playerToken: myInfo.playerToken }
+      : loadLastSession();
     if (!saved) return;
+
     autoRejoinTried.current = true;
     const ok = send({ type: 'join_room', roomId: saved.roomId, playerId: saved.playerId, playerToken: saved.playerToken, playerName: '' });
     if (ok) toast('正在回到房间...', 'info');
