@@ -36,8 +36,8 @@ export default function Lobby({ send, gameState, myInfo, onContinueLastRoom }) {
     setView('room');
   }
 
-  function startSolo() {
-    send({ type: 'create_room', playerName: getPlayerName(), maxPlayers: 4, solo: true });
+  function startSolo(maxPlayers) {
+    send({ type: 'create_room', playerName: getPlayerName(), maxPlayers, solo: true });
     setView('room');
   }
 
@@ -79,12 +79,27 @@ export default function Lobby({ send, gameState, myInfo, onContinueLastRoom }) {
               <button onClick={onContinueLastRoom} style={{ width:'100%', marginBottom:10, padding:'11px 0', borderRadius:12, fontWeight:800, fontSize:14, background:'rgba(255,255,255,0.08)', color:'#f5c842', border:'1px solid #f5c84255' }}>继续上次房间</button>
             )}
 
-            <button onClick={startSolo} style={{ width:'100%', marginBottom:10, padding:'14px 0', borderRadius:12, fontWeight:900, fontSize:16, background:'linear-gradient(135deg,#f5c842,#d99920)', color:'#102016', boxShadow:'0 4px 18px #f5c84233', border:'none' }}>🤖 单机练习</button>
+            <button onClick={()=>setView('solo')} style={{ width:'100%', marginBottom:10, padding:'14px 0', borderRadius:12, fontWeight:900, fontSize:16, background:'linear-gradient(135deg,#f5c842,#d99920)', color:'#102016', boxShadow:'0 4px 18px #f5c84233', border:'none' }}>🤖 单机练习</button>
 
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={()=>{if(!name.trim()){alert('请输入昵称');return;}setView('create');}} style={{ flex:1, padding:'13px 0', borderRadius:12, fontWeight:800, fontSize:15, background:'linear-gradient(135deg,#166534,#14532d)', color:'#fff', border:'1px solid #22c55e55' }}>创建房间</button>
               <button onClick={()=>{if(!name.trim()){alert('请输入昵称');return;}setView('join');}} style={{ flex:1, padding:'13px 0', borderRadius:12, fontWeight:800, fontSize:15, background:'linear-gradient(135deg,#0891b2,#0e7490)', color:'#fff', border:'1px solid #67e8f955' }}>加入房间</button>
             </div>
+          </div>
+        )}
+
+        {view === 'solo' && !inRoom && (
+          <div style={{ width:'100%', maxWidth:320, animation:'slide-up .25s ease' }}>
+            <div style={{ textAlign:'center', fontSize:13, color:'#94a3b8', marginBottom:14 }}>选择单机人数</div>
+            <div style={{ display:'flex', gap:12 }}>
+              <button onClick={()=>startSolo(3)} style={{ flex:1, padding:'22px 0', borderRadius:14, fontWeight:800, fontSize:16, background:'#10291c', border:'2px solid #22c55e55', color:'#22c55e' }}>
+                <span style={{fontSize:28}}>🤖</span><br/>三人单机<br/><span style={{fontSize:11,color:'#64748b',fontWeight:400}}>我+2机器人</span>
+              </button>
+              <button onClick={()=>startSolo(4)} style={{ flex:1, padding:'22px 0', borderRadius:14, fontWeight:800, fontSize:16, background:'#15152b', border:'2px solid #9333ea55', color:'#c084fc' }}>
+                <span style={{fontSize:28}}>🤖</span><br/>四人单机<br/><span style={{fontSize:11,color:'#64748b',fontWeight:400}}>我+3机器人</span>
+              </button>
+            </div>
+            <button onClick={()=>setView('home')} style={{ marginTop:12, background:'none', color:'#64748b', fontSize:13, border:'none', width:'100%', padding:'6px 0' }}>← 返回</button>
           </div>
         )}
 
@@ -110,7 +125,7 @@ export default function Lobby({ send, gameState, myInfo, onContinueLastRoom }) {
         {inRoom && (
           <div style={{ width:'100%', maxWidth:360, animation:'slide-up .25s ease' }}>
             <div style={{ background:'#ffffff06', border:'1px solid #ffffff10', borderRadius:14, padding:16, marginBottom:12, backdropFilter:'blur(12px)' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}><span style={{ fontSize:11, color:'#94a3b8' }}>{gameState.mode === 'solo' ? '单机练习' : '房间号'}</span><span style={{ fontSize:28, fontWeight:900, color:'#f5c842', letterSpacing:4 }}>{gameState.mode === 'solo' ? 'SOLO' : gameState.id}</span></div>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}><span style={{ fontSize:11, color:'#94a3b8' }}>{gameState.mode === 'solo' ? '单机练习' : '房间号'}</span><span style={{ fontSize:28, fontWeight:900, color:'#f5c842', letterSpacing:4 }}>{gameState.mode === 'solo' ? `${gameState.maxPlayers}人` : gameState.id}</span></div>
               <div style={{ fontSize:10, color:'#94a3b8', marginBottom:8 }}>玩家 {gameState.players.length}/{gameState.maxPlayers}</div>
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {gameState.players.map((p,i)=><div key={p.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:8, background: p.id===myInfo.playerId ? '#f5c84212' : '#ffffff05', border:`1px solid ${p.id===myInfo.playerId?'#f5c84233':'#ffffff08'}` }}><div style={{ width:30, height:30, borderRadius:'50%', background:AVATAR_COLORS[i], display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, color:'#fff', fontWeight:900 }}>{p.isBot?'机':AVATARS[i]}</div><div style={{ flex:1, fontSize:13, fontWeight:700 }}>{p.name} {p.id===myInfo.playerId&&<span style={{fontSize:10,color:'#f5c842'}}>(我)</span>}{i===0&&<span style={{fontSize:10,color:'#f5c842',marginLeft:4}}>👑</span>}</div><span style={{ fontSize:10, color:p.isOnline?'#4ade80':'#f87171' }}>● {p.isBot?'机器人':p.isOnline?'在线':'离线'}</span></div>)}
