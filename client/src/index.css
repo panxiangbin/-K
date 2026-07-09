@@ -9,24 +9,24 @@
   --text: #f0ede0;
   --dim: #8a8070;
 
-  /* 游戏牌桌统一尺寸：默认按手机横屏优化 */
-  --side-col-w: 104px;
-  --card-w: 68px;
-  --card-h: 96px;
-  --card-rank-font: 17px;
-  --card-suit-font: 13px;
-  --card-center-font: 34px;
-  --card-selected-offset: -18px;
-  --hand-overlap: -25px;
-  --hand-x-pad: 42px;
-  --hand-y-pad-top: 8px;
-  --hand-y-pad-bottom: 16px;
+  /* 游戏牌桌统一尺寸：默认按手机横屏优化，3人局36张也尽量不炸屏 */
+  --side-col-w: 96px;
+  --card-w: 54px;
+  --card-h: 78px;
+  --card-rank-font: 14px;
+  --card-suit-font: 10px;
+  --card-center-font: 26px;
+  --card-selected-offset: -15px;
+  --hand-overlap: -38px;
+  --hand-x-pad: 28px;
+  --hand-y-pad-top: 6px;
+  --hand-y-pad-bottom: 12px;
   --hand-bottom-pad: 6px;
-  --mini-card-w: 32px;
-  --mini-card-h: 46px;
-  --mini-rank-font: 11px;
+  --mini-card-w: 30px;
+  --mini-card-h: 42px;
+  --mini-rank-font: 10px;
   --mini-suit-font: 8px;
-  --mini-center-font: 18px;
+  --mini-center-font: 16px;
 }
 
 * {
@@ -60,18 +60,9 @@ button {
   user-select: none;
 }
 
-button:active {
-  transform: scale(0.97);
-}
-
-button:disabled:active {
-  transform: none;
-}
-
-input {
-  font-family: inherit;
-  outline: none;
-}
+button:active { transform: scale(0.97); }
+button:disabled:active { transform: none; }
+input { font-family: inherit; outline: none; }
 
 .felt-texture {
   background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
@@ -96,14 +87,8 @@ input {
   background: linear-gradient(180deg, rgba(127,29,29,0.34), rgba(127,29,29,0.14)) !important;
 }
 
-.top-action.help {
-  color: #bfdbfe !important;
-  border-color: rgba(96,165,250,0.44) !important;
-  background: linear-gradient(180deg, rgba(30,64,175,0.34), rgba(30,64,175,0.12)) !important;
-}
-
 .btn-lite, .btn-pass, .btn-play {
-  min-height: 48px !important;
+  min-height: 46px !important;
   border-radius: 18px !important;
   letter-spacing: 0.5px;
 }
@@ -126,96 +111,47 @@ input {
 }
 
 .btn-play {
-  min-height: 52px !important;
-  padding-left: 28px !important;
-  padding-right: 28px !important;
+  min-height: 50px !important;
+  padding-left: 26px !important;
+  padding-right: 26px !important;
   background: linear-gradient(180deg, #ffe27a, #f5c518 48%, #d79a12) !important;
   box-shadow: 0 5px 16px rgba(245,197,24,0.36), inset 0 1px 0 rgba(255,255,255,0.55) !important;
   border: 1px solid rgba(255,255,255,0.26) !important;
 }
 
-.btn-play:not(:disabled) {
-  animation: playReady 1.5s ease-in-out infinite;
-}
+.btn-play:not(:disabled) { animation: playReady 1.5s ease-in-out infinite; }
+.btn-play:disabled { animation: none; }
 
-.btn-play:disabled {
-  animation: none;
-}
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-120px) scale(1.5); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 8px rgba(245,197,24,0.4), 0 0 20px rgba(245,197,24,0.2); } 50% { box-shadow: 0 0 25px rgba(245,197,24,0.8), 0 0 50px rgba(245,197,24,0.4); } }
+@keyframes bomb-flash { 0% { background: rgba(255,100,0,0); } 50% { background: rgba(255,100,0,0.5); } 100% { background: rgba(255,100,0,0); } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-10px); } 40% { transform: translateX(10px); } 60% { transform: translateX(-7px); } 80% { transform: translateX(7px); } }
+@keyframes cardDeal { from { opacity: 0; transform: translateY(-100px) rotate(-10deg); } to { opacity: 1; transform: translateY(0) rotate(0); } }
+@keyframes myTurnPulse { 0%, 100% { border-color: rgba(245,197,24,0.2); } 50% { border-color: rgba(245,197,24,0.8); } }
+@keyframes playReady { 0%, 100% { filter: brightness(1); transform: translateY(0); } 50% { filter: brightness(1.08); transform: translateY(-1px); } }
 
-/* Keyframes */
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.92); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes floatUp {
-  0% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-120px) scale(1.5); }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(245,197,24,0.4), 0 0 20px rgba(245,197,24,0.2); }
-  50% { box-shadow: 0 0 25px rgba(245,197,24,0.8), 0 0 50px rgba(245,197,24,0.4); }
-}
-
-@keyframes bomb-flash {
-  0% { background: rgba(255,100,0,0); }
-  50% { background: rgba(255,100,0,0.5); }
-  100% { background: rgba(255,100,0,0); }
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-10px); }
-  40% { transform: translateX(10px); }
-  60% { transform: translateX(-7px); }
-  80% { transform: translateX(7px); }
-}
-
-@keyframes cardDeal {
-  from { opacity: 0; transform: translateY(-100px) rotate(-10deg); }
-  to { opacity: 1; transform: translateY(0) rotate(0); }
-}
-
-@keyframes myTurnPulse {
-  0%, 100% { border-color: rgba(245,197,24,0.2); }
-  50% { border-color: rgba(245,197,24,0.8); }
-}
-
-@keyframes playReady {
-  0%, 100% { filter: brightness(1); transform: translateY(0); }
-  50% { filter: brightness(1.08); transform: translateY(-1px); }
-}
-
-/* 小屏手机横屏：少堆字，牌更紧凑 */
+/* 小屏手机横屏：36张牌强压缩，优先保证能操作 */
 @media (max-width: 740px) and (orientation: landscape) {
   :root {
-    --side-col-w: 82px;
-    --card-w: 54px;
-    --card-h: 76px;
-    --card-rank-font: 14px;
-    --card-suit-font: 10px;
-    --card-center-font: 26px;
-    --card-selected-offset: -14px;
-    --hand-overlap: -22px;
-    --hand-x-pad: 28px;
-    --hand-y-pad-top: 5px;
-    --hand-y-pad-bottom: 10px;
-    --mini-card-w: 26px;
-    --mini-card-h: 38px;
-    --mini-rank-font: 9px;
-    --mini-suit-font: 7px;
-    --mini-center-font: 14px;
+    --side-col-w: 76px;
+    --card-w: 46px;
+    --card-h: 66px;
+    --card-rank-font: 12px;
+    --card-suit-font: 9px;
+    --card-center-font: 22px;
+    --card-selected-offset: -12px;
+    --hand-overlap: -34px;
+    --hand-x-pad: 18px;
+    --hand-y-pad-top: 4px;
+    --hand-y-pad-bottom: 8px;
+    --mini-card-w: 24px;
+    --mini-card-h: 34px;
+    --mini-rank-font: 8px;
+    --mini-suit-font: 6px;
+    --mini-center-font: 12px;
   }
 
   .top-action {
@@ -225,28 +161,28 @@ input {
   }
 
   .btn-lite, .btn-pass {
-    min-height: 40px !important;
-    padding-left: 10px !important;
-    padding-right: 10px !important;
+    min-height: 38px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
     font-size: 12px !important;
   }
 
   .btn-play {
-    min-height: 44px !important;
-    padding-left: 18px !important;
-    padding-right: 18px !important;
+    min-height: 42px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
     font-size: 15px !important;
   }
 }
 
-/* 大屏手机/平板横屏：牌桌更舒展 */
+/* 大屏手机/平板横屏：牌桌更舒展，但仍保证3人36张不溢出太多 */
 @media (min-width: 900px) and (orientation: landscape) {
   :root {
-    --side-col-w: 118px;
-    --card-w: 74px;
-    --card-h: 104px;
-    --hand-overlap: -27px;
-    --mini-card-w: 36px;
-    --mini-card-h: 52px;
+    --side-col-w: 110px;
+    --card-w: 60px;
+    --card-h: 86px;
+    --hand-overlap: -40px;
+    --mini-card-w: 34px;
+    --mini-card-h: 48px;
   }
 }
