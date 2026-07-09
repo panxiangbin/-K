@@ -158,6 +158,11 @@ function detectSelectedType(cards) {
   return pattern ? patternLabel(pattern) : '?';
 }
 
+function splitHandRows(cards) {
+  if (cards.length <= 18) return [cards];
+  return [cards.slice(0, 18), cards.slice(18, 36)];
+}
+
 export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast }) {
   const [selected, setSelected] = useState(new Set());
   const [floats, setFloats] = useState([]);
@@ -170,6 +175,7 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   const isMyTurn = gameState?.currentPlayer === myIdx;
   const isFirst = !gameState?.lastPlay;
   const sortedHand = sortCards(myHand);
+  const handRows = splitHandRows(sortedHand);
   const lastPlayKey = gameState?.lastPlayCards?.map(c => c.id).join('|') || '';
 
   useEffect(() => { if (isMyTurn && navigator.vibrate) navigator.vibrate([100, 50, 100]); }, [isMyTurn]);
@@ -201,9 +207,7 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
     setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }, [sending]);
 
-  function releaseSendingSoon() {
-    setTimeout(() => setSending(false), 1500);
-  }
+  function releaseSendingSoon() { setTimeout(() => setSending(false), 1500); }
 
   function playCards() {
     if (!isMyTurn || !selected.size || sending) return;
@@ -289,14 +293,14 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
         </div>
 
         <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0 }}>
-          <div style={{ height:'38%', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
+          <div style={{ height:'32%', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
             {topOpp && <OpponentTop player={topOpp} idx={players.indexOf(topOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(topOpp)} />}
           </div>
-          <div style={{ height:'62%', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
+          <div style={{ height:'68%', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
             <div style={{ position:'absolute', width:'80%', height:'80%', borderRadius:'50%', border:'2px solid rgba(255,255,255,0.05)', background:'rgba(0,0,0,0.1)', boxShadow: isMyTurn ? 'inset 0 0 30px rgba(245,197,24,0.2)' : 'none', animation: isMyTurn ? 'myTurnPulse 2s infinite' : 'none' }} />
             {lp ? (
               <div style={{ zIndex:5, textAlign:'center', maxWidth:'96%' }}>
-                <div style={{ marginBottom:6, fontSize:13, fontWeight:900, color:'#f5c518', textShadow:'0 2px 4px rgba(0,0,0,0.5)' }}>{lpPlayer?.name} : {patternLabel(lp)}</div>
+                <div style={{ marginBottom:5, fontSize:12, fontWeight:900, color:'#f5c518', textShadow:'0 2px 4px rgba(0,0,0,0.5)' }}>{lpPlayer?.name} : {patternLabel(lp)}</div>
                 <div style={{ display:'flex', gap:3, justifyContent:'center', flexWrap:'wrap' }}>{lpCards.map(c => <MiniCard key={c.id} card={c} />)}</div>
               </div>
             ) : <div style={{ color:'rgba(255,255,255,0.2)', fontSize:14 }}>{isMyTurn ? '请出牌' : '等待中...'}</div>}
@@ -309,26 +313,28 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
       </div>
 
       <div style={{ paddingBottom:'var(--hand-bottom-pad, 8px)', zIndex:30, flexShrink:0 }}>
-        <div style={{ height:22, textAlign:'center', fontSize:13, color:'#f5c518', fontWeight:900, textShadow:'0 1px 2px rgba(0,0,0,0.8)' }}>
+        <div style={{ height:18, textAlign:'center', fontSize:12, color:'#f5c518', fontWeight:900, textShadow:'0 1px 2px rgba(0,0,0,0.8)' }}>
           {selected.size > 0 ? `已选${selected.size}张 · ${selectedType}` : sending ? '正在出牌...' : ''}
         </div>
 
-        <div style={{ display:'flex', justifyContent:'center', padding:'var(--hand-y-pad-top, 10px) 0 var(--hand-y-pad-bottom, 20px)', overflowX:'auto', overflowY:'visible', WebkitOverflowScrolling:'touch', paddingLeft:'var(--hand-x-pad, 40px)', paddingRight:'var(--hand-x-pad, 40px)', touchAction:'pan-x' }}>
-          <div style={{ display:'flex', minWidth:'max-content' }}>
-            {sortedHand.map((card, i) => (
-              <div key={card.id} style={{ marginLeft: i === 0 ? 0 : 'var(--hand-overlap, -24px)' }}>
-                <Card card={card} selected={selected.has(card.id)} onClick={() => toggleCard(card.id)} />
-              </div>
-            ))}
-          </div>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'var(--hand-row-gap, 4px)', padding:'var(--hand-y-pad-top, 10px) var(--hand-x-pad, 40px) var(--hand-y-pad-bottom, 20px)', overflow:'visible', touchAction:'manipulation' }}>
+          {handRows.map((row, rowIndex) => (
+            <div key={rowIndex} style={{ display:'flex', justifyContent:'center', width:'100%', minWidth:0 }}>
+              {row.map((card, i) => (
+                <div key={card.id} style={{ marginLeft: i === 0 ? 0 : 'var(--hand-overlap, -24px)' }}>
+                  <Card card={card} selected={selected.has(card.id)} onClick={() => toggleCard(card.id)} />
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
 
-        <div style={{ display:'flex', gap:8, padding:'0 14px', alignItems:'center' }}>
-          <button disabled={sending} onClick={hint} className="btn-gold-outline" style={{ padding:'7px 13px', borderRadius:18, fontSize:13, fontWeight:900 }}>💡提示</button>
-          <button disabled={sending} onClick={selectAll} className="btn-gold-outline" style={{ padding:'7px 13px', borderRadius:18, fontSize:13, fontWeight:900 }}>全选</button>
+        <div style={{ display:'flex', gap:7, padding:'0 10px', alignItems:'center' }}>
+          <button disabled={sending} onClick={hint} className="btn-gold-outline" style={{ padding:'6px 11px', borderRadius:16, fontSize:12, fontWeight:900 }}>💡提示</button>
+          <button disabled={sending} onClick={selectAll} className="btn-gold-outline" style={{ padding:'6px 11px', borderRadius:16, fontSize:12, fontWeight:900 }}>全选</button>
           <div style={{ flex:1 }} />
-          <button disabled={!isMyTurn || isFirst || sending} onClick={pass} className="btn-pass" style={{ padding:'9px 20px', borderRadius:18, fontSize:15, fontWeight:900 }}>过牌</button>
-          <button disabled={!isMyTurn || !selected.size || sending} onClick={playCards} className="btn-play" style={{ padding:'9px 28px', borderRadius:18, fontSize:17, fontWeight:900 }}>出牌{selected.size > 0 ? `(${selected.size})` : ''}</button>
+          <button disabled={!isMyTurn || isFirst || sending} onClick={pass} className="btn-pass" style={{ padding:'8px 18px', borderRadius:16, fontSize:14, fontWeight:900 }}>过牌</button>
+          <button disabled={!isMyTurn || !selected.size || sending} onClick={playCards} className="btn-play" style={{ padding:'8px 24px', borderRadius:16, fontSize:16, fontWeight:900 }}>出牌{selected.size > 0 ? `(${selected.size})` : ''}</button>
         </div>
       </div>
 
