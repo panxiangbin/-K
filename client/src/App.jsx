@@ -58,12 +58,7 @@ export default function App() {
     switch (msg.type) {
       case 'room_joined':
         savePlayerSession(msg);
-        setMyInfo({
-          playerId: msg.playerId,
-          playerToken: msg.playerToken,
-          roomId: msg.roomId,
-          playerIndex: msg.playerIndex,
-        });
+        setMyInfo({ playerId: msg.playerId, playerToken: msg.playerToken, roomId: msg.roomId, playerIndex: msg.playerIndex });
         if (msg.reconnect) toast('已回到房间', 'success');
         break;
       case 'room_left':
@@ -73,15 +68,9 @@ export default function App() {
         break;
       case 'room_update':
         setGameState(msg.state);
-        if (msg.state.status === 'waiting') {
-          setPage('lobby');
-          setMyHand([]);
-          setSettlementData(null);
-        } else if (msg.state.status === 'playing') {
-          setPage('game');
-        } else if (msg.state.status === 'settlement') {
-          setPage('settlement');
-        }
+        if (msg.state.status === 'waiting') { setPage('lobby'); setMyHand([]); setSettlementData(null); }
+        else if (msg.state.status === 'playing') setPage('game');
+        else if (msg.state.status === 'settlement') setPage('settlement');
         break;
       case 'game_start':
         setGameState(msg.state);
@@ -103,6 +92,7 @@ export default function App() {
         toast(`🏁 ${msg.playerName} 第${msg.finishRank}名出完`, 'gold');
         break;
       case 'player_passed':
+        if (msg.state) setGameState(msg.state);
         toast(msg.playerName + ' 过牌', msg.auto ? 'info' : 'dim');
         break;
       case 'pile_won':
@@ -125,18 +115,12 @@ export default function App() {
   const { send, connected } = useWebSocket(onMessage);
 
   useEffect(() => {
-    if (!connected) {
-      autoRejoinTried.current = false;
-      return;
-    }
+    if (!connected) { autoRejoinTried.current = false; return; }
     if (autoRejoinTried.current) return;
-
-    // 只在当前页面已有身份时自动重连。禁止打开网页时从 localStorage 静默进入旧房间，避免被困在单机局里。
     const saved = myInfo?.roomId && myInfo?.playerId && myInfo?.playerToken
       ? { roomId: myInfo.roomId, playerId: myInfo.playerId, playerToken: myInfo.playerToken }
       : null;
     if (!saved) return;
-
     autoRejoinTried.current = true;
     const ok = send({ type: 'join_room', roomId: saved.roomId, playerId: saved.playerId, playerToken: saved.playerToken, playerName: '' });
     if (ok) toast('正在恢复连接...', 'info');
@@ -144,10 +128,7 @@ export default function App() {
 
   const continueLastRoom = useCallback(() => {
     const saved = loadLastSession();
-    if (!saved) {
-      toast('没有可继续的房间', 'dim');
-      return;
-    }
+    if (!saved) { toast('没有可继续的房间', 'dim'); return; }
     send({ type: 'join_room', roomId: saved.roomId, playerId: saved.playerId, playerToken: saved.playerToken, playerName: '' });
   }, [send, toast]);
 
@@ -174,14 +155,7 @@ export default function App() {
 
   return (
     <div style={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
-      <div style={{
-        position: 'fixed', top: 8, right: 8, zIndex: 1000,
-        fontSize: 11, padding: '3px 8px', borderRadius: 12,
-        background: '#00000088', backdropFilter: 'blur(8px)',
-        color: connected ? '#4ade80' : '#f87171',
-        border: `1px solid ${connected ? '#4ade8033' : '#f8717133'}`,
-        display: 'flex', alignItems: 'center', gap: 4,
-      }}>
+      <div style={{ position: 'fixed', top: 8, right: 8, zIndex: 1000, fontSize: 11, padding: '3px 8px', borderRadius: 12, background: '#00000088', backdropFilter: 'blur(8px)', color: connected ? '#4ade80' : '#f87171', border: `1px solid ${connected ? '#4ade8033' : '#f8717133'}`, display: 'flex', alignItems: 'center', gap: 4 }}>
         <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block', animation: connected ? 'none' : 'pulse 1s infinite' }} />
         {connected ? '在线' : '连接中...'}
       </div>
@@ -189,15 +163,7 @@ export default function App() {
       <div style={{ position: 'fixed', top: 36, left: '50%', transform: 'translateX(-50%)', zIndex: 999, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', pointerEvents: 'none' }}>
         {toasts.map(t => {
           const s = TOAST_STYLE[t.type] || TOAST_STYLE.info;
-          return (
-            <div key={t.id} style={{
-              padding: '7px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600,
-              color: s.color, background: s.bg + 'ee',
-              border: `1px solid ${s.color}44`,
-              animation: 'floatUp 2.5s ease-out forwards',
-              whiteSpace: 'nowrap', backdropFilter: 'blur(6px)',
-            }}>{t.text}</div>
-          );
+          return <div key={t.id} style={{ padding: '7px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: s.color, background: s.bg + 'ee', border: `1px solid ${s.color}44`, animation: 'floatUp 2.5s ease-out forwards', whiteSpace: 'nowrap', backdropFilter: 'blur(6px)' }}>{t.text}</div>;
         })}
       </div>
 
