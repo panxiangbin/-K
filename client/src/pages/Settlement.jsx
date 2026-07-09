@@ -12,7 +12,21 @@ const AVATARS = ['🐲','🐯','🦊','🐺'];
 const AVATAR_COLORS = ['#9333ea','#0891b2','#d97706','#dc2626'];
 const RANK_NAMES = ['第一名', '第二名', '第三名', '第四名'];
 
-export default function Settlement({ data, send, myInfo, gameState }) {
+function TopButton({ children, danger = false, left, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      position:'absolute', top:10, left, zIndex:60,
+      minHeight:34, padding:'0 13px', borderRadius:999,
+      border:`1px solid ${danger ? 'rgba(248,113,113,.45)' : 'rgba(255,255,255,.20)'}`,
+      background: danger ? 'rgba(127,29,29,.34)' : 'rgba(255,255,255,.08)',
+      color: danger ? '#fecaca' : '#f8fafc',
+      fontSize:13, fontWeight:900,
+      boxShadow:'0 4px 12px rgba(0,0,0,.24)', backdropFilter:'blur(10px)',
+    }}>{children}</button>
+  );
+}
+
+export default function Settlement({ data, send, myInfo, gameState, onReturnLobby, onExitRoom }) {
   if (!data) return null;
   const isHost = gameState?.players?.[0]?.id === myInfo?.playerId;
   const history = gameState?.roundHistory || [];
@@ -28,6 +42,8 @@ export default function Settlement({ data, send, myInfo, gameState }) {
       position:'relative', overflow:'hidden',
       fontFamily:"'PingFang SC','Microsoft YaHei',sans-serif",
     }}>
+      <TopButton left={10} onClick={onReturnLobby}>← 返回大厅</TopButton>
+      <TopButton left={104} danger onClick={onExitRoom}>退出房间</TopButton>
       <div style={{ position:'absolute', inset:0, backgroundImage:'repeating-linear-gradient(45deg,#ffffff03 0,#ffffff03 1px,transparent 0,transparent 50%)', backgroundSize:'12px 12px', pointerEvents:'none' }}/>
 
       <div style={{
