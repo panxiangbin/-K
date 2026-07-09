@@ -4,6 +4,12 @@ import Lobby from './pages/Lobby';
 import Game from './pages/Game';
 import Settlement from './pages/Settlement';
 
+function savePlayerSession(msg) {
+  if (!msg?.roomId || !msg?.playerId || !msg?.playerToken) return;
+  localStorage.setItem(`henan50k:${msg.roomId}:playerId`, msg.playerId);
+  localStorage.setItem(`henan50k:${msg.roomId}:playerToken`, msg.playerToken);
+}
+
 export default function App() {
   const [page, setPage] = useState('lobby');
   const [gameState, setGameState] = useState(null);
@@ -30,14 +36,25 @@ export default function App() {
   const onMessage = useCallback((msg) => {
     switch (msg.type) {
       case 'room_joined':
-        setMyInfo({ playerId: msg.playerId, roomId: msg.roomId, playerIndex: msg.playerIndex });
+        savePlayerSession(msg);
+        setMyInfo({
+          playerId: msg.playerId,
+          playerToken: msg.playerToken,
+          roomId: msg.roomId,
+          playerIndex: msg.playerIndex,
+        });
         break;
       case 'room_update':
         setGameState(msg.state);
-        if (msg.state.status === 'waiting') setPage('lobby');
+        if (msg.state.status === 'waiting') {
+          setPage('lobby');
+          setMyHand([]);
+          setSettlementData(null);
+        }
         break;
       case 'game_start':
         setGameState(msg.state);
+        setSettlementData(null);
         setPage('game');
         toast('🎮 游戏开始！', 'success');
         break;
@@ -52,7 +69,7 @@ export default function App() {
         if (msg.pattern?.type === 'bomb') toast('💥 ' + msg.playerName + ' 炸弹！', 'bomb');
         break;
       case 'player_passed':
-        toast(msg.playerName + ' 过牌', 'dim');
+        toast(msg.playerName + ' 过牌', msg.auto ? 'info' : 'dim');
         break;
       case 'pile_won':
         setGameState(msg.state);
@@ -65,6 +82,8 @@ export default function App() {
         break;
       case 'error':
         toast('⚠ ' + msg.msg, 'error');
+        break;
+      default:
         break;
     }
   }, [toast]);
