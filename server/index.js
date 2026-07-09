@@ -191,6 +191,7 @@ function startGame(room) {
   room.lastPlayerId = null;
   room.pile = [];
   room.passCount = 0;
+  room.finishOrder = [];
   room.status = 'playing';
   room.roundNum = (room.roundNum || 0) + 1;
 
@@ -202,16 +203,39 @@ function startGame(room) {
   setTurn(room, firstPlayer);
 }
 
+function getSettlementRanking(room) {
+  const finishIds = new Set(room.finishOrder || []);
+  const finished = (room.finishOrder || [])
+    .map(id => room.players.find(p => p.id === id))
+    .filter(Boolean);
+
+  // 当前游戏是“有人出完牌就结算”：第一个出完的人固定第一名，剩下的人按本局分数排。
+  const remaining = room.players
+    .filter(p => !finishIds.has(p.id))
+    .sort((a, b) => (b.score - a.score) || ((a.hand?.length || 0) - (b.hand?.length || 0)));
+
+  return [...finished, ...remaining];
+}
+
 function endRound(room) {
-  // 计算排名
-  const ranked = [...room.players].sort((a, b) => b.score - a.score);
+  const ranked = getSettlementRanking(room);
   const targets = getTargetScores(room.players.length);
   ranked.forEach((p) => { p.totalScore = (p.totalScore || 0) + p.score; });
 
-  const result = ranked.map((p, i) => ({
-    id: p.id, name: p.name, score: p.score, rank: i + 1,
-    target: targets[i], totalScore: p.totalScore,
-  }));
+  const result = ranked.map((p, i) => {
+    const target = targets[i] || 0;
+    const qualified = p.score >= target;
+    return {
+      id: p.id,
+      name: p.name,
+      score: p.score,
+      rank: i + 1,
+      target,
+      qualified,
+      isWin: qualified,
+      totalScore: p.totalScore,
+    };
+  });
 
   room.status = 'settlement';
   broadcast(room, { type: 'round_end', result, state: getRoomPublicState(room) });
@@ -235,7 +259,7 @@ wss.on('connection', (ws) => {
         id: roomId, maxPlayers: maxPlayers || 4, status: 'waiting',
         players: [{ id: playerId, token: playerToken, name: cleanName, hand: [], score: 0, totalScore: 0, isOnline: true }],
         currentPlayer: 0, lastPlay: null, lastPlayCards: [], lastPlayerId: null,
-        pile: [], passCount: 0, extra: [], roundNum: 0, roundScores: [],
+        pile: [], passCount: 0, extra: [], roundNum: 0, roundScores: [], finishOrder: [],
       };
       rooms.set(roomId, room);
       clients.set(ws, { playerId, roomId, playerName: cleanName });
@@ -338,6 +362,8 @@ wss.on('connection', (ws) => {
 
       // 出完牌了？
       if (player.hand.length === 0) {
+        if (!room.finishOrder) room.finishOrder = [];
+        if (!room.finishOrder.includes(player.id)) room.finishOrder.push(player.id);
         // 该玩家赢得最后一墩
         awardPile(room);
         endRound(room);
@@ -374,6 +400,7 @@ wss.on('connection', (ws) => {
       room.lastPlayerId = null;
       room.pile = [];
       room.passCount = 0;
+      room.finishOrder = [];
       broadcast(room, { type: 'room_update', state: getRoomPublicState(room) });
     }
   });
