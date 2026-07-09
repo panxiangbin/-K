@@ -279,6 +279,9 @@ function getBotCandidateCombos(hand) {
     if (group.length >= 2) combos.push(group.slice(0, 2));
     if (group.length >= 3) combos.push(group.slice(0, 3));
     if (group.length >= 4) combos.push(group.slice(0, 4));
+    if (group.length >= 5) combos.push(group.slice(0, 5));
+    if (group.length >= 6) combos.push(group.slice(0, 6));
+    if (group.length >= 7) combos.push(group.slice(0, 7));
     if (group.length >= 8) combos.push(group.slice(0, 8));
     const blacks = group.filter(c => isBlack(c.suit));
     const reds = group.filter(c => isRed(c.suit));
@@ -293,16 +296,18 @@ function getBotCandidateCombos(hand) {
 }
 
 function patternWeight(pattern) {
-  if (!pattern) return 999;
+  if (!pattern) return 999999;
   if (pattern.type !== 'bomb') {
-    const order = { single: 1, pair: 2, triple: 3, four: 4 };
+    const order = { single: 1, pair: 2, triple: 3, four: 4, five: 5, six: 6, seven: 7 };
     return (order[pattern.type] || 9) * 100 + cardValue(pattern.rank);
   }
   const bombOrder = { '50K': 20, color4: 30, same8: 40, joker4: 50 };
-  let color = 0;
-  if (pattern.color === 'red') color = 1;
-  if (pattern.color === 'black') color = 2;
-  return (bombOrder[pattern.bombType] || 90) * 100 + color * 20 + cardValue(pattern.rank || '3');
+  if (pattern.bombType === 'color4') {
+    const colorOrder = { red: 1, black: 2 };
+    return bombOrder.color4 * 1000 + cardValue(pattern.rank) * 2 + (colorOrder[pattern.color] || 0);
+  }
+  if (pattern.bombType === '50K') return bombOrder['50K'] * 1000 + (['♦','♣','♥','♠'].indexOf(pattern.suit) + 1);
+  return (bombOrder[pattern.bombType] || 90) * 1000 + cardValue(pattern.rank || '3');
 }
 
 function chooseBotMove(hand, lastPlay) {
@@ -418,7 +423,7 @@ function handlePlayerLeave(ws, manual = false) {
     if (room.status === 'playing' && room.currentPlayer === playerIdx) {
       if (room.lastPlay && player.id !== room.lastPlayerId && hasCards(player)) {
         room.passCount++;
-        recordTrickPass(room, player, true);
+        recordTrickPass(room, player, true;
         broadcast(room, { type: 'player_passed', playerId: player.id, playerName: player.name + (manual ? '（已退出）' : '（离线自动）'), auto: true, state: getRoomPublicState(room) });
       }
       advanceTurn(room, playerIdx + 1);
@@ -476,7 +481,6 @@ wss.on('connection', (ws) => {
       const cleanName = String(msg.playerName || '').trim();
       const room = rooms.get(roomId);
       if (!room) { sendError(ws, '房间不存在'); return; }
-
       const token = msg.playerToken || msg.token;
       const requestedPlayerId = msg.playerId;
       const reconnecting = token ? room.players.find(p => p.token === token && !p.left && (!requestedPlayerId || p.id === requestedPlayerId)) : null;
