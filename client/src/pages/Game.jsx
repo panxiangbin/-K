@@ -2,46 +2,191 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import Card, { MiniCard } from '../components/Card';
 
 const CARD_ORDER = ['3','4','5','6','7','8','9','10','J','Q','K','A','2','小王','大王'];
-const TYPE_LABEL = { single:'单张', pair:'对子', triple:'三张', straight:'顺子', pairs:'连对', bomb:'💥炸弹' };
+const BOMB_LEVEL = { '50K': 1, color4: 2, same8: 3, joker4: 4 };
+const SUIT_ORDER = { '♠': 4, '♥': 3, '♣': 2, '♦': 1 };
+const TYPE_LABEL = { single:'单张', pair:'对子', triple:'三张', bomb:'💥炸弹' };
 const AVATARS = ['🐲','🐯','🦊','🐺'];
 const AVATAR_COLORS = ['#9333ea','#0891b2','#d97706','#dc2626'];
 
+function cardValue(rank) {
+  return CARD_ORDER.indexOf(rank);
+}
+
+function isBlack(suit) { return suit === '♠' || suit === '♣'; }
+function isRed(suit) { return suit === '♥' || suit === '♦'; }
+
 function sortCards(cards) {
-  return [...cards].sort((a,b) => CARD_ORDER.indexOf(a.rank) - CARD_ORDER.indexOf(b.rank));
+  return [...cards].sort((a,b) => cardValue(a.rank) - cardValue(b.rank));
+}
+
+function detect50K(cards) {
+  if (cards.length !== 3) return null;
+  const sorted = [...cards].sort((a,b) => cardValue(a.rank) - cardValue(b.rank));
+  if (sorted.map(c => c.rank).join(',') !== '5,10,K') return null;
+  const suit = sorted[0].suit;
+  if (suit !== 'joker' && sorted.every(c => c.suit === suit)) {
+    return { type: 'bomb', bombType: '50K', rank: 'K', suit };
+  }
+  return null;
+}
+
+function detectPattern(cards) {
+  if (!cards || cards.length === 0) return null;
+  const n = cards.length;
+
+  if (n === 1) return { type: 'single', rank: cards[0].rank };
+
+  if (n === 2) {
+    if (cards[0].rank === cards[1].rank) return { type: 'pair', rank: cards[0].rank };
+    return null;
+  }
+
+  if (n === 3) {
+    const f50k = detect50K(cards);
+    if (f50k) return f50k;
+    if (cards.every(c => c.rank === cards[0].rank)) return { type: 'triple', rank: cards[0].rank };
+    return null;
+  }
+
+  if (n === 4) {
+    const jokers = cards.filter(c => c.suit === 'joker');
+    if (jokers.length === 4) {
+      const hasBig = jokers.filter(c => c.rank === '大王').length === 2;
+      const hasSmall = jokers.filter(c => c.rank === '小王').length === 2;
+      if (hasBig && hasSmall) return { type: 'bomb', bombType: 'joker4', rank: '大王', suit: null };
+    }
+
+    if (cards.every(c => c.rank === cards[0].rank)) {
+      const rank = cards[0].rank;
+      const allBlack = cards.every(c => isBlack(c.suit));
+      const allRed = cards.every(c => isRed(c.suit));
+      if (allBlack) return { type: 'bomb', bombType: 'color4', rank, color: 'black' };
+      if (allRed) return { type: 'bomb', bombType: 'color4', rank, color: 'red' };
+      return null;
+    }
+    return null;
+  }
+
+  if (n === 8 && cards.every(c => c.rank === cards[0].rank)) {
+    return { type: 'bomb', bombType: 'same8', rank: cards[0].rank };
+  }
+
+  return null;
+}
+
+function comparePatterns(newP, oldP) {
+  if (!oldP) return true;
+
+  const newBomb = newP.type === 'bomb';
+  const oldBomb = oldP.type === 'bomb';
+  if (newBomb && !oldBomb) return true;
+  if (!newBomb && oldBomb) return false;
+
+  if (newBomb && oldBomb) {
+    const nl = BOMB_LEVEL[newP.bombType];
+    const ol = BOMB_LEVEL[oldP.bombType];
+    if (nl !== ol) return nl > ol;
+    if (newP.bombType === 'joker4') return false;
+    if (newP.bombType === 'same8') return cardValue(newP.rank) > cardValue(oldP.rank);
+    if (newP.bombType === 'color4') {
+      const colorOrder = { black: 2, red: 1 };
+      if (newP.color !== oldP.color) return colorOrder[newP.color] > colorOrder[oldP.color];
+      return cardValue(newP.rank) > cardValue(oldP.rank);
+    }
+    if (newP.bombType === '50K') {
+      return (SUIT_ORDER[newP.suit] || 0) > (SUIT_ORDER[oldP.suit] || 0);
+    }
+  }
+
+  if (newP.type !== oldP.type) return false;
+  return cardValue(newP.rank) > cardValue(oldP.rank);
+}
+
+function getPatternLen(p) {
+  if (p.type === 'single') return 1;
+  if (p.type === 'pair') return 2;
+  if (p.type === 'triple') return 3;
+  return null;
+}
+
+function getCombinations(arr, n) {
+  if (n === 1) return arr.map(c => [c]);
+  if (n > arr.length) return [];
+  const result = [];
+  function pick(start, current) {
+    if (current.length === n) { result.push([...current]); return; }
+    for (let i = start; i < arr.length; i++) {
+      current.push(arr[i]);
+      pick(i + 1, current);
+      current.pop();
+    }
+  }
+  pick(0, []);
+  return result;
+}
+
+function getAllBombs(hand) {
+  const results = [];
+  const big = hand.filter(c => c.rank === '大王');
+  const small = hand.filter(c => c.rank === '小王');
+  if (big.length >= 2 && small.length >= 2) results.push([big[0], big[1], small[0], small[1]]);
+
+  const rankGroups = {};
+  for (const c of hand) {
+    if (!rankGroups[c.rank]) rankGroups[c.rank] = [];
+    rankGroups[c.rank].push(c);
+  }
+
+  for (const group of Object.values(rankGroups)) {
+    if (group.length >= 8) results.push(group.slice(0, 8));
+    const blacks = group.filter(c => isBlack(c.suit));
+    const reds = group.filter(c => isRed(c.suit));
+    if (blacks.length >= 4) results.push(blacks.slice(0, 4));
+    if (reds.length >= 4) results.push(reds.slice(0, 4));
+  }
+
+  const suits = ['♠','♥','♣','♦'];
+  for (const suit of suits) {
+    const five = hand.find(c => c.rank === '5' && c.suit === suit);
+    const ten = hand.find(c => c.rank === '10' && c.suit === suit);
+    const king = hand.find(c => c.rank === 'K' && c.suit === suit);
+    if (five && ten && king) results.push([five, ten, king]);
+  }
+
+  return results;
 }
 
 function getHint(hand, lastPlay) {
-  if (!lastPlay) return hand.length > 0 ? [hand[0].id] : [];
-  if (lastPlay.type === 'single') {
-    const bigger = hand.filter(c => CARD_ORDER.indexOf(c.rank) > CARD_ORDER.indexOf(lastPlay.rank));
-    if (bigger.length) return [bigger[0].id];
-  }
-  const rankGroups = {};
-  hand.forEach(c => { rankGroups[c.rank] = rankGroups[c.rank] || []; rankGroups[c.rank].push(c.id); });
-  for (const [rank, ids] of Object.entries(rankGroups)) {
-    if (ids.length >= 4 && lastPlay.type !== 'bomb') return ids.slice(0,4);
+  if (!hand.length) return [];
+  if (!lastPlay) return [hand[0].id];
+
+  const candidates = [];
+  const normalLen = lastPlay.type === 'bomb' ? null : getPatternLen(lastPlay);
+  if (normalLen) candidates.push(...getCombinations(hand, normalLen));
+  candidates.push(...getAllBombs(hand));
+
+  for (const combo of candidates) {
+    const pattern = detectPattern(combo);
+    if (pattern && comparePatterns(pattern, lastPlay)) return combo.map(c => c.id);
   }
   return [];
 }
 
+function patternLabel(pattern) {
+  if (!pattern) return '出牌';
+  if (pattern.type !== 'bomb') return TYPE_LABEL[pattern.type] || '出牌';
+  if (pattern.bombType === '50K') return `${pattern.suit}五十K`;
+  if (pattern.bombType === 'color4') return `${pattern.color === 'black' ? '黑' : '红'}四炸`;
+  if (pattern.bombType === 'same8') return '八张炸弹';
+  if (pattern.bombType === 'joker4') return '四王炸弹';
+  return '💥炸弹';
+}
+
 function detectSelectedType(cards) {
   if (!cards.length) return '';
-  const ranks = cards.map(c => c.rank);
-  const uniqueRanks = [...new Set(ranks)];
-  if (cards.length === 1) return '单张';
-  if (cards.length === 2 && uniqueRanks.length === 1) return '对子';
-  if (cards.length === 3 && uniqueRanks.length === 1) return '三张';
-  if (cards.length === 2 && ranks.includes('大王') && ranks.includes('小王')) return '💥王炸';
-  if (uniqueRanks.length === 1 && cards.length >= 4) return `💥炸弹×${cards.length}`;
-  const sorted = [...cards].sort((a,b)=>CARD_ORDER.indexOf(a.rank)-CARD_ORDER.indexOf(b.rank));
-  const vals = sorted.map(c=>CARD_ORDER.indexOf(c.rank));
-  const isSeq = vals.every((v,i)=>i===0||v===vals[i-1]+1);
-  if (isSeq && cards.length >= 5) return `顺子×${cards.length}`;
-  if (cards.length % 2 === 0 && uniqueRanks.length === cards.length/2) {
-    const grps = uniqueRanks.map(r=>ranks.filter(x=>x===r).length);
-    if (grps.every(g=>g===2)) return `连对×${cards.length/2}`;
-  }
-  return '?';
+  const pattern = detectPattern(cards);
+  if (!pattern) return '?';
+  return patternLabel(pattern);
 }
 
 export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast }) {
@@ -55,6 +200,7 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   const isMyTurn = gameState?.currentPlayer === myIdx;
   const isFirst = !gameState?.lastPlay;
   const sortedHand = sortCards(myHand);
+  const lastPlayKey = gameState?.lastPlayCards?.map(c => c.id).join('|') || '';
 
   useEffect(() => {
     if (isMyTurn && navigator.vibrate) navigator.vibrate([100, 50, 100]);
@@ -74,6 +220,13 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
     });
   }, [gameState?.players]);
 
+  useEffect(() => {
+    if (gameState?.lastPlay?.type === 'bomb') {
+      setBombAnim(true);
+      setTimeout(() => setBombAnim(false), 1000);
+    }
+  }, [lastPlayKey, gameState?.lastPlay?.type]);
+
   const toggleCard = useCallback((id) => {
     setSelected(s => { const n = new Set(s); n.has(id)?n.delete(id):n.add(id); return n; });
   }, []);
@@ -81,14 +234,9 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   function playCards() {
     if (!isMyTurn || !selected.size) return;
     const cardIds = [...selected];
-    const cards = myHand.filter(c => cardIds.includes(c.id));
+    // 不能在本地乐观删除手牌；必须等服务器确认 your_hand，避免非法出牌后牌消失。
     send({ type: 'play_cards', cardIds });
-    setMyHand(h => h.filter(c => !cardIds.includes(c.id)));
     setSelected(new Set());
-    const ranks = new Set(cards.map(c => c.rank));
-    if ((ranks.size===1 && cards.length>=4) || (cards.some(c=>c.rank==='大王') && cards.some(c=>c.rank==='小王'))) {
-      setBombAnim(true); setTimeout(()=>setBombAnim(false), 1000);
-    }
   }
 
   function pass() {
@@ -104,11 +252,11 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   }
 
   function selectAll() {
-    setSelected(new Set(myHand.map(c=>c.id)));
+    setSelected(new Set(sortedHand.map(c=>c.id)));
   }
 
   const players = gameState?.players || [];
-  const selectedCards = myHand.filter(c => selected.has(c.id));
+  const selectedCards = sortedHand.filter(c => selected.has(c.id));
   const selectedType = detectSelectedType(selectedCards);
 
   // 座位计算
@@ -164,11 +312,12 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
               background: isCurrent ? 'rgba(245,197,24,0.2)' : 'transparent',
               border: `1px solid ${isCurrent ? '#f5c518' : 'transparent'}`,
               boxShadow: isCurrent ? '0 0 15px rgba(245,197,24,0.4)' : 'none',
-              transition: 'all 0.3s'
+              transition: 'all 0.3s',
+              opacity: p.isOnline ? 1 : 0.45,
             }}>
               <div style={{ width:24, height:24, borderRadius:'50%', background:AVATAR_COLORS[i], display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>{AVATARS[i]}</div>
               <div style={{ flex:1, overflow:'hidden' }}>
-                <div style={{ fontSize:10, color:'#eee', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{p.name}</div>
+                <div style={{ fontSize:10, color:'#eee', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>{p.name}{!p.isOnline ? ' 离线' : ''}</div>
                 <div style={{ fontSize:12, fontWeight:900, color:'#f5c518' }}>{p.score} <span style={{fontSize:9}}>pts</span></div>
               </div>
               <div style={{ fontSize:11, color:'#fff', opacity:0.7 }}>🎴{p.cardCount}</div>
@@ -206,7 +355,7 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
             {lp ? (
               <div style={{ zIndex:5, textAlign:'center' }}>
                 <div style={{ marginBottom:8, fontSize:14, fontWeight:900, color:'#f5c518', textShadow:'0 2px 4px rgba(0,0,0,0.5)' }}>
-                  {lpPlayer?.name} : {TYPE_LABEL[lp.type] || '出牌'}
+                  {lpPlayer?.name} : {patternLabel(lp)}
                 </div>
                 <div style={{ display:'flex', gap:4, justifyContent:'center' }}>
                   {lpCards.map(c => <MiniCard key={c.id} card={c} />)}
@@ -288,14 +437,14 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
 
 function OpponentSide({ player, idx, isCurrent }) {
   return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8, opacity: player.isOnline ? 1 : 0.5 }}>
       <div style={{ 
         width:50, height:50, borderRadius:'50%', background:AVATAR_COLORS[idx],
         display:'flex', alignItems:'center', justifyContent:'center', fontSize:28,
         border: `3px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.2)'}`,
         boxShadow: isCurrent ? '0 0 20px #f5c518' : 'none'
       }}>{AVATARS[idx]}</div>
-      <div style={{ fontSize:12, fontWeight:900, color:'#fff', textAlign:'center', maxWidth:80, overflow:'hidden', textOverflow:'ellipsis' }}>{player.name}</div>
+      <div style={{ fontSize:12, fontWeight:900, color:'#fff', textAlign:'center', maxWidth:80, overflow:'hidden', textOverflow:'ellipsis' }}>{player.name}{!player.isOnline ? ' 离线' : ''}</div>
       <div style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
         {[...Array(Math.min(player.cardCount, 5))].map((_, i) => (
           <div key={i} style={{ marginTop: i === 0 ? 0 : -32 }}>
@@ -310,7 +459,7 @@ function OpponentSide({ player, idx, isCurrent }) {
 
 function OpponentTop({ player, idx, isCurrent }) {
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+    <div style={{ display:'flex', alignItems:'center', gap:12, opacity: player.isOnline ? 1 : 0.5 }}>
       <div style={{ 
         width:40, height:40, borderRadius:'50%', background:AVATAR_COLORS[idx],
         display:'flex', alignItems:'center', justifyContent:'center', fontSize:24,
@@ -318,7 +467,7 @@ function OpponentTop({ player, idx, isCurrent }) {
         boxShadow: isCurrent ? '0 0 15px #f5c518' : 'none'
       }}>{AVATARS[idx]}</div>
       <div style={{ display:'flex', flexDirection:'column' }}>
-        <div style={{ fontSize:12, fontWeight:900, color:'#fff' }}>{player.name}</div>
+        <div style={{ fontSize:12, fontWeight:900, color:'#fff' }}>{player.name}{!player.isOnline ? ' 离线' : ''}</div>
         <div style={{ display:'flex' }}>
           {[...Array(Math.min(player.cardCount, 8))].map((_, i) => (
             <div key={i} style={{ marginLeft: i === 0 ? 0 : -22 }}>
