@@ -85,7 +85,9 @@ function getRoomPublicState(room) {
     lastPlayCards: room.lastPlayCards || [],
     lastPlayerId: room.lastPlayerId,
     pile: room.pile,
-    roundScores: room.roundScores,
+    roundScores: room.roundScores || [],
+    roundHistory: room.roundHistory || [],
+    finishOrder: room.finishOrder || [],
     flipCard: room.flipCard,
     roundNum: room.roundNum,
   };
@@ -93,6 +95,32 @@ function getRoomPublicState(room) {
 
 function canAct(player) {
   return Boolean(player && player.isOnline && player.hand && player.hand.length > 0);
+}
+
+function hasCards(player) {
+  return Boolean(player && player.hand && player.hand.length > 0);
+}
+
+function activeCardPlayers(room) {
+  return room.players.filter(hasCards);
+}
+
+function pendingOpponentCount(room) {
+  if (!room.lastPlay) return 0;
+  return room.players.filter(p => p.id !== room.lastPlayerId && hasCards(p)).length;
+}
+
+function recordFinish(room, player) {
+  if (!room.finishOrder) room.finishOrder = [];
+  if (player && !room.finishOrder.includes(player.id)) {
+    room.finishOrder.push(player.id);
+    broadcast(room, {
+      type: 'player_finished',
+      playerId: player.id,
+      playerName: player.name,
+      finishRank: room.finishOrder.length,
+    });
+  }
 }
 
 function setTurn(room, idx) {
@@ -129,16 +157,82 @@ function awardPile(room) {
   return room.players.indexOf(winner);
 }
 
+function getSettlementRanking(room) {
+  const finishIds = new Set(room.finishOrder || []);
+  const finished = (room.finishOrder || [])
+    .map(id => room.players.find(p => p.id === id))
+    .filter(Boolean);
+
+  // 正常情况下会打到所有人手牌清空；这里保留兜底，未出完的按本局分数排序。
+  const remaining = room.players
+    .filter(p => !finishIds.has(p.id))
+    .sort((a, b) => (b.score - a.score) || ((a.hand?.length || 0) - (b.hand?.length || 0)));
+
+  return [...finished, ...remaining];
+}
+
+function endRound(room) {
+  if (room.status === 'settlement') return;
+  const ranked = getSettlementRanking(room);
+  const targets = getTargetScores(room.players.length);
+  ranked.forEach((p) => { p.totalScore = (p.totalScore || 0) + p.score; });
+
+  const result = ranked.map((p, i) => {
+    const target = targets[i] || 0;
+    const qualified = p.score >= target;
+    return {
+      id: p.id,
+      name: p.name,
+      score: p.score,
+      rank: i + 1,
+      target,
+      qualified,
+      isWin: qualified,
+      totalScore: p.totalScore,
+    };
+  });
+
+  room.roundScores = result;
+  room.roundHistory = room.roundHistory || [];
+  room.roundHistory.push({
+    roundNum: room.roundNum || 1,
+    playerCount: room.players.length,
+    targets,
+    result,
+    createdAt: Date.now(),
+  });
+  // 房间常驻内存，保留最近20局，够看历史又不无限增长。
+  room.roundHistory = room.roundHistory.slice(-20);
+
+  room.status = 'settlement';
+  broadcast(room, { type: 'round_end', result, state: getRoomPublicState(room) });
+}
+
+function finishRoundIfAllCardsGone(room) {
+  if (!room || room.status !== 'playing') return false;
+  if (activeCardPlayers(room).length > 0) return false;
+
+  if (room.pile.length > 0 && room.lastPlayerId) {
+    awardPile(room);
+  }
+  endRound(room);
+  return true;
+}
+
 function advanceTurn(room, startIdx) {
   if (!room || room.status !== 'playing' || room.players.length === 0) return;
+  if (finishRoundIfAllCardsGone(room)) return;
 
   const len = room.players.length;
   let idx = ((startIdx % len) + len) % len;
   let safety = 0;
 
-  while (safety < len * 2) {
-    if (room.lastPlay && room.passCount >= len - 1) {
+  while (safety < len * 3) {
+    if (finishRoundIfAllCardsGone(room)) return;
+
+    if (room.lastPlay && room.passCount >= pendingOpponentCount(room)) {
       const winnerIdx = awardPile(room);
+      if (finishRoundIfAllCardsGone(room)) return;
       idx = winnerIdx >= 0 ? winnerIdx : idx;
       safety = 0;
       continue;
@@ -150,8 +244,8 @@ function advanceTurn(room, startIdx) {
       return;
     }
 
-    // 离线玩家不会卡住整局：有上家牌时自动过牌；先手时直接跳到下一位在线玩家。
-    if (room.lastPlay && player && player.id !== room.lastPlayerId && player.hand?.length > 0) {
+    // 离线玩家不会卡住整局：有上家牌时自动过牌；已经出完牌的人不计入过牌数。
+    if (room.lastPlay && player && player.id !== room.lastPlayerId && hasCards(player)) {
       room.passCount++;
       broadcast(room, {
         type: 'player_passed',
@@ -192,6 +286,7 @@ function startGame(room) {
   room.pile = [];
   room.passCount = 0;
   room.finishOrder = [];
+  room.roundScores = [];
   room.status = 'playing';
   room.roundNum = (room.roundNum || 0) + 1;
 
@@ -201,44 +296,6 @@ function startGame(room) {
   for (const p of room.players) sendHand(room, p.id);
 
   setTurn(room, firstPlayer);
-}
-
-function getSettlementRanking(room) {
-  const finishIds = new Set(room.finishOrder || []);
-  const finished = (room.finishOrder || [])
-    .map(id => room.players.find(p => p.id === id))
-    .filter(Boolean);
-
-  // 当前游戏是“有人出完牌就结算”：第一个出完的人固定第一名，剩下的人按本局分数排。
-  const remaining = room.players
-    .filter(p => !finishIds.has(p.id))
-    .sort((a, b) => (b.score - a.score) || ((a.hand?.length || 0) - (b.hand?.length || 0)));
-
-  return [...finished, ...remaining];
-}
-
-function endRound(room) {
-  const ranked = getSettlementRanking(room);
-  const targets = getTargetScores(room.players.length);
-  ranked.forEach((p) => { p.totalScore = (p.totalScore || 0) + p.score; });
-
-  const result = ranked.map((p, i) => {
-    const target = targets[i] || 0;
-    const qualified = p.score >= target;
-    return {
-      id: p.id,
-      name: p.name,
-      score: p.score,
-      rank: i + 1,
-      target,
-      qualified,
-      isWin: qualified,
-      totalScore: p.totalScore,
-    };
-  });
-
-  room.status = 'settlement';
-  broadcast(room, { type: 'round_end', result, state: getRoomPublicState(room) });
 }
 
 wss.on('connection', (ws) => {
@@ -259,7 +316,7 @@ wss.on('connection', (ws) => {
         id: roomId, maxPlayers: maxPlayers || 4, status: 'waiting',
         players: [{ id: playerId, token: playerToken, name: cleanName, hand: [], score: 0, totalScore: 0, isOnline: true }],
         currentPlayer: 0, lastPlay: null, lastPlayCards: [], lastPlayerId: null,
-        pile: [], passCount: 0, extra: [], roundNum: 0, roundScores: [], finishOrder: [],
+        pile: [], passCount: 0, extra: [], roundNum: 0, roundScores: [], roundHistory: [], finishOrder: [],
       };
       rooms.set(roomId, room);
       clients.set(ws, { playerId, roomId, playerName: cleanName });
@@ -360,14 +417,10 @@ wss.on('connection', (ws) => {
         state: getRoomPublicState(room),
       });
 
-      // 出完牌了？
+      // 出完牌只记录名次，不立即结算；必须打到所有人手牌清空。
       if (player.hand.length === 0) {
-        if (!room.finishOrder) room.finishOrder = [];
-        if (!room.finishOrder.includes(player.id)) room.finishOrder.push(player.id);
-        // 该玩家赢得最后一墩
-        awardPile(room);
-        endRound(room);
-        return;
+        recordFinish(room, player);
+        if (finishRoundIfAllCardsGone(room)) return;
       }
 
       advanceTurn(room, playerIdx + 1);
@@ -401,6 +454,7 @@ wss.on('connection', (ws) => {
       room.pile = [];
       room.passCount = 0;
       room.finishOrder = [];
+      room.roundScores = [];
       broadcast(room, { type: 'room_update', state: getRoomPublicState(room) });
     }
   });
@@ -418,7 +472,7 @@ wss.on('connection', (ws) => {
 
           // 如果正好轮到离线玩家，立即按自动过牌处理，避免三人局 passCount 不足而绕回上家。
           if (room.status === 'playing' && room.currentPlayer === playerIdx) {
-            if (room.lastPlay && player.id !== room.lastPlayerId && player.hand?.length > 0) {
+            if (room.lastPlay && player.id !== room.lastPlayerId && hasCards(player)) {
               room.passCount++;
               broadcast(room, {
                 type: 'player_passed',
