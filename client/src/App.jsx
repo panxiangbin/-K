@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import Lobby from './pages/Lobby';
 import Game from './pages/Game';
@@ -17,15 +17,7 @@ export default function App() {
   const [myInfo, setMyInfo] = useState(null);
   const [settlementData, setSettlementData] = useState(null);
   const [toasts, setToasts] = useState([]);
-  const [canInstall, setCanInstall] = useState(false);
   const tid = useRef(0);
-
-  useEffect(() => {
-    const check = setInterval(() => {
-      if (window.__pwaPrompt) { setCanInstall(true); clearInterval(check); }
-    }, 500);
-    return () => clearInterval(check);
-  }, []);
 
   const toast = useCallback((text, type = 'info') => {
     const id = tid.current++;
@@ -113,16 +105,6 @@ export default function App() {
         <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block', animation: connected ? 'none' : 'pulse 1s infinite' }} />
         {connected ? '在线' : '连接中...'}
       </div>
-
-      {/* 安装 APP 按钮 */}
-      {canInstall && page === 'lobby' && (
-        <button onClick={() => window.__pwaPrompt?.()} style={{
-          position: 'fixed', top: 8, left: 8, zIndex: 1000,
-          fontSize: 11, padding: '4px 10px', borderRadius: 12,
-          background: '#f5c518', color: '#000', fontWeight: 700,
-          border: 'none', cursor: 'pointer',
-        }}>📲 安装APP</button>
-      )}
 
       {/* Toast */}
       <div style={{ position: 'fixed', top: 36, left: '50%', transform: 'translateX(-50%)', zIndex: 999, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', pointerEvents: 'none' }}>
