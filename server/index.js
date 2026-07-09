@@ -389,8 +389,17 @@ wss.on('connection', (ws) => {
           player.isOnline = false;
           broadcast(room, { type: 'room_update', state: getRoomPublicState(room) });
 
-          // 如果正好轮到离线玩家，立即跳过，避免整局卡死。
+          // 如果正好轮到离线玩家，立即按自动过牌处理，避免三人局 passCount 不足而绕回上家。
           if (room.status === 'playing' && room.currentPlayer === playerIdx) {
+            if (room.lastPlay && player.id !== room.lastPlayerId && player.hand?.length > 0) {
+              room.passCount++;
+              broadcast(room, {
+                type: 'player_passed',
+                playerId: player.id,
+                playerName: player.name + '（离线自动）',
+                auto: true,
+              });
+            }
             advanceTurn(room, playerIdx + 1);
           }
         }
