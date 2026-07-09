@@ -91,15 +91,14 @@ function detectPattern(cards) {
       const hasSmall = jokers.filter(c => c.rank === '小王').length === 2;
       if (hasBig && hasSmall) return { type: 'bomb', bombType: 'joker4', rank: '大王', suit: null };
     }
-    // 4张同点
+    // 4张同点：允许纯黑、纯红、红黑混合；混色也算四炸
     if (cards.every(c => c.rank === cards[0].rank)) {
       const rank = cards[0].rank;
       const allBlack = cards.every(c => isBlack(c.suit));
       const allRed   = cards.every(c => isRed(c.suit));
       if (allBlack) return { type: 'bomb', bombType: 'color4', rank, color: 'black' };
       if (allRed)   return { type: 'bomb', bombType: 'color4', rank, color: 'red' };
-      // 四张同点但混色 → 不合法（不算炸弹，也不算普通牌型）
-      return null;
+      return { type: 'bomb', bombType: 'color4', rank, color: 'mixed' };
     }
     return null;
   }
@@ -155,8 +154,8 @@ function comparePatterns(newP, oldP) {
     if (newP.bombType === 'joker4') return false; // 只有一种四王，相等
     if (newP.bombType === 'same8') return cardValue(newP.rank) > cardValue(oldP.rank);
     if (newP.bombType === 'color4') {
-      // 黑 > 红；同色比点数
-      const colorOrder = { black: 2, red: 1 };
+      // 四炸内部：黑 > 红 > 混色；同类再比点数
+      const colorOrder = { black: 3, red: 2, mixed: 1 };
       if (newP.color !== oldP.color) return colorOrder[newP.color] > colorOrder[oldP.color];
       return cardValue(newP.rank) > cardValue(oldP.rank);
     }
@@ -217,7 +216,8 @@ function getAllBombs(hand) {
   }
   for (const [, group] of Object.entries(rankGroups)) {
     if (group.length >= 8) results.push(group.slice(0, 8));
-    // 4张同色
+    // 4张同点：混色四炸也要枚举出来，避免提示/必须压漏判
+    if (group.length >= 4) results.push(group.slice(0, 4));
     const blacks = group.filter(c => isBlack(c.suit));
     const reds   = group.filter(c => isRed(c.suit));
     if (blacks.length >= 4) results.push(blacks.slice(0, 4));
