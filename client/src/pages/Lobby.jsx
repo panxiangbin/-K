@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const AVATAR_COLORS = ['#9333ea','#0891b2','#d97706','#dc2626'];
 const AVATARS = ['🐲','🐯','🦊','🐺'];
+
+function loadSavedSession(roomId) {
+  return {
+    playerId: localStorage.getItem(`henan50k:${roomId}:playerId`) || undefined,
+    playerToken: localStorage.getItem(`henan50k:${roomId}:playerToken`) || undefined,
+  };
+}
 
 export default function Lobby({ send, gameState, myInfo }) {
   const [name, setName] = useState('');
@@ -11,7 +18,9 @@ export default function Lobby({ send, gameState, myInfo }) {
   const inRoom = myInfo && gameState;
   const isHost = inRoom && gameState.players[0]?.id === myInfo.playerId;
 
-  if (inRoom && view !== 'room') setTimeout(() => setView('room'), 0);
+  useEffect(() => {
+    if (inRoom && view !== 'room') setView('room');
+  }, [inRoom, view]);
 
   function createRoom(maxPlayers) {
     if (!name.trim()) return alert('请输入昵称');
@@ -22,7 +31,9 @@ export default function Lobby({ send, gameState, myInfo }) {
   function joinRoom() {
     if (!name.trim()) return alert('请输入昵称');
     if (joinId.length !== 6) return alert('请输入6位房间号');
-    send({ type: 'join_room', roomId: joinId.trim(), playerName: name.trim() });
+    const roomId = joinId.trim();
+    const saved = loadSavedSession(roomId);
+    send({ type: 'join_room', roomId, playerName: name.trim(), ...saved });
   }
 
   // 横屏两栏布局
