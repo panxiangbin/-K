@@ -201,12 +201,17 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
     setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }, [sending]);
 
+  function releaseSendingSoon() {
+    setTimeout(() => setSending(false), 1500);
+  }
+
   function playCards() {
     if (!isMyTurn || !selected.size || sending) return;
     const cardIds = [...selected];
     send({ type: 'play_cards', cardIds });
     setSending(true);
     setSelected(new Set());
+    releaseSendingSoon();
   }
 
   function pass() {
@@ -214,6 +219,7 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
     send({ type: 'pass' });
     setSending(true);
     setSelected(new Set());
+    releaseSendingSoon();
   }
 
   function hint() {
