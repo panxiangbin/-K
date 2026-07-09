@@ -29,6 +29,24 @@ function clearSavedSession(roomId) {
   localStorage.removeItem('henan50k:lastRoomId');
 }
 
+function speakBombLine() {
+  try {
+    if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+    const u = new SpeechSynthesisUtterance('懒干受！');
+    u.lang = 'zh-CN';
+    u.volume = 1;
+    u.rate = 0.82;
+    u.pitch = 0.7;
+    const voices = window.speechSynthesis.getVoices?.() || [];
+    const zhVoice = voices.find(v => /zh|Chinese|中文|普通话/i.test(`${v.lang} ${v.name}`));
+    if (zhVoice) u.voice = zhVoice;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  } catch {
+    // 语音不可用时不影响正常游戏
+  }
+}
+
 export default function App() {
   const [page, setPage] = useState('lobby');
   const [gameState, setGameState] = useState(null);
@@ -86,7 +104,10 @@ export default function App() {
         break;
       case 'cards_played':
         setGameState(msg.state);
-        if (msg.pattern?.type === 'bomb') toast('💥 ' + msg.playerName + ' 炸弹！', 'bomb');
+        if (msg.pattern?.type === 'bomb') {
+          toast('💥 ' + msg.playerName + ' 炸弹！', 'bomb');
+          speakBombLine();
+        }
         break;
       case 'player_finished':
         toast(`🏁 ${msg.playerName} 第${msg.finishRank}名出完`, 'gold');
