@@ -10,21 +10,25 @@ function loadSavedSession(roomId) {
   };
 }
 
-export default function Lobby({ send, gameState, myInfo }) {
+function hasSavedSession() {
+  const roomId = localStorage.getItem('henan50k:lastRoomId');
+  if (!roomId) return false;
+  return Boolean(localStorage.getItem(`henan50k:${roomId}:playerId`) && localStorage.getItem(`henan50k:${roomId}:playerToken`));
+}
+
+export default function Lobby({ send, gameState, myInfo, onContinueLastRoom }) {
   const [name, setName] = useState('');
   const [joinId, setJoinId] = useState('');
   const [view, setView] = useState('home');
+  const [savedSession, setSavedSession] = useState(false);
 
   const inRoom = myInfo && gameState;
   const isHost = inRoom && gameState.players[0]?.id === myInfo.playerId;
 
-  useEffect(() => {
-    if (inRoom && view !== 'room') setView('room');
-  }, [inRoom, view]);
+  useEffect(() => { setSavedSession(hasSavedSession()); }, [view, inRoom]);
+  useEffect(() => { if (inRoom && view !== 'room') setView('room'); }, [inRoom, view]);
 
-  function getPlayerName() {
-    return name.trim() || '我';
-  }
+  function getPlayerName() { return name.trim() || '我'; }
 
   function createRoom(maxPlayers) {
     if (!name.trim()) return alert('请输入昵称');
@@ -70,6 +74,10 @@ export default function Lobby({ send, gameState, myInfo }) {
               <label style={{ fontSize:11, color:'#94a3b8', marginBottom:5, display:'block' }}>你的昵称</label>
               <input value={name} maxLength={8} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&name.trim()&&setView('create')} placeholder="输入昵称，单机可不填" style={{ width:'100%', padding:'11px 14px', borderRadius:10, fontSize:15, background:'#ffffff0d', border:'1px solid #ffffff22', color:'#f0f0f0', outline:'none' }} />
             </div>
+
+            {savedSession && (
+              <button onClick={onContinueLastRoom} style={{ width:'100%', marginBottom:10, padding:'11px 0', borderRadius:12, fontWeight:800, fontSize:14, background:'rgba(255,255,255,0.08)', color:'#f5c842', border:'1px solid #f5c84255' }}>继续上次房间</button>
+            )}
 
             <button onClick={startSolo} style={{ width:'100%', marginBottom:10, padding:'14px 0', borderRadius:12, fontWeight:900, fontSize:16, background:'linear-gradient(135deg,#f5c842,#d99920)', color:'#102016', boxShadow:'0 4px 18px #f5c84233', border:'none' }}>🤖 单机练习</button>
 
