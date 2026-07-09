@@ -423,7 +423,7 @@ function handlePlayerLeave(ws, manual = false) {
     if (room.status === 'playing' && room.currentPlayer === playerIdx) {
       if (room.lastPlay && player.id !== room.lastPlayerId && hasCards(player)) {
         room.passCount++;
-        recordTrickPass(room, player, true;
+        recordTrickPass(room, player, true);
         broadcast(room, { type: 'player_passed', playerId: player.id, playerName: player.name + (manual ? '（已退出）' : '（离线自动）'), auto: true, state: getRoomPublicState(room) });
       }
       advanceTurn(room, playerIdx + 1);
