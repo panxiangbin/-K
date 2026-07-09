@@ -4,7 +4,7 @@ import Card, { MiniCard } from '../components/Card';
 const CARD_ORDER = ['3','4','5','6','7','8','9','10','J','Q','K','A','2','小王','大王'];
 const BOMB_LEVEL = { '50K': 1, color4: 2, same8: 3, joker4: 4 };
 const SUIT_ORDER = { '♠': 4, '♥': 3, '♣': 2, '♦': 1 };
-const TYPE_LABEL = { single:'单张', pair:'对子', triple:'三张', bomb:'炸弹' };
+const TYPE_LABEL = { single:'单张', pair:'对子', triple:'三张', four:'四张', bomb:'炸弹' };
 const AVATARS = ['龙','虎','狐','狼'];
 const AVATAR_COLORS = ['#7c3aed','#0891b2','#d97706','#dc2626'];
 const SCORE_RANKS = new Set(['5', '10', 'K']);
@@ -48,7 +48,7 @@ function detectPattern(cards) {
       const allRed = cards.every(c => isRed(c.suit));
       if (allBlack) return { type: 'bomb', bombType: 'color4', rank, color: 'black' };
       if (allRed) return { type: 'bomb', bombType: 'color4', rank, color: 'red' };
-      return { type: 'bomb', bombType: 'color4', rank, color: 'mixed' };
+      return { type: 'four', rank };
     }
     return null;
   }
@@ -69,7 +69,7 @@ function comparePatterns(newP, oldP) {
     if (newP.bombType === 'joker4') return false;
     if (newP.bombType === 'same8') return cardValue(newP.rank) > cardValue(oldP.rank);
     if (newP.bombType === 'color4') {
-      const colorOrder = { black: 3, red: 2, mixed: 1 };
+      const colorOrder = { black: 2, red: 1 };
       if (newP.color !== oldP.color) return colorOrder[newP.color] > colorOrder[oldP.color];
       return cardValue(newP.rank) > cardValue(oldP.rank);
     }
@@ -83,6 +83,7 @@ function getPatternLen(p) {
   if (p.type === 'single') return 1;
   if (p.type === 'pair') return 2;
   if (p.type === 'triple') return 3;
+  if (p.type === 'four') return 4;
   return null;
 }
 
@@ -115,7 +116,6 @@ function getAllBombs(hand) {
   }
   for (const group of Object.values(rankGroups)) {
     if (group.length >= 8) results.push(group.slice(0, 8));
-    if (group.length >= 4) results.push(group.slice(0, 4));
     const blacks = group.filter(c => isBlack(c.suit));
     const reds = group.filter(c => isRed(c.suit));
     if (blacks.length >= 4) results.push(blacks.slice(0, 4));
@@ -171,11 +171,7 @@ function patternLabel(pattern) {
   if (!pattern) return '出牌';
   if (pattern.type !== 'bomb') return TYPE_LABEL[pattern.type] || '出牌';
   if (pattern.bombType === '50K') return `${pattern.suit}五十K`;
-  if (pattern.bombType === 'color4') {
-    if (pattern.color === 'black') return '黑四炸';
-    if (pattern.color === 'red') return '红四炸';
-    return '四炸';
-  }
+  if (pattern.bombType === 'color4') return `${pattern.color === 'black' ? '黑' : '红'}四炸`;
   if (pattern.bombType === 'same8') return '八张炸弹';
   if (pattern.bombType === 'joker4') return '四王炸弹';
   return '炸弹';
