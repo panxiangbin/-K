@@ -5,15 +5,15 @@ const SCORE_MAP = { '5': 5, '10': 10, 'K': 10 };
 // 炸弹等级（从小到大）
 const BOMB_LEVEL = { '50K': 1, 'color4': 2, 'same8': 3, 'joker4': 4 };
 
+// 五十K花色大小：黑桃 > 红桃 > 梅花 > 方块
+const SUIT_ORDER = { '♠': 4, '♥': 3, '♣': 2, '♦': 1 };
+
 function cardValue(rank) {
   return CARD_ORDER.indexOf(rank);
 }
 
 function isBlack(suit) { return suit === '♠' || suit === '♣'; }
 function isRed(suit)   { return suit === '♥' || suit === '♦'; }
-
-// 花色顺序（用于五十K比较）
-const SUIT_ORDER = { '♠': 4, '♥': 3, '♣': 2, '♦': 1 };
 
 function createDeck() {
   const suits = ['♠','♥','♦','♣'];
@@ -58,6 +58,22 @@ function sortCards(cards) {
   return [...cards].sort((a, b) => cardValue(a.rank) - cardValue(b.rank));
 }
 
+function isSameRank(cards) {
+  return cards.length > 0 && cards.every(c => c.rank === cards[0].rank);
+}
+
+// 检测同花色五十K（5+10+K 同花色）
+function detect50K(cards) {
+  if (cards.length !== 3) return null;
+  const sorted = [...cards].sort((a,b) => cardValue(a.rank) - cardValue(b.rank));
+  if (sorted.map(c => c.rank).join(',') !== '5,10,K') return null;
+  const suit = sorted[0].suit;
+  if (suit !== 'joker' && sorted.every(c => c.suit === suit)) {
+    return { type: 'bomb', bombType: '50K', rank: 'K', suit };
+  }
+  return null;
+}
+
 // ─── 判断牌型 ────────────────────────────────────────────────
 function detectPattern(cards) {
   if (!cards || cards.length === 0) return null;
@@ -66,33 +82,30 @@ function detectPattern(cards) {
   // 单张
   if (n === 1) return { type: 'single', rank: cards[0].rank };
 
-  // 对子
+  // 对子：小王+大王不算对子，因为点数不同
   if (n === 2) {
     if (cards[0].rank === cards[1].rank) return { type: 'pair', rank: cards[0].rank };
     return null;
   }
 
-  // 三张
+  // 三张 / 同花五十K
   if (n === 3) {
-    // 先检查五十K炸弹
     const f50k = detect50K(cards);
     if (f50k) return f50k;
-    // 三同
-    if (cards.every(c => c.rank === cards[0].rank)) return { type: 'triple', rank: cards[0].rank };
+    if (isSameRank(cards)) return { type: 'triple', rank: cards[0].rank };
     return null;
   }
 
-  // 四张
+  // 四张：四王炸 / 红四炸 / 黑四炸 / 普通四张
   if (n === 4) {
-    // 4张王炸弹
     const jokers = cards.filter(c => c.suit === 'joker');
     if (jokers.length === 4) {
       const hasBig = jokers.filter(c => c.rank === '大王').length === 2;
       const hasSmall = jokers.filter(c => c.rank === '小王').length === 2;
       if (hasBig && hasSmall) return { type: 'bomb', bombType: 'joker4', rank: '大王', suit: null };
     }
-    // 4张同点：纯黑/纯红算同色炸弹；红黑混合只是普通四张，不是炸弹
-    if (cards.every(c => c.rank === cards[0].rank)) {
+
+    if (isSameRank(cards)) {
       const rank = cards[0].rank;
       const allBlack = cards.every(c => isBlack(c.suit));
       const allRed   = cards.every(c => isRed(c.suit));
@@ -103,39 +116,24 @@ function detectPattern(cards) {
     return null;
   }
 
-  // 八张（同点炸弹）
-  if (n === 8) {
-    if (cards.every(c => c.rank === cards[0].rank)) {
-      return { type: 'bomb', bombType: 'same8', rank: cards[0].rank };
-    }
-    return null;
+  // 5/6/7 张同点数：普通牌型，不是炸弹，也不自动拆四炸
+  if (n === 5 && isSameRank(cards)) return { type: 'five', rank: cards[0].rank };
+  if (n === 6 && isSameRank(cards)) return { type: 'six', rank: cards[0].rank };
+  if (n === 7 && isSameRank(cards)) return { type: 'seven', rank: cards[0].rank };
+
+  // 八张同点数：八张炸弹
+  if (n === 8 && isSameRank(cards)) {
+    return { type: 'bomb', bombType: 'same8', rank: cards[0].rank };
   }
 
-  // 禁止：顺子、连对、其他组合
-  return null;
-}
-
-// 检测同花色五十K（5+10+K 同花色）
-function detect50K(cards) {
-  if (cards.length !== 3) return null;
-  const ranks = cards.map(c => c.rank).sort().join(',');
-  if (ranks !== '10,5,K' && ranks !== '10,K,5' && ranks !== '5,10,K') {
-    // 排序后是否为 5,10,K
-    const sorted = [...cards].sort((a,b) => cardValue(a.rank) - cardValue(b.rank));
-    if (sorted.map(c => c.rank).join(',') !== '5,10,K') return null;
-  }
-  const sorted = [...cards].sort((a,b) => cardValue(a.rank) - cardValue(b.rank));
-  if (sorted.map(c => c.rank).join(',') !== '5,10,K') return null;
-  const suit = sorted[0].suit;
-  if (sorted.every(c => c.suit === suit) && suit !== 'joker') {
-    return { type: 'bomb', bombType: '50K', rank: 'K', suit };
-  }
+  // 禁止：顺子、连对、三带一、杂牌组合、不同花五十K、小王+大王
   return null;
 }
 
 // ─── 比较牌型 ────────────────────────────────────────────────
 // 返回 true 表示 newP 能压 oldP
 function comparePatterns(newP, oldP) {
+  if (!newP) return false;
   if (!oldP) return true; // 先手，任何合法牌型都可出
 
   const newBomb = newP.type === 'bomb';
@@ -150,38 +148,40 @@ function comparePatterns(newP, oldP) {
     const nl = BOMB_LEVEL[newP.bombType];
     const ol = BOMB_LEVEL[oldP.bombType];
     if (nl !== ol) return nl > ol;
-    // 同等级炸弹内部比较
-    if (newP.bombType === 'joker4') return false; // 只有一种四王，相等
+
+    if (newP.bombType === 'joker4') return false; // 四王炸只有一种，最大但不能互压
     if (newP.bombType === 'same8') return cardValue(newP.rank) > cardValue(oldP.rank);
+
     if (newP.bombType === 'color4') {
-      // 同色四炸内部：黑 > 红；同色再比点数
+      // 红/黑四炸：先比点数；点数相同，黑 > 红
+      const rankDiff = cardValue(newP.rank) - cardValue(oldP.rank);
+      if (rankDiff !== 0) return rankDiff > 0;
       const colorOrder = { black: 2, red: 1 };
-      if (newP.color !== oldP.color) return colorOrder[newP.color] > colorOrder[oldP.color];
-      return cardValue(newP.rank) > cardValue(oldP.rank);
+      return colorOrder[newP.color] > colorOrder[oldP.color];
     }
+
     if (newP.bombType === '50K') {
-      // ♠ > ♥ > ♣ > ♦
+      // 同花五十K：黑桃 > 红桃 > 梅花 > 方块
       return (SUIT_ORDER[newP.suit] || 0) > (SUIT_ORDER[oldP.suit] || 0);
     }
   }
 
-  // 非炸弹：必须同类型
+  // 非炸弹：必须同类型、同张数压同张数
   if (newP.type !== oldP.type) return false;
-
-  // 单/对/三/普通四张：直接比点数
   return cardValue(newP.rank) > cardValue(oldP.rank);
 }
 
 // ─── 检查玩家手牌中是否存在能压当前牌的出法 ─────────────────
 function canBeat(hand, lastPattern) {
   if (!lastPattern) return true; // 先手，总能出
-  // 逐一枚举手牌中所有合法子集（性能优化：只枚举相同张数）
+
   const n = lastPattern.type === 'bomb' ? null : getPatternLen(lastPattern);
   const candidates = n ? getCombinations(hand, n) : getAllBombs(hand);
   for (const combo of candidates) {
     const p = detectPattern(combo);
     if (p && comparePatterns(p, lastPattern)) return true;
   }
+
   // 如果上家是非炸弹，还要检查炸弹
   if (lastPattern.type !== 'bomb') {
     for (const combo of getAllBombs(hand)) {
@@ -197,32 +197,40 @@ function getPatternLen(p) {
   if (p.type === 'pair') return 2;
   if (p.type === 'triple') return 3;
   if (p.type === 'four') return 4;
+  if (p.type === 'five') return 5;
+  if (p.type === 'six') return 6;
+  if (p.type === 'seven') return 7;
   return null;
 }
 
 // 获取手牌中所有可能的炸弹组合
 function getAllBombs(hand) {
   const results = [];
-  // 4张王
+
+  // 4张王炸弹：小王小王大王大王
   const big = hand.filter(c => c.rank === '大王');
   const small = hand.filter(c => c.rank === '小王');
   if (big.length >= 2 && small.length >= 2) {
     results.push([big[0], big[1], small[0], small[1]]);
   }
-  // 8张同点
+
   const rankGroups = {};
   for (const c of hand) {
     if (!rankGroups[c.rank]) rankGroups[c.rank] = [];
     rankGroups[c.rank].push(c);
   }
+
   for (const [, group] of Object.entries(rankGroups)) {
+    // 8张同点数是大炸弹
     if (group.length >= 8) results.push(group.slice(0, 8));
-    // 只有纯黑/纯红四张同点才是同色炸弹；混色四张不是炸弹
+
+    // 只有刚好选出纯黑/纯红4张同点数，才是同色四炸；5/6/7张不自动拆炸弹
     const blacks = group.filter(c => isBlack(c.suit));
     const reds   = group.filter(c => isRed(c.suit));
     if (blacks.length >= 4) results.push(blacks.slice(0, 4));
     if (reds.length >= 4)   results.push(reds.slice(0, 4));
   }
+
   // 同花色五十K
   const suits = ['♠','♥','♣','♦'];
   for (const suit of suits) {
