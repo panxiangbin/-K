@@ -158,11 +158,6 @@ function detectSelectedType(cards) {
   return pattern ? patternLabel(pattern) : '?';
 }
 
-function splitHandRows(cards) {
-  if (cards.length <= 18) return [cards];
-  return [cards.slice(0, 18), cards.slice(18, 36)];
-}
-
 export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast }) {
   const [selected, setSelected] = useState(new Set());
   const [floats, setFloats] = useState([]);
@@ -175,7 +170,6 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   const isMyTurn = gameState?.currentPlayer === myIdx;
   const isFirst = !gameState?.lastPlay;
   const sortedHand = sortCards(myHand);
-  const handRows = splitHandRows(sortedHand);
   const lastPlayKey = gameState?.lastPlayCards?.map(c => c.id).join('|') || '';
 
   useEffect(() => { if (isMyTurn && navigator.vibrate) navigator.vibrate([100, 50, 100]); }, [isMyTurn]);
@@ -293,10 +287,10 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
         </div>
 
         <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0 }}>
-          <div style={{ height:'32%', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
+          <div style={{ height:'38%', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
             {topOpp && <OpponentTop player={topOpp} idx={players.indexOf(topOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(topOpp)} />}
           </div>
-          <div style={{ height:'68%', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
+          <div style={{ height:'62%', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
             <div style={{ position:'absolute', width:'80%', height:'80%', borderRadius:'50%', border:'2px solid rgba(255,255,255,0.05)', background:'rgba(0,0,0,0.1)', boxShadow: isMyTurn ? 'inset 0 0 30px rgba(245,197,24,0.2)' : 'none', animation: isMyTurn ? 'myTurnPulse 2s infinite' : 'none' }} />
             {lp ? (
               <div style={{ zIndex:5, textAlign:'center', maxWidth:'96%' }}>
@@ -317,16 +311,14 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
           {selected.size > 0 ? `已选${selected.size}张 · ${selectedType}` : sending ? '正在出牌...' : ''}
         </div>
 
-        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'var(--hand-row-gap, 4px)', padding:'var(--hand-y-pad-top, 10px) var(--hand-x-pad, 40px) var(--hand-y-pad-bottom, 20px)', overflow:'visible', touchAction:'manipulation' }}>
-          {handRows.map((row, rowIndex) => (
-            <div key={rowIndex} style={{ display:'flex', justifyContent:'center', width:'100%', minWidth:0 }}>
-              {row.map((card, i) => (
-                <div key={card.id} style={{ marginLeft: i === 0 ? 0 : 'var(--hand-overlap, -24px)' }}>
-                  <Card card={card} selected={selected.has(card.id)} onClick={() => toggleCard(card.id)} />
-                </div>
-              ))}
-            </div>
-          ))}
+        <div style={{ display:'flex', justifyContent:'center', padding:'var(--hand-y-pad-top, 10px) var(--hand-x-pad, 40px) var(--hand-y-pad-bottom, 20px)', overflow:'visible', touchAction:'manipulation' }}>
+          <div style={{ display:'flex', justifyContent:'center', minWidth:0 }}>
+            {sortedHand.map((card, i) => (
+              <div key={card.id} style={{ marginLeft: i === 0 ? 0 : 'var(--hand-overlap, -24px)' }}>
+                <Card card={card} selected={selected.has(card.id)} onClick={() => toggleCard(card.id)} />
+              </div>
+            ))}
+          </div>
         </div>
 
         <div style={{ display:'flex', gap:7, padding:'0 10px', alignItems:'center' }}>
