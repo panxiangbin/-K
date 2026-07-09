@@ -20,6 +20,15 @@ function loadLastSession() {
   return { roomId, playerId, playerToken };
 }
 
+function clearSavedSession(roomId) {
+  const targetRoomId = roomId || localStorage.getItem('henan50k:lastRoomId');
+  if (targetRoomId) {
+    localStorage.removeItem(`henan50k:${targetRoomId}:playerId`);
+    localStorage.removeItem(`henan50k:${targetRoomId}:playerToken`);
+  }
+  localStorage.removeItem('henan50k:lastRoomId');
+}
+
 export default function App() {
   const [page, setPage] = useState('lobby');
   const [gameState, setGameState] = useState(null);
@@ -36,6 +45,15 @@ export default function App() {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2500);
   }, []);
 
+  const resetToLobby = useCallback(() => {
+    setPage('lobby');
+    setGameState(null);
+    setMyHand([]);
+    setMyInfo(null);
+    setSettlementData(null);
+    autoRejoinTried.current = false;
+  }, []);
+
   const onMessage = useCallback((msg) => {
     switch (msg.type) {
       case 'room_joined':
@@ -47,6 +65,11 @@ export default function App() {
           playerIndex: msg.playerIndex,
         });
         if (msg.reconnect) toast('已回到房间', 'success');
+        break;
+      case 'room_left':
+        clearSavedSession(msg.roomId);
+        resetToLobby();
+        toast('已退出房间', 'success');
         break;
       case 'room_update':
         setGameState(msg.state);
@@ -97,7 +120,7 @@ export default function App() {
       default:
         break;
     }
-  }, [toast]);
+  }, [toast, resetToLobby]);
 
   const { send, connected } = useWebSocket(onMessage);
 
@@ -108,15 +131,37 @@ export default function App() {
     }
     if (autoRejoinTried.current) return;
 
+    // 只在当前页面已有身份时自动重连。禁止打开网页时从 localStorage 静默进入旧房间，避免被困在单机局里。
     const saved = myInfo?.roomId && myInfo?.playerId && myInfo?.playerToken
       ? { roomId: myInfo.roomId, playerId: myInfo.playerId, playerToken: myInfo.playerToken }
-      : loadLastSession();
+      : null;
     if (!saved) return;
 
     autoRejoinTried.current = true;
     const ok = send({ type: 'join_room', roomId: saved.roomId, playerId: saved.playerId, playerToken: saved.playerToken, playerName: '' });
-    if (ok) toast('正在回到房间...', 'info');
+    if (ok) toast('正在恢复连接...', 'info');
   }, [connected, myInfo, send, toast]);
+
+  const continueLastRoom = useCallback(() => {
+    const saved = loadLastSession();
+    if (!saved) {
+      toast('没有可继续的房间', 'dim');
+      return;
+    }
+    send({ type: 'join_room', roomId: saved.roomId, playerId: saved.playerId, playerToken: saved.playerToken, playerName: '' });
+  }, [send, toast]);
+
+  const returnToLobby = useCallback(() => {
+    setPage('lobby');
+    toast('已返回大厅，房间仍保留', 'info');
+  }, [toast]);
+
+  const exitRoom = useCallback(() => {
+    const roomId = myInfo?.roomId || gameState?.id;
+    send({ type: 'leave_room' });
+    clearSavedSession(roomId);
+    resetToLobby();
+  }, [send, myInfo, gameState, resetToLobby]);
 
   const TOAST_STYLE = {
     info: { color: '#60a5fa', bg: '#1e3a5f' },
@@ -129,7 +174,6 @@ export default function App() {
 
   return (
     <div style={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
-      {/* 网络状态 */}
       <div style={{
         position: 'fixed', top: 8, right: 8, zIndex: 1000,
         fontSize: 11, padding: '3px 8px', borderRadius: 12,
@@ -142,7 +186,6 @@ export default function App() {
         {connected ? '在线' : '连接中...'}
       </div>
 
-      {/* Toast */}
       <div style={{ position: 'fixed', top: 36, left: '50%', transform: 'translateX(-50%)', zIndex: 999, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', pointerEvents: 'none' }}>
         {toasts.map(t => {
           const s = TOAST_STYLE[t.type] || TOAST_STYLE.info;
@@ -158,9 +201,9 @@ export default function App() {
         })}
       </div>
 
-      {page === 'lobby' && <Lobby send={send} gameState={gameState} myInfo={myInfo} />}
-      {page === 'game' && <Game send={send} gameState={gameState} myHand={myHand} setMyHand={setMyHand} myInfo={myInfo} toast={toast} />}
-      {page === 'settlement' && <Settlement data={settlementData} send={send} myInfo={myInfo} gameState={gameState} />}
+      {page === 'lobby' && <Lobby send={send} gameState={gameState} myInfo={myInfo} onContinueLastRoom={continueLastRoom} />}
+      {page === 'game' && <Game send={send} gameState={gameState} myHand={myHand} setMyHand={setMyHand} myInfo={myInfo} toast={toast} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
+      {page === 'settlement' && <Settlement data={settlementData} send={send} myInfo={myInfo} gameState={gameState} onExitRoom={exitRoom} />}
     </div>
   );
 }
