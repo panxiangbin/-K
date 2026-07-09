@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import Lobby from './pages/Lobby';
 import Game from './pages/Game';
@@ -6,8 +6,18 @@ import Settlement from './pages/Settlement';
 
 function savePlayerSession(msg) {
   if (!msg?.roomId || !msg?.playerId || !msg?.playerToken) return;
+  localStorage.setItem('henan50k:lastRoomId', msg.roomId);
   localStorage.setItem(`henan50k:${msg.roomId}:playerId`, msg.playerId);
   localStorage.setItem(`henan50k:${msg.roomId}:playerToken`, msg.playerToken);
+}
+
+function loadLastSession() {
+  const roomId = localStorage.getItem('henan50k:lastRoomId');
+  if (!roomId) return null;
+  const playerId = localStorage.getItem(`henan50k:${roomId}:playerId`);
+  const playerToken = localStorage.getItem(`henan50k:${roomId}:playerToken`);
+  if (!playerId || !playerToken) return null;
+  return { roomId, playerId, playerToken };
 }
 
 export default function App() {
@@ -18,6 +28,7 @@ export default function App() {
   const [settlementData, setSettlementData] = useState(null);
   const [toasts, setToasts] = useState([]);
   const tid = useRef(0);
+  const autoRejoinTried = useRef(false);
 
   const toast = useCallback((text, type = 'info') => {
     const id = tid.current++;
@@ -35,6 +46,7 @@ export default function App() {
           roomId: msg.roomId,
           playerIndex: msg.playerIndex,
         });
+        if (msg.reconnect) toast('已回到房间', 'success');
         break;
       case 'room_update':
         setGameState(msg.state);
@@ -42,6 +54,10 @@ export default function App() {
           setPage('lobby');
           setMyHand([]);
           setSettlementData(null);
+        } else if (msg.state.status === 'playing') {
+          setPage('game');
+        } else if (msg.state.status === 'settlement') {
+          setPage('settlement');
         }
         break;
       case 'game_start':
@@ -84,6 +100,15 @@ export default function App() {
   }, [toast]);
 
   const { send, connected } = useWebSocket(onMessage);
+
+  useEffect(() => {
+    if (!connected || myInfo || autoRejoinTried.current) return;
+    const saved = loadLastSession();
+    if (!saved) return;
+    autoRejoinTried.current = true;
+    const ok = send({ type: 'join_room', roomId: saved.roomId, playerId: saved.playerId, playerToken: saved.playerToken, playerName: '' });
+    if (ok) toast('正在回到房间...', 'info');
+  }, [connected, myInfo, send, toast]);
 
   const TOAST_STYLE = {
     info: { color: '#60a5fa', bg: '#1e3a5f' },
