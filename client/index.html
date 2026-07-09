@@ -8,18 +8,29 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
     html,body{height:100%;width:100%;overflow:hidden;background:#0d1117;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
-    #root{height:100%;width:100%;overflow:hidden;background:#0d1117;padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+    #root{
+      height:100%;width:100%;overflow:hidden;background:#0d1117;
+      padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);
+      --card-w:80px;--card-h:112px;--card-rank-font:18px;--card-suit-font:14px;--card-center-font:36px;--card-selected-offset:-16px;
+      --tiny-card-w:28px;--tiny-card-h:40px;--mini-card-w:38px;--mini-card-h:56px;
+      --hand-overlap:-24px;--hand-x-pad:40px;--hand-y-pad-top:10px;--hand-y-pad-bottom:20px;
+      --scorebar-h:48px;--side-col-w:100px;
+    }
 
-    /* 手机竖屏打开时，不再弹提示，而是把整个游戏画布强制旋转成横屏布局。 */
+    /* 手机竖屏打开时，不弹提示，直接把游戏画布强制旋转成横屏牌桌。 */
     body.force-landscape #root{
       position:fixed;
-      top:50%;
-      left:50%;
-      width:100vh;
-      height:100vw;
-      transform:translate(-50%,-50%) rotate(90deg);
-      transform-origin:center center;
+      top:0;
+      left:0;
+      width:var(--app-height, 100vh);
+      height:var(--app-width, 100vw);
+      transform:rotate(90deg) translateY(-100%);
+      transform-origin:top left;
       padding:env(safe-area-inset-left) env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom);
+      --card-w:56px;--card-h:78px;--card-rank-font:14px;--card-suit-font:11px;--card-center-font:25px;--card-selected-offset:-10px;
+      --tiny-card-w:20px;--tiny-card-h:29px;--mini-card-w:30px;--mini-card-h:44px;--mini-rank-font:10px;--mini-suit-font:8px;--mini-center-font:16px;
+      --hand-overlap:-8px;--hand-x-pad:18px;--hand-y-pad-top:5px;--hand-y-pad-bottom:8px;
+      --scorebar-h:40px;--side-col-w:72px;
     }
   </style>
 </head>
@@ -41,9 +52,19 @@
 
     (function(){
       function isTouchDevice(){ return ('ontouchstart' in window) || navigator.maxTouchPoints > 0; }
+      function syncViewportVars(){
+        var vv = window.visualViewport;
+        var w = vv ? vv.width : window.innerWidth;
+        var h = vv ? vv.height : window.innerHeight;
+        document.documentElement.style.setProperty('--app-width', w + 'px');
+        document.documentElement.style.setProperty('--app-height', h + 'px');
+      }
       function applyForcedLandscape(){
-        var portrait = window.innerHeight > window.innerWidth;
-        document.body.classList.toggle('force-landscape', isTouchDevice() && portrait);
+        syncViewportVars();
+        var vv = window.visualViewport;
+        var w = vv ? vv.width : window.innerWidth;
+        var h = vv ? vv.height : window.innerHeight;
+        document.body.classList.toggle('force-landscape', isTouchDevice() && h > w);
       }
 
       // 尝试锁定系统横屏；普通手机浏览器经常会拒绝，所以同时保留 CSS 强制横屏兜底。
@@ -56,6 +77,7 @@
       }
 
       window.addEventListener('resize', applyForcedLandscape);
+      if (window.visualViewport) window.visualViewport.addEventListener('resize', applyForcedLandscape);
       window.addEventListener('orientationchange', function(){ setTimeout(applyForcedLandscape, 300); });
       document.addEventListener('DOMContentLoaded', function(){ applyForcedLandscape(); tryLockLandscape(); });
       document.addEventListener('click', tryLockLandscape, { once:true });
