@@ -15,13 +15,25 @@ cd server && npm install
 cd ../client && npm install
 
 # 2. 构建前端
-cd client && npm run build
+cd ../client && npm run build
 
 # 3. 启动服务器（会同时提供前端静态文件）
-cd server && node index.js
+cd ../server && node index.js
 ```
 
-打开浏览器访问 `http://localhost:3001`，局域网内其他设备用你电脑的 IP 访问（如 `http://192.168.1.x:3001`）。
+打开浏览器访问 `http://localhost:3002`，局域网内其他设备用你电脑的 IP 访问（如 `http://192.168.1.x:3002`）。
+
+开发模式：
+
+```bash
+# 终端1：启动后端
+cd server && npm install && node index.js
+
+# 终端2：启动前端
+cd client && npm install && npm run dev
+```
+
+开发模式打开 Vite 地址即可，前端会自动连接本机 `ws://localhost:3002`。
 
 ---
 
@@ -70,11 +82,14 @@ cd server && node index.js
 | 单张 | 一张牌 |
 | 对子 | 两张相同点数 |
 | 三张 | 三张相同点数 |
-| 顺子 | 5张以上连续（不含2和王） |
-| 连对 | 3对以上连续对子 |
-| 炸弹 | 4张相同 或 大王+小王（最大） |
+| 同花五十K | 同花色 5 + 10 + K，属于炸弹 |
+| 四张同色炸弹 | 同点数 4 张黑牌或 4 张红牌 |
+| 八张炸弹 | 两副牌同点数 8 张 |
+| 四王炸弹 | 两张大王 + 两张小王，最大 |
 
-**得分牌**：5（5分）、10（10分）、K（10分），共200分
+**得分牌**：5（5分）、10（10分）、K（10分），共200分。
+
+**当前版本规则约束**：不支持顺子、连对、两王炸；前端显示、提示和后端校验已按上述规则保持一致。
 
 ---
 
