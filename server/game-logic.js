@@ -47,7 +47,6 @@ function dealCards(playerCount) {
   for (let i = 0; i < playerCount; i++) {
     hands.push(deck.slice(i * perPlayer, (i + 1) * perPlayer));
   }
-  // 翻明牌：从最后一张开始找非王的牌
   let flipIdx = deck.length - 1;
   while (flipIdx >= 0 && deck[flipIdx].suit === 'joker') flipIdx--;
   const flipCard = deck[flipIdx] || deck[deck.length - 1];
@@ -60,6 +59,15 @@ function sortCards(cards) {
 
 function isSameRank(cards) {
   return cards.length > 0 && cards.every(c => c.rank === cards[0].rank);
+}
+
+function groupByRank(hand) {
+  const groups = {};
+  for (const c of hand) {
+    if (!groups[c.rank]) groups[c.rank] = [];
+    groups[c.rank].push(c);
+  }
+  return groups;
 }
 
 // 检测同花色五十K（5+10+K 同花色）
@@ -171,27 +179,6 @@ function comparePatterns(newP, oldP) {
   return cardValue(newP.rank) > cardValue(oldP.rank);
 }
 
-// ─── 检查玩家手牌中是否存在能压当前牌的出法 ─────────────────
-function canBeat(hand, lastPattern) {
-  if (!lastPattern) return true; // 先手，总能出
-
-  const n = lastPattern.type === 'bomb' ? null : getPatternLen(lastPattern);
-  const candidates = n ? getCombinations(hand, n) : getAllBombs(hand);
-  for (const combo of candidates) {
-    const p = detectPattern(combo);
-    if (p && comparePatterns(p, lastPattern)) return true;
-  }
-
-  // 如果上家是非炸弹，还要检查炸弹
-  if (lastPattern.type !== 'bomb') {
-    for (const combo of getAllBombs(hand)) {
-      const p = detectPattern(combo);
-      if (p && comparePatterns(p, lastPattern)) return true;
-    }
-  }
-  return false;
-}
-
 function getPatternLen(p) {
   if (p.type === 'single') return 1;
   if (p.type === 'pair') return 2;
@@ -201,6 +188,40 @@ function getPatternLen(p) {
   if (p.type === 'six') return 6;
   if (p.type === 'seven') return 7;
   return null;
+}
+
+function getNormalCandidates(hand, n) {
+  if (n === 1) return hand.map(c => [c]);
+  const groups = groupByRank(hand);
+  const results = [];
+  for (const group of Object.values(groups)) {
+    if (group.length >= n) results.push(group.slice(0, n));
+  }
+  return results;
+}
+
+// ─── 检查玩家手牌中是否存在能压当前牌的出法 ─────────────────
+function canBeat(hand, lastPattern) {
+  if (!lastPattern) return true; // 先手，总能出
+
+  if (lastPattern.type !== 'bomb') {
+    const n = getPatternLen(lastPattern);
+    for (const combo of getNormalCandidates(hand, n)) {
+      const p = detectPattern(combo);
+      if (p && comparePatterns(p, lastPattern)) return true;
+    }
+    for (const combo of getAllBombs(hand)) {
+      const p = detectPattern(combo);
+      if (p && comparePatterns(p, lastPattern)) return true;
+    }
+    return false;
+  }
+
+  for (const combo of getAllBombs(hand)) {
+    const p = detectPattern(combo);
+    if (p && comparePatterns(p, lastPattern)) return true;
+  }
+  return false;
 }
 
 // 获取手牌中所有可能的炸弹组合
@@ -214,11 +235,7 @@ function getAllBombs(hand) {
     results.push([big[0], big[1], small[0], small[1]]);
   }
 
-  const rankGroups = {};
-  for (const c of hand) {
-    if (!rankGroups[c.rank]) rankGroups[c.rank] = [];
-    rankGroups[c.rank].push(c);
-  }
+  const rankGroups = groupByRank(hand);
 
   for (const [, group] of Object.entries(rankGroups)) {
     // 8张同点数是大炸弹
@@ -242,7 +259,7 @@ function getAllBombs(hand) {
   return results;
 }
 
-// 获取 n 张牌的组合
+// 获取 n 张牌的组合，仅保留给少量工具函数备用；核心规则不再用它暴力枚举长组合
 function getCombinations(arr, n) {
   if (n === 1) return arr.map(c => [c]);
   if (n > arr.length) return [];
