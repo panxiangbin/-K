@@ -28,6 +28,10 @@ function genPlayerId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function genPlayerToken() {
+  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+}
+
 function broadcast(room, msg) {
   for (const [ws, info] of clients.entries()) {
     if (info.roomId === room.id && ws.readyState === WebSocket.OPEN) {
@@ -38,6 +42,29 @@ function broadcast(room, msg) {
 
 function send(ws, msg) {
   if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+function sendError(ws, msg) {
+  send(ws, { type: 'error', msg });
+}
+
+function hasOpenConnection(roomId, playerId, exceptWs = null) {
+  for (const [ws, info] of clients.entries()) {
+    if (ws !== exceptWs && info.roomId === roomId && info.playerId === playerId && ws.readyState === WebSocket.OPEN) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function sendHand(room, playerId) {
+  const player = room.players.find(p => p.id === playerId);
+  if (!player) return;
+  for (const [ws, info] of clients.entries()) {
+    if (info.roomId === room.id && info.playerId === playerId) {
+      send(ws, { type: 'your_hand', hand: player.hand || [] });
+    }
+  }
 }
 
 function getRoomPublicState(room) {
@@ -64,6 +91,81 @@ function getRoomPublicState(room) {
   };
 }
 
+function canAct(player) {
+  return Boolean(player && player.isOnline && player.hand && player.hand.length > 0);
+}
+
+function setTurn(room, idx) {
+  room.currentPlayer = idx;
+  broadcast(room, {
+    type: 'turn_change',
+    currentPlayer: idx,
+    playerId: room.players[idx]?.id,
+  });
+}
+
+function awardPile(room) {
+  const winner = room.players.find(p => p.id === room.lastPlayerId);
+  if (!winner) return -1;
+
+  const pileScore = calcPileScore(room.pile);
+  winner.score += pileScore;
+  const pileCards = [...room.pile];
+  room.pile = [];
+  room.lastPlay = null;
+  room.lastPlayCards = [];
+  room.lastPlayerId = null;
+  room.passCount = 0;
+
+  broadcast(room, {
+    type: 'pile_won',
+    winnerId: winner.id,
+    winnerName: winner.name,
+    score: pileScore,
+    cards: pileCards,
+    state: getRoomPublicState(room),
+  });
+
+  return room.players.indexOf(winner);
+}
+
+function advanceTurn(room, startIdx) {
+  if (!room || room.status !== 'playing' || room.players.length === 0) return;
+
+  const len = room.players.length;
+  let idx = ((startIdx % len) + len) % len;
+  let safety = 0;
+
+  while (safety < len * 2) {
+    if (room.lastPlay && room.passCount >= len - 1) {
+      const winnerIdx = awardPile(room);
+      idx = winnerIdx >= 0 ? winnerIdx : idx;
+      safety = 0;
+      continue;
+    }
+
+    const player = room.players[idx];
+    if (canAct(player)) {
+      setTurn(room, idx);
+      return;
+    }
+
+    // 离线玩家不会卡住整局：有上家牌时自动过牌；先手时直接跳到下一位在线玩家。
+    if (room.lastPlay && player && player.id !== room.lastPlayerId && player.hand?.length > 0) {
+      room.passCount++;
+      broadcast(room, {
+        type: 'player_passed',
+        playerId: player.id,
+        playerName: player.name + '（离线自动）',
+        auto: true,
+      });
+    }
+
+    idx = (idx + 1) % len;
+    safety++;
+  }
+}
+
 function startGame(room) {
   const pc = room.players.length;
   const { hands, flipCard } = dealCards(pc);
@@ -85,6 +187,7 @@ function startGame(room) {
   room.flipCard = flipCard;
   room.currentPlayer = firstPlayer;
   room.lastPlay = null;
+  room.lastPlayCards = [];
   room.lastPlayerId = null;
   room.pile = [];
   room.passCount = 0;
@@ -94,21 +197,16 @@ function startGame(room) {
   broadcast(room, { type: 'game_start', state: getRoomPublicState(room), flipCard });
 
   // 各自发手牌
-  for (const [ws, info] of clients.entries()) {
-    const player = room.players.find(p => p.id === info.playerId);
-    if (player && info.roomId === room.id) {
-      send(ws, { type: 'your_hand', hand: player.hand });
-    }
-  }
+  for (const p of room.players) sendHand(room, p.id);
 
-  broadcast(room, { type: 'turn_change', currentPlayer: firstPlayer, playerId: room.players[firstPlayer].id });
+  setTurn(room, firstPlayer);
 }
 
 function endRound(room) {
   // 计算排名
   const ranked = [...room.players].sort((a, b) => b.score - a.score);
   const targets = getTargetScores(room.players.length);
-  ranked.forEach((p, i) => { p.totalScore = (p.totalScore || 0) + p.score; });
+  ranked.forEach((p) => { p.totalScore = (p.totalScore || 0) + p.score; });
 
   const result = ranked.map((p, i) => ({
     id: p.id, name: p.name, score: p.score, rank: i + 1,
@@ -129,54 +227,76 @@ wss.on('connection', (ws) => {
 
     if (msg.type === 'create_room') {
       const { playerName, maxPlayers } = msg;
+      const cleanName = String(playerName || '').trim() || '玩家1';
       const playerId = genPlayerId();
+      const playerToken = genPlayerToken();
       const roomId = genRoomId();
       const room = {
         id: roomId, maxPlayers: maxPlayers || 4, status: 'waiting',
-        players: [{ id: playerId, name: playerName || '玩家1', hand: [], score: 0, totalScore: 0, isOnline: true }],
-        currentPlayer: 0, lastPlay: null, lastPlayerId: null,
+        players: [{ id: playerId, token: playerToken, name: cleanName, hand: [], score: 0, totalScore: 0, isOnline: true }],
+        currentPlayer: 0, lastPlay: null, lastPlayCards: [], lastPlayerId: null,
         pile: [], passCount: 0, extra: [], roundNum: 0, roundScores: [],
       };
       rooms.set(roomId, room);
-      clients.set(ws, { playerId, roomId, playerName });
-      send(ws, { type: 'room_joined', playerId, roomId, playerIndex: 0 });
+      clients.set(ws, { playerId, roomId, playerName: cleanName });
+      send(ws, { type: 'room_joined', playerId, playerToken, roomId, playerIndex: 0 });
       broadcast(room, { type: 'room_update', state: getRoomPublicState(room) });
     }
 
     else if (msg.type === 'join_room') {
-      const { roomId, playerName } = msg;
+      const roomId = String(msg.roomId || '').trim();
+      const cleanName = String(msg.playerName || '').trim();
       const room = rooms.get(roomId);
-      if (!room) { send(ws, { type: 'error', msg: '房间不存在' }); return; }
-      if (room.status !== 'waiting') {
-        // 断线重连
-        const existing = room.players.find(p => p.name === playerName);
-        if (existing) {
-          existing.isOnline = true;
-          clients.set(ws, { playerId: existing.id, roomId, playerName });
-          send(ws, { type: 'room_joined', playerId: existing.id, roomId, playerIndex: room.players.indexOf(existing), reconnect: true });
-          send(ws, { type: 'your_hand', hand: existing.hand });
-          broadcast(room, { type: 'room_update', state: getRoomPublicState(room) });
-          if (room.status === 'playing') {
-            send(ws, { type: 'turn_change', currentPlayer: room.currentPlayer, playerId: room.players[room.currentPlayer].id });
-          }
-          return;
+      if (!room) { sendError(ws, '房间不存在'); return; }
+
+      const token = msg.playerToken || msg.token;
+      const requestedPlayerId = msg.playerId;
+      const reconnecting = token
+        ? room.players.find(p => p.token === token && (!requestedPlayerId || p.id === requestedPlayerId))
+        : null;
+
+      if (reconnecting) {
+        reconnecting.isOnline = true;
+        clients.set(ws, { playerId: reconnecting.id, roomId, playerName: reconnecting.name });
+        send(ws, {
+          type: 'room_joined',
+          playerId: reconnecting.id,
+          playerToken: reconnecting.token,
+          roomId,
+          playerIndex: room.players.indexOf(reconnecting),
+          reconnect: true,
+        });
+        sendHand(room, reconnecting.id);
+        broadcast(room, { type: 'room_update', state: getRoomPublicState(room) });
+        if (room.status === 'playing') {
+          setTurn(room, room.currentPlayer);
         }
-        send(ws, { type: 'error', msg: '游戏已开始' }); return;
+        return;
       }
-      if (room.players.length >= room.maxPlayers) { send(ws, { type: 'error', msg: '房间已满' }); return; }
+
+      if (room.status !== 'waiting') {
+        sendError(ws, '游戏已开始，无法加入；断线重连请用原设备进入');
+        return;
+      }
+      if (!cleanName) { sendError(ws, '请输入昵称'); return; }
+      if (room.players.some(p => p.name === cleanName)) { sendError(ws, '昵称已被使用，请换一个'); return; }
+      if (room.players.length >= room.maxPlayers) { sendError(ws, '房间已满'); return; }
+
       const playerId = genPlayerId();
-      const player = { id: playerId, name: playerName || `玩家${room.players.length + 1}`, hand: [], score: 0, totalScore: 0, isOnline: true };
+      const playerToken = genPlayerToken();
+      const player = { id: playerId, token: playerToken, name: cleanName || `玩家${room.players.length + 1}`, hand: [], score: 0, totalScore: 0, isOnline: true };
       room.players.push(player);
-      clients.set(ws, { playerId, roomId, playerName });
-      send(ws, { type: 'room_joined', playerId, roomId, playerIndex: room.players.length - 1 });
+      clients.set(ws, { playerId, roomId, playerName: player.name });
+      send(ws, { type: 'room_joined', playerId, playerToken, roomId, playerIndex: room.players.length - 1 });
       broadcast(room, { type: 'room_update', state: getRoomPublicState(room) });
     }
 
     else if (msg.type === 'start_game') {
       const room = rooms.get(clientInfo.roomId);
       if (!room) return;
-      if (room.players[0].id !== clientInfo.playerId) { send(ws, { type: 'error', msg: '只有房主可以开始' }); return; }
-      if (room.players.length < 3) { send(ws, { type: 'error', msg: '至少需要3名玩家' }); return; }
+      if (room.players[0].id !== clientInfo.playerId) { sendError(ws, '只有房主可以开始'); return; }
+      if (room.status !== 'waiting') { sendError(ws, '当前状态不能开始游戏'); return; }
+      if (room.players.length < 3) { sendError(ws, '至少需要3名玩家'); return; }
       startGame(room);
     }
 
@@ -184,24 +304,28 @@ wss.on('connection', (ws) => {
       const room = rooms.get(clientInfo.roomId);
       if (!room || room.status !== 'playing') return;
       const playerIdx = room.players.findIndex(p => p.id === clientInfo.playerId);
-      if (playerIdx !== room.currentPlayer) { send(ws, { type: 'error', msg: '还没轮到你' }); return; }
+      if (playerIdx !== room.currentPlayer) { sendError(ws, '还没轮到你'); return; }
 
       const player = room.players[playerIdx];
-      const { cardIds } = msg;
+      const cardIds = Array.isArray(msg.cardIds) ? msg.cardIds : [];
       const selectedCards = cardIds.map(id => player.hand.find(c => c.id === id)).filter(Boolean);
-      if (selectedCards.length !== cardIds.length) { send(ws, { type: 'error', msg: '牌不在手中' }); return; }
+      if (selectedCards.length !== cardIds.length) { sendError(ws, '牌不在手中'); sendHand(room, player.id); return; }
 
       const pattern = detectPattern(selectedCards);
-      if (!pattern) { send(ws, { type: 'error', msg: '非法牌型' }); return; }
-      if (!comparePatterns(pattern, room.lastPlay)) { send(ws, { type: 'error', msg: '不够大' }); return; }
+      if (!pattern) { sendError(ws, '非法牌型'); sendHand(room, player.id); return; }
+      if (!comparePatterns(pattern, room.lastPlay)) { sendError(ws, '不够大'); sendHand(room, player.id); return; }
 
       // 移除手牌
       player.hand = player.hand.filter(c => !cardIds.includes(c.id));
+      player.hand = sortCards(player.hand);
       room.pile.push(...selectedCards);
       room.lastPlay = pattern;
       room.lastPlayCards = selectedCards;
       room.lastPlayerId = clientInfo.playerId;
       room.passCount = 0;
+
+      // 服务器确认成功后再同步手牌，避免前端非法出牌时丢牌
+      sendHand(room, player.id);
 
       broadcast(room, {
         type: 'cards_played',
@@ -215,18 +339,12 @@ wss.on('connection', (ws) => {
       // 出完牌了？
       if (player.hand.length === 0) {
         // 该玩家赢得最后一墩
-        const pileScore = calcPileScore(room.pile);
-        player.score += pileScore;
-        const pileCards = [...room.pile];
-        room.pile = [];
-        broadcast(room, { type: 'pile_won', winnerId: clientInfo.playerId, winnerName: player.name, score: pileScore, cards: pileCards, state: getRoomPublicState(room) });
+        awardPile(room);
         endRound(room);
         return;
       }
 
-      // 下一玩家
-      room.currentPlayer = (playerIdx + 1) % room.players.length;
-      broadcast(room, { type: 'turn_change', currentPlayer: room.currentPlayer, playerId: room.players[room.currentPlayer].id });
+      advanceTurn(room, playerIdx + 1);
     }
 
     else if (msg.type === 'pass') {
@@ -234,38 +352,16 @@ wss.on('connection', (ws) => {
       if (!room || room.status !== 'playing') return;
       const playerIdx = room.players.findIndex(p => p.id === clientInfo.playerId);
       if (playerIdx !== room.currentPlayer) return;
-      if (!room.lastPlay) { send(ws, { type: 'error', msg: '先手不能过牌' }); return; }
+      if (!room.lastPlay) { sendError(ws, '先手不能过牌'); return; }
       // 必须压：有能压的牌不允许过
       const player = room.players[playerIdx];
       if (canBeat(player.hand, room.lastPlay)) {
-        send(ws, { type: 'error', msg: '你有能压的牌，必须出！' }); return;
+        sendError(ws, '你有能压的牌，必须出！'); return;
       }
 
       room.passCount++;
       broadcast(room, { type: 'player_passed', playerId: clientInfo.playerId, playerName: room.players[playerIdx].name });
-
-      // 所有其他人都过牌了，当前lastPlayerId赢得墩
-      if (room.passCount >= room.players.length - 1) {
-        const winner = room.players.find(p => p.id === room.lastPlayerId);
-        if (winner) {
-          const pileScore = calcPileScore(room.pile);
-          winner.score += pileScore;
-          const pileCards = [...room.pile];
-          room.pile = [];
-          room.lastPlay = null;
-          room.lastPlayCards = [];
-          room.lastPlayerId = null;
-          room.passCount = 0;
-          broadcast(room, { type: 'pile_won', winnerId: winner.id, winnerName: winner.name, score: pileScore, cards: pileCards, state: getRoomPublicState(room) });
-          // 赢墩者继续先手
-          const winnerIdx = room.players.indexOf(winner);
-          room.currentPlayer = winnerIdx;
-          broadcast(room, { type: 'turn_change', currentPlayer: winnerIdx, playerId: winner.id });
-        }
-      } else {
-        room.currentPlayer = (playerIdx + 1) % room.players.length;
-        broadcast(room, { type: 'turn_change', currentPlayer: room.currentPlayer, playerId: room.players[room.currentPlayer].id });
-      }
+      advanceTurn(room, playerIdx + 1);
     }
 
     else if (msg.type === 'next_round') {
@@ -273,6 +369,11 @@ wss.on('connection', (ws) => {
       if (!room || room.status !== 'settlement') return;
       if (room.players[0].id !== clientInfo.playerId) return;
       room.status = 'waiting';
+      room.lastPlay = null;
+      room.lastPlayCards = [];
+      room.lastPlayerId = null;
+      room.pile = [];
+      room.passCount = 0;
       broadcast(room, { type: 'room_update', state: getRoomPublicState(room) });
     }
   });
@@ -282,9 +383,17 @@ wss.on('connection', (ws) => {
     if (info && info.roomId) {
       const room = rooms.get(info.roomId);
       if (room) {
-        const player = room.players.find(p => p.id === info.playerId);
-        if (player) player.isOnline = false;
-        broadcast(room, { type: 'room_update', state: getRoomPublicState(room) });
+        const playerIdx = room.players.findIndex(p => p.id === info.playerId);
+        const player = room.players[playerIdx];
+        if (player && !hasOpenConnection(info.roomId, info.playerId, ws)) {
+          player.isOnline = false;
+          broadcast(room, { type: 'room_update', state: getRoomPublicState(room) });
+
+          // 如果正好轮到离线玩家，立即跳过，避免整局卡死。
+          if (room.status === 'playing' && room.currentPlayer === playerIdx) {
+            advanceTurn(room, playerIdx + 1);
+          }
+        }
       }
     }
     clients.delete(ws);
