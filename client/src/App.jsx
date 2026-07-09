@@ -60,6 +60,9 @@ export default function App() {
         setGameState(msg.state);
         if (msg.pattern?.type === 'bomb') toast('💥 ' + msg.playerName + ' 炸弹！', 'bomb');
         break;
+      case 'player_finished':
+        toast(`🏁 ${msg.playerName} 第${msg.finishRank}名出完`, 'gold');
+        break;
       case 'player_passed':
         toast(msg.playerName + ' 过牌', msg.auto ? 'info' : 'dim');
         break;
