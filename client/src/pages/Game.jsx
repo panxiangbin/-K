@@ -4,7 +4,6 @@ import Card, { MiniCard } from '../components/Card';
 const CARD_ORDER = ['3','4','5','6','7','8','9','10','J','Q','K','A','2','小王','大王'];
 const SCORE_MAP = { '5': 5, '10': 10, 'K': 10 };
 const BOMB_LEVEL = { '50K': 1, color4: 2, same8: 3, joker4: 4 };
-// 同花五十K大小：黑桃 > 红桃 > 梅花 > 方块
 const SUIT_ORDER = { '♠': 4, '♥': 3, '♣': 2, '♦': 1 };
 const TYPE_LABEL = { single:'单张', pair:'对子', triple:'三张', four:'普通四张', five:'普通五张', six:'普通六张', seven:'普通七张', bomb:'炸弹' };
 const AVATARS = ['龙','虎','狐','狼'];
@@ -17,10 +16,11 @@ function isRed(suit) { return suit === '♥' || suit === '♦'; }
 function sortCards(cards) { return [...cards].sort((a,b) => cardValue(a.rank) - cardValue(b.rank)); }
 function calcScore(cards = []) { return cards.reduce((sum, c) => sum + (SCORE_MAP[c.rank] || 0), 0); }
 function isSameRank(cards) { return cards.length > 0 && cards.every(c => c.rank === cards[0].rank); }
+function groupByRank(cards) { const g = {}; for (const c of cards) { if (!g[c.rank]) g[c.rank] = []; g[c.rank].push(c); } return g; }
 
 function detect50K(cards) {
   if (cards.length !== 3) return null;
-  const sorted = [...cards].sort((a,b) => cardValue(a.rank) - cardValue(b.rank));
+  const sorted = sortCards(cards);
   if (sorted.map(c => c.rank).join(',') !== '5,10,K') return null;
   const suit = sorted[0].suit;
   if (suit !== 'joker' && sorted.every(c => c.suit === suit)) return { type: 'bomb', bombType: '50K', rank: 'K', suit };
@@ -54,11 +54,9 @@ function detectPattern(cards) {
     }
     return null;
   }
-  // 5/6/7张同点数可以出，但不是炸弹
   if (n === 5 && isSameRank(cards)) return { type: 'five', rank: cards[0].rank };
   if (n === 6 && isSameRank(cards)) return { type: 'six', rank: cards[0].rank };
   if (n === 7 && isSameRank(cards)) return { type: 'seven', rank: cards[0].rank };
-  // 8张同点数才是八张炸弹
   if (n === 8 && isSameRank(cards)) return { type: 'bomb', bombType: 'same8', rank: cards[0].rank };
   return null;
 }
@@ -77,10 +75,9 @@ function comparePatterns(newP, oldP) {
     if (newP.bombType === 'joker4') return false;
     if (newP.bombType === 'same8') return cardValue(newP.rank) > cardValue(oldP.rank);
     if (newP.bombType === 'color4') {
-      // 红/黑四炸：先比点数；同点数时黑 > 红
       const rankDiff = cardValue(newP.rank) - cardValue(oldP.rank);
       if (rankDiff !== 0) return rankDiff > 0;
-      const colorOrder = { black: 2, red: 1 };
+      const colorOrder = { red: 1, black: 2 };
       return colorOrder[newP.color] > colorOrder[oldP.color];
     }
     if (newP.bombType === '50K') return (SUIT_ORDER[newP.suit] || 0) > (SUIT_ORDER[oldP.suit] || 0);
@@ -100,16 +97,12 @@ function getPatternLen(p) {
   return null;
 }
 
-function getCombinations(arr, n) {
-  if (n === 1) return arr.map(c => [c]);
-  if (n > arr.length) return [];
-  const result = [];
-  function pick(start, current) {
-    if (current.length === n) { result.push([...current]); return; }
-    for (let i = start; i < arr.length; i++) { current.push(arr[i]); pick(i + 1, current); current.pop(); }
-  }
-  pick(0, []);
-  return result;
+function getNormalCandidates(hand, n) {
+  if (n === 1) return hand.map(c => [c]);
+  const groups = groupByRank(hand);
+  const combos = [];
+  for (const group of Object.values(groups)) if (group.length >= n) combos.push(group.slice(0, n));
+  return combos;
 }
 
 function getAllBombs(hand) {
@@ -117,14 +110,13 @@ function getAllBombs(hand) {
   const big = hand.filter(c => c.rank === '大王');
   const small = hand.filter(c => c.rank === '小王');
   if (big.length >= 2 && small.length >= 2) results.push([big[0], big[1], small[0], small[1]]);
-  const rankGroups = {};
-  for (const c of hand) { if (!rankGroups[c.rank]) rankGroups[c.rank] = []; rankGroups[c.rank].push(c); }
-  for (const group of Object.values(rankGroups)) {
+  const groups = groupByRank(hand);
+  for (const group of Object.values(groups)) {
     if (group.length >= 8) results.push(group.slice(0, 8));
     const blacks = group.filter(c => isBlack(c.suit));
     const reds = group.filter(c => isRed(c.suit));
-    if (blacks.length >= 4) combosPushUnique(results, blacks.slice(0, 4));
-    if (reds.length >= 4) combosPushUnique(results, reds.slice(0, 4));
+    if (blacks.length >= 4) results.push(blacks.slice(0, 4));
+    if (reds.length >= 4) results.push(reds.slice(0, 4));
   }
   for (const suit of ['♠','♥','♣','♦']) {
     const five = hand.find(c => c.rank === '5' && c.suit === suit);
@@ -133,11 +125,6 @@ function getAllBombs(hand) {
     if (five && ten && king) results.push([five, ten, king]);
   }
   return results;
-}
-
-function combosPushUnique(results, combo) {
-  const key = combo.map(c => c.id).sort().join('|');
-  if (!results.some(x => x.map(c => c.id).sort().join('|') === key)) results.push(combo);
 }
 
 function getBombIds(hand) { const ids = new Set(); getAllBombs(hand).forEach(combo => combo.forEach(card => ids.add(card.id))); return ids; }
@@ -153,8 +140,10 @@ function getHint(hand, lastPlay) {
   if (!hand.length) return [];
   if (!lastPlay) return [hand[0].id];
   const candidates = [];
-  const normalLen = lastPlay.type === 'bomb' ? null : getPatternLen(lastPlay);
-  if (normalLen) candidates.push(...getCombinations(hand, normalLen));
+  if (lastPlay.type !== 'bomb') {
+    const n = getPatternLen(lastPlay);
+    candidates.push(...getNormalCandidates(hand, n));
+  }
   candidates.push(...getAllBombs(hand));
   for (const combo of candidates) {
     const pattern = detectPattern(combo);
@@ -206,14 +195,12 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
 
   useEffect(() => { if (isMyTurn && navigator.vibrate) navigator.vibrate([100, 50, 100]); }, [isMyTurn]);
   useEffect(() => { setSending(false); }, [myHand, gameState?.currentPlayer]);
-
   useEffect(() => {
     setTurnProgress(0);
     const start = Date.now();
     const timer = setInterval(() => setTurnProgress(Math.min(100, Math.round(((Date.now() - start) / 20000) * 100))), 250);
     return () => clearInterval(timer);
   }, [turnKey]);
-
   useEffect(() => {
     if (!gameState) return;
     gameState.players.forEach(p => {
@@ -227,7 +214,6 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
       prevScores.current[p.id] = p.score;
     });
   }, [gameState?.players]);
-
   useEffect(() => {
     if (gameState?.lastPlay?.type === 'bomb') { setBombAnim(true); setTimeout(() => setBombAnim(false), 700); }
   }, [lastPlayKey, gameState?.lastPlay?.type]);
@@ -241,7 +227,6 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
       return n;
     });
   }, [sending, myFinished]);
-
   const toggleCard = useCallback((id) => {
     if (sending || myFinished) return;
     setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -253,7 +238,6 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
     dragMovedRef.current = false;
     dragStartCardRef.current = id;
   }
-
   function handleHandPointerMove(e) {
     if (!pointerDownRef.current || sending || myFinished) return;
     dragMovedRef.current = true;
@@ -261,7 +245,6 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
     const el = document.elementFromPoint(e.clientX, e.clientY)?.closest?.('[data-card-id]');
     if (el) addSelected(el.dataset.cardId);
   }
-
   function endSlideSelect() {
     if (dragMovedRef.current) {
       ignoreClickRef.current = true;
@@ -271,11 +254,7 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
     dragMovedRef.current = false;
     dragStartCardRef.current = null;
   }
-
-  function handleCardClick(id) {
-    if (ignoreClickRef.current) return;
-    toggleCard(id);
-  }
+  function handleCardClick(id) { if (!ignoreClickRef.current) toggleCard(id); }
 
   function releaseSendingSoon() { setTimeout(() => setSending(false), 1200); }
   function playCards() {
@@ -308,7 +287,6 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
   } else if (players.length === 2) {
     topOpp = players[(myIdx + 1 + 2) % 2];
   }
-
   const trickItems = [
     { label: '上方', player: topOpp },
     { label: '左边', player: leftOpp },
@@ -322,7 +300,6 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
   return (
     <div style={{ height:'100%', display:'flex', flexDirection:'column', background:'#0f3a24', animation: bombAnim ? 'shake 0.35s ease' : 'none', position:'relative', overflow:'hidden', fontFamily:"'PingFang SC','Microsoft YaHei',sans-serif" }}>
       {bombAnim && <div style={{ position:'fixed', inset:0, zIndex:100, background:'rgba(245,158,11,0.12)', pointerEvents:'none' }} />}
-
       <div style={{ position:'fixed', top:'40%', left:'50%', transform:'translateX(-50%)', zIndex:110, pointerEvents:'none' }}>
         {floats.map(f => <div key={f.id} style={{ fontSize:30, fontWeight:900, color:'#fbbf24', textShadow:'0 2px 8px rgba(0,0,0,0.45)', animation:'floatUp 2.5s ease-out forwards' }}>{f.text}</div>)}
       </div>
@@ -343,18 +320,15 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
         <div style={{ width:'var(--side-col-w, 96px)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
           {leftOpp && <OpponentSide player={leftOpp} idx={players.indexOf(leftOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(leftOpp)} />}
         </div>
-
         <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0 }}>
           <div style={{ height:'21%', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
             {topOpp && <OpponentTop player={topOpp} idx={players.indexOf(topOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(topOpp)} />}
           </div>
-
           <div style={{ height:'79%', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
             <div style={{ position:'absolute', width:'86%', height:'90%', borderRadius:'28px', border:'1px solid rgba(255,255,255,0.07)', background:'radial-gradient(circle at center, rgba(255,255,255,0.045), rgba(255,255,255,0.015))', boxShadow: isMyTurn ? 'inset 0 0 26px rgba(245,197,24,0.20)' : 'none' }} />
             <TrickBoard items={trickItems} trickPlays={gameState?.trickPlays || []} pileScore={pileScore} isMyTurn={isMyTurn} currentPlayer={currentPlayer} lastPlay={gameState?.lastPlay} />
           </div>
         </div>
-
         <div style={{ width:'var(--side-col-w, 96px)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
           {rightOpp && <OpponentSide player={rightOpp} idx={players.indexOf(rightOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(rightOpp)} />}
         </div>
@@ -363,29 +337,15 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
       <div style={{ paddingBottom:'var(--hand-bottom-pad, 8px)', zIndex:30, flexShrink:0, background:'linear-gradient(to top, rgba(0,0,0,0.30), transparent)' }}>
         {me && <div style={{ display:'flex', justifyContent:'center', marginBottom:1 }}><SelfPanel player={me} isCurrent={isMyTurn} /></div>}
         <StatusBar myFinished={myFinished} selectedCount={selected.size} selectedType={selectedType} canPlaySelected={canPlaySelected} sending={sending} isMyTurn={isMyTurn} arranged={arranged} lastPlay={gameState?.lastPlay} />
-
-        <div
-          onPointerMove={handleHandPointerMove}
-          onPointerUp={endSlideSelect}
-          onPointerCancel={endSlideSelect}
-          onPointerLeave={endSlideSelect}
-          style={{ display:'flex', justifyContent:'center', padding:'var(--hand-y-pad-top, 10px) var(--hand-x-pad, 40px) var(--hand-y-pad-bottom, 18px)', overflow:'visible', touchAction:'none' }}
-        >
+        <div onPointerMove={handleHandPointerMove} onPointerUp={endSlideSelect} onPointerCancel={endSlideSelect} onPointerLeave={endSlideSelect} style={{ display:'flex', justifyContent:'center', padding:'var(--hand-y-pad-top, 10px) var(--hand-x-pad, 40px) var(--hand-y-pad-bottom, 18px)', overflow:'visible', touchAction:'none' }}>
           <div style={{ display:'flex', justifyContent:'center', minWidth:0, opacity: myFinished ? 0.35 : 1 }}>
             {sortedHand.map((card, i) => (
-              <div
-                key={card.id}
-                data-card-id={card.id}
-                onPointerDown={() => handleCardPointerDown(card.id)}
-                onClick={() => handleCardClick(card.id)}
-                style={{ marginLeft: i === 0 ? 0 : 'var(--hand-overlap, -24px)', filter:selected.has(card.id) ? 'drop-shadow(0 0 8px rgba(251,191,36,0.8))' : 'none' }}
-              >
+              <div key={card.id} data-card-id={card.id} onPointerDown={() => handleCardPointerDown(card.id)} onClick={() => handleCardClick(card.id)} style={{ marginLeft: i === 0 ? 0 : 'var(--hand-overlap, -24px)', filter:selected.has(card.id) ? 'drop-shadow(0 0 8px rgba(251,191,36,0.8))' : 'none' }}>
                 <Card card={card} selected={selected.has(card.id)} />
               </div>
             ))}
           </div>
         </div>
-
         <div style={{ display:'flex', alignItems:'center', gap:7, padding:'0 10px 4px' }}>
           <div style={{ display:'flex', gap:10, fontSize:11, color:'#cbd5e1', flex:1, paddingLeft:6, whiteSpace:'nowrap', overflow:'hidden' }}><span>普通</span><span>分牌</span><span>炸弹</span></div>
           <button disabled={sending || myFinished} onClick={toggleArrange} className="btn-lite">{arranged ? '还原' : '理牌'}</button>
@@ -396,17 +356,7 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
         </div>
       </div>
 
-      {confirmAction && (
-        <ConfirmModal
-          title={confirmAction === 'return' ? '是否返回大厅？' : '是否退出当前房间？'}
-          desc={confirmAction === 'return' ? '当前房间会保留，你可以从大厅继续回来。' : gameState?.mode === 'solo' ? '退出后单机局直接作废，下次不会自动恢复。' : '退出后会清除本机房间记录，下次不会自动回到这局。'}
-          cancelText="取消"
-          okText={confirmAction === 'return' ? '返回大厅' : '确认退出'}
-          danger={confirmAction === 'exit'}
-          onCancel={() => setConfirmAction(null)}
-          onOk={confirmAction === 'return' ? confirmReturn : confirmExit}
-        />
-      )}
+      {confirmAction && <ConfirmModal title={confirmAction === 'return' ? '是否返回大厅？' : '是否退出当前房间？'} desc={confirmAction === 'return' ? '当前房间会保留，你可以从大厅继续回来。' : gameState?.mode === 'solo' ? '退出后单机局直接作废，下次不会自动恢复。' : '退出后会清除本机房间记录，下次不会自动回到这局。'} cancelText="取消" okText={confirmAction === 'return' ? '返回大厅' : '确认退出'} danger={confirmAction === 'exit'} onCancel={() => setConfirmAction(null)} onOk={confirmAction === 'return' ? confirmReturn : confirmExit} />}
 
       <style>{`
         .top-action { min-height:32px; padding:0 10px; border-radius:11px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#f8fafc; font-size:12px; font-weight:900; }
@@ -465,11 +415,7 @@ function TrickCell({ label, player, entry }) {
         <div style={{ fontSize:11, color:'#94a3b8', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{label} · <span style={{ color:'#fff', fontWeight:900 }}>{player.name}</span>{player.isBot ? <span style={{ color:'#fbbf24' }}> 机</span> : null}</div>
         <div style={{ fontSize:11, color:hasPlayed ? '#fbbf24' : passed ? '#94a3b8' : '#64748b', fontWeight:900, flexShrink:0 }}>{hasPlayed ? patternLabel(entry.pattern) : passed ? '过牌' : '待出'}</div>
       </div>
-      {hasPlayed ? (
-        <div style={{ display:'flex', gap:2, alignItems:'center', overflow:'hidden' }}>{(entry.cards || []).slice(0, 8).map(c => <MiniCard key={c.id} card={c} />)}</div>
-      ) : (
-        <div style={{ height:36, display:'flex', alignItems:'center', color:passed ? '#94a3b8' : 'rgba(255,255,255,0.28)', fontSize:13, fontWeight:800 }}>{passed ? '已过牌' : '等待操作'}</div>
-      )}
+      {hasPlayed ? <div style={{ display:'flex', gap:2, alignItems:'center', overflow:'hidden' }}>{(entry.cards || []).slice(0, 8).map(c => <MiniCard key={c.id} card={c} />)}</div> : <div style={{ height:36, display:'flex', alignItems:'center', color:passed ? '#94a3b8' : 'rgba(255,255,255,0.28)', fontSize:13, fontWeight:800 }}>{passed ? '已过牌' : '等待操作'}</div>}
     </div>
   );
 }
@@ -479,46 +425,17 @@ function PlayerAvatar({ player, idx, size = 40 }) {
 }
 
 function OpponentSide({ player, idx, isCurrent }) {
-  return (
-    <div style={{ width:76, padding:'10px 5px', borderRadius:18, background:isCurrent?'rgba(245,197,24,0.13)':'rgba(0,0,0,0.16)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 14px rgba(245,197,24,0.32)':'none', display:'flex', flexDirection:'column', alignItems:'center', gap:4, opacity: player.isOnline ? 1 : 0.45 }}>
-      <PlayerAvatar player={player} idx={idx} size={38} />
-      <div style={{ fontSize:11, fontWeight:900, color:'#fff', maxWidth:68, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{player.name}</div>
-      <div style={{ fontSize:10, color:'#fbbf24', fontWeight:800 }}>{player.score}分</div>
-      <div style={{ fontSize:10, color:'#cbd5e1' }}>{player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div>
-    </div>
-  );
+  return <div style={{ width:76, padding:'10px 5px', borderRadius:18, background:isCurrent?'rgba(245,197,24,0.13)':'rgba(0,0,0,0.16)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 14px rgba(245,197,24,0.32)':'none', display:'flex', flexDirection:'column', alignItems:'center', gap:4, opacity: player.isOnline ? 1 : 0.45 }}><PlayerAvatar player={player} idx={idx} size={38} /><div style={{ fontSize:11, fontWeight:900, color:'#fff', maxWidth:68, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{player.name}</div><div style={{ fontSize:10, color:'#fbbf24', fontWeight:800 }}>{player.score}分</div><div style={{ fontSize:10, color:'#cbd5e1' }}>{player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div></div>;
 }
 
 function OpponentTop({ player, idx, isCurrent }) {
-  return (
-    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:18, background:isCurrent?'rgba(245,197,24,0.14)':'rgba(0,0,0,0.16)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 14px rgba(245,197,24,0.32)':'none', opacity: player.isOnline ? 1 : 0.45 }}>
-      <PlayerAvatar player={player} idx={idx} size={34} />
-      <div><div style={{ fontSize:12, color:'#fff', fontWeight:900 }}>{player.name}</div><div style={{ fontSize:10, color:'#cbd5e1' }}>{player.score}分 · {player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div></div>
-    </div>
-  );
+  return <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:18, background:isCurrent?'rgba(245,197,24,0.14)':'rgba(0,0,0,0.16)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 14px rgba(245,197,24,0.32)':'none', opacity: player.isOnline ? 1 : 0.45 }}><PlayerAvatar player={player} idx={idx} size={34} /><div><div style={{ fontSize:12, color:'#fff', fontWeight:900 }}>{player.name}</div><div style={{ fontSize:10, color:'#cbd5e1' }}>{player.score}分 · {player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div></div></div>;
 }
 
 function SelfPanel({ player, isCurrent }) {
-  return (
-    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 12px', borderRadius:16, background:isCurrent?'rgba(245,197,24,0.14)':'rgba(0,0,0,0.22)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}` }}>
-      <div style={{ fontSize:11, color:'#fbbf24', fontWeight:900 }}>我</div>
-      <div style={{ fontSize:12, color:'#fff', fontWeight:900 }}>{player.name}</div>
-      <div style={{ fontSize:11, color:'#cbd5e1' }}>{player.score}分 · {player.cardCount}张</div>
-    </div>
-  );
+  return <div style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 12px', borderRadius:16, background:isCurrent?'rgba(245,197,24,0.14)':'rgba(0,0,0,0.22)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}` }}><div style={{ fontSize:11, color:'#fbbf24', fontWeight:900 }}>我</div><div style={{ fontSize:12, color:'#fff', fontWeight:900 }}>{player.name}</div><div style={{ fontSize:11, color:'#cbd5e1' }}>{player.score}分 · {player.cardCount}张</div></div>;
 }
 
 function ConfirmModal({ title, desc, cancelText, okText, danger, onCancel, onOk }) {
-  return (
-    <div style={{ position:'fixed', inset:0, zIndex:2000, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
-      <div style={{ width:330, borderRadius:22, background:'#f8fafc', color:'#0f172a', padding:18, boxShadow:'0 12px 30px rgba(0,0,0,0.35)' }}>
-        <div style={{ fontSize:20, fontWeight:900, marginBottom:8 }}>{title}</div>
-        <div style={{ fontSize:14, color:'#475569', lineHeight:1.6, marginBottom:18 }}>{desc}</div>
-        <div style={{ display:'flex', gap:10 }}>
-          <button onClick={onCancel} style={{ flex:1, height:46, borderRadius:14, border:'1px solid #cbd5e1', background:'#fff', color:'#334155', fontSize:15, fontWeight:900 }}>{cancelText}</button>
-          <button onClick={onOk} style={{ flex:1, height:46, borderRadius:14, border:'none', background:danger ? '#ef4444' : '#f5c518', color:danger ? '#fff' : '#102016', fontSize:15, fontWeight:900 }}>{okText}</button>
-        </div>
-      </div>
-    </div>
-  );
+  return <div style={{ position:'fixed', inset:0, zIndex:2000, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div style={{ width:330, borderRadius:22, background:'#f8fafc', color:'#0f172a', padding:18, boxShadow:'0 12px 30px rgba(0,0,0,0.35)' }}><div style={{ fontSize:20, fontWeight:900, marginBottom:8 }}>{title}</div><div style={{ fontSize:14, color:'#475569', lineHeight:1.6, marginBottom:18 }}>{desc}</div><div style={{ display:'flex', gap:10 }}><button onClick={onCancel} style={{ flex:1, height:46, borderRadius:14, border:'1px solid #cbd5e1', background:'#fff', color:'#334155', fontSize:15, fontWeight:900 }}>{cancelText}</button><button onClick={onOk} style={{ flex:1, height:46, borderRadius:14, border:'none', background:danger ? '#ef4444' : '#f5c518', color:danger ? '#fff' : '#102016', fontSize:15, fontWeight:900 }}>{okText}</button></div></div></div>;
 }
