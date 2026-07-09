@@ -16,7 +16,21 @@ function hasSavedSession() {
   return Boolean(localStorage.getItem(`henan50k:${roomId}:playerId`) && localStorage.getItem(`henan50k:${roomId}:playerToken`));
 }
 
-export default function Lobby({ send, gameState, myInfo, onContinueLastRoom }) {
+function TopBackButton({ children = '返回', danger = false, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      position:'absolute', top:10, left:10, zIndex:50,
+      minHeight:34, padding:'0 13px', borderRadius:999,
+      border:`1px solid ${danger ? 'rgba(248,113,113,.45)' : 'rgba(255,255,255,.20)'}`,
+      background: danger ? 'rgba(127,29,29,.34)' : 'rgba(255,255,255,.08)',
+      color: danger ? '#fecaca' : '#f8fafc',
+      fontSize:13, fontWeight:900,
+      boxShadow:'0 4px 12px rgba(0,0,0,.22)', backdropFilter:'blur(10px)',
+    }}>{children}</button>
+  );
+}
+
+export default function Lobby({ send, gameState, myInfo, onContinueLastRoom, onExitRoom }) {
   const [name, setName] = useState('');
   const [joinId, setJoinId] = useState('');
   const [view, setView] = useState('home');
@@ -29,6 +43,7 @@ export default function Lobby({ send, gameState, myInfo, onContinueLastRoom }) {
   useEffect(() => { if (inRoom && view !== 'room') setView('room'); }, [inRoom, view]);
 
   function getPlayerName() { return name.trim() || '我'; }
+  function backHome() { setView('home'); }
 
   function createRoom(maxPlayers) {
     if (!name.trim()) return alert('请输入昵称');
@@ -56,6 +71,9 @@ export default function Lobby({ send, gameState, myInfo, onContinueLastRoom }) {
       position:'relative', overflow:'hidden',
       fontFamily:"'PingFang SC','Microsoft YaHei',sans-serif",
     }}>
+      {view !== 'home' && !inRoom && <TopBackButton onClick={backHome}>← 返回</TopBackButton>}
+      {inRoom && <TopBackButton danger onClick={onExitRoom}>退出房间</TopBackButton>}
+
       <div style={{ position:'absolute', width:380, height:380, borderRadius:'50%', background:'radial-gradient(circle,#f5c84216 0%,transparent 70%)', top:-120, left:-90, pointerEvents:'none' }}/>
       <div style={{ position:'absolute', width:320, height:320, borderRadius:'50%', background:'radial-gradient(circle,#0891b218 0%,transparent 70%)', bottom:-90, right:-90, pointerEvents:'none' }}/>
 
@@ -75,12 +93,8 @@ export default function Lobby({ send, gameState, myInfo, onContinueLastRoom }) {
               <input value={name} maxLength={8} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&name.trim()&&setView('create')} placeholder="输入昵称，单机可不填" style={{ width:'100%', padding:'11px 14px', borderRadius:10, fontSize:15, background:'#ffffff0d', border:'1px solid #ffffff22', color:'#f0f0f0', outline:'none' }} />
             </div>
 
-            {savedSession && (
-              <button onClick={onContinueLastRoom} style={{ width:'100%', marginBottom:10, padding:'11px 0', borderRadius:12, fontWeight:800, fontSize:14, background:'rgba(255,255,255,0.08)', color:'#f5c842', border:'1px solid #f5c84255' }}>继续上次房间</button>
-            )}
-
+            {savedSession && <button onClick={onContinueLastRoom} style={{ width:'100%', marginBottom:10, padding:'11px 0', borderRadius:12, fontWeight:800, fontSize:14, background:'rgba(255,255,255,0.08)', color:'#f5c842', border:'1px solid #f5c84255' }}>继续上次房间</button>}
             <button onClick={()=>setView('solo')} style={{ width:'100%', marginBottom:10, padding:'14px 0', borderRadius:12, fontWeight:900, fontSize:16, background:'linear-gradient(135deg,#f5c842,#d99920)', color:'#102016', boxShadow:'0 4px 18px #f5c84233', border:'none' }}>🤖 单机练习</button>
-
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={()=>{if(!name.trim()){alert('请输入昵称');return;}setView('create');}} style={{ flex:1, padding:'13px 0', borderRadius:12, fontWeight:800, fontSize:15, background:'linear-gradient(135deg,#166534,#14532d)', color:'#fff', border:'1px solid #22c55e55' }}>创建房间</button>
               <button onClick={()=>{if(!name.trim()){alert('请输入昵称');return;}setView('join');}} style={{ flex:1, padding:'13px 0', borderRadius:12, fontWeight:800, fontSize:15, background:'linear-gradient(135deg,#0891b2,#0e7490)', color:'#fff', border:'1px solid #67e8f955' }}>加入房间</button>
@@ -92,14 +106,10 @@ export default function Lobby({ send, gameState, myInfo, onContinueLastRoom }) {
           <div style={{ width:'100%', maxWidth:320, animation:'slide-up .25s ease' }}>
             <div style={{ textAlign:'center', fontSize:13, color:'#94a3b8', marginBottom:14 }}>选择单机人数</div>
             <div style={{ display:'flex', gap:12 }}>
-              <button onClick={()=>startSolo(3)} style={{ flex:1, padding:'22px 0', borderRadius:14, fontWeight:800, fontSize:16, background:'#10291c', border:'2px solid #22c55e55', color:'#22c55e' }}>
-                <span style={{fontSize:28}}>🤖</span><br/>三人单机<br/><span style={{fontSize:11,color:'#64748b',fontWeight:400}}>我+2机器人</span>
-              </button>
-              <button onClick={()=>startSolo(4)} style={{ flex:1, padding:'22px 0', borderRadius:14, fontWeight:800, fontSize:16, background:'#15152b', border:'2px solid #9333ea55', color:'#c084fc' }}>
-                <span style={{fontSize:28}}>🤖</span><br/>四人单机<br/><span style={{fontSize:11,color:'#64748b',fontWeight:400}}>我+3机器人</span>
-              </button>
+              <button onClick={()=>startSolo(3)} style={{ flex:1, padding:'22px 0', borderRadius:14, fontWeight:800, fontSize:16, background:'#10291c', border:'2px solid #22c55e55', color:'#22c55e' }}><span style={{fontSize:28}}>🤖</span><br/>三人单机<br/><span style={{fontSize:11,color:'#64748b',fontWeight:400}}>我+2机器人</span></button>
+              <button onClick={()=>startSolo(4)} style={{ flex:1, padding:'22px 0', borderRadius:14, fontWeight:800, fontSize:16, background:'#15152b', border:'2px solid #9333ea55', color:'#c084fc' }}><span style={{fontSize:28}}>🤖</span><br/>四人单机<br/><span style={{fontSize:11,color:'#64748b',fontWeight:400}}>我+3机器人</span></button>
             </div>
-            <button onClick={()=>setView('home')} style={{ marginTop:12, background:'none', color:'#64748b', fontSize:13, border:'none', width:'100%', padding:'6px 0' }}>← 返回</button>
+            <button onClick={backHome} style={{ marginTop:12, background:'none', color:'#94a3b8', fontSize:13, border:'none', width:'100%', padding:'8px 0' }}>← 返回</button>
           </div>
         )}
 
@@ -110,7 +120,7 @@ export default function Lobby({ send, gameState, myInfo, onContinueLastRoom }) {
               <button onClick={()=>createRoom(3)} style={{ flex:1, padding:'22px 0', borderRadius:14, fontWeight:800, fontSize:16, background:'#10291c', border:'2px solid #22c55e55', color:'#22c55e' }}><span style={{fontSize:28}}>👥</span><br/>三人局<br/><span style={{fontSize:11,color:'#64748b',fontWeight:400}}>每人36张</span></button>
               <button onClick={()=>createRoom(4)} style={{ flex:1, padding:'22px 0', borderRadius:14, fontWeight:800, fontSize:16, background:'#15152b', border:'2px solid #9333ea55', color:'#c084fc' }}><span style={{fontSize:28}}>👨‍👩‍👧‍👦</span><br/>四人局<br/><span style={{fontSize:11,color:'#64748b',fontWeight:400}}>每人27张</span></button>
             </div>
-            <button onClick={()=>setView('home')} style={{ marginTop:12, background:'none', color:'#64748b', fontSize:13, border:'none', width:'100%', padding:'6px 0' }}>← 返回</button>
+            <button onClick={backHome} style={{ marginTop:12, background:'none', color:'#94a3b8', fontSize:13, border:'none', width:'100%', padding:'8px 0' }}>← 返回</button>
           </div>
         )}
 
@@ -118,7 +128,7 @@ export default function Lobby({ send, gameState, myInfo, onContinueLastRoom }) {
           <div style={{ width:'100%', maxWidth:320, animation:'slide-up .25s ease' }}>
             <div style={{ marginBottom:12 }}><label style={{ fontSize:11, color:'#94a3b8', marginBottom:5, display:'block' }}>6位房间号</label><input value={joinId} maxLength={6} onChange={e=>setJoinId(e.target.value.replace(/\D/g,'').slice(0,6))} onKeyDown={e=>e.key==='Enter'&&joinRoom()} placeholder="输入房间号..." style={{ width:'100%', padding:'13px 16px', borderRadius:10, fontSize:24, letterSpacing:10, background:'#ffffff0d', border:'1px solid #ffffff22', color:'#f5c842', outline:'none', textAlign:'center', fontWeight:800 }} /></div>
             <button onClick={joinRoom} style={{ width:'100%', padding:'13px 0', borderRadius:12, fontWeight:800, fontSize:15, background: joinId.length===6 ? 'linear-gradient(135deg,#0891b2,#166534)' : '#1a1a1a', color: joinId.length===6 ? '#fff' : '#444', border:'none' }}>进入房间 →</button>
-            <button onClick={()=>setView('home')} style={{ marginTop:10, background:'none', color:'#64748b', fontSize:13, border:'none', width:'100%', padding:'6px 0' }}>← 返回</button>
+            <button onClick={backHome} style={{ marginTop:10, background:'none', color:'#94a3b8', fontSize:13, border:'none', width:'100%', padding:'8px 0' }}>← 返回</button>
           </div>
         )}
 
@@ -133,6 +143,7 @@ export default function Lobby({ send, gameState, myInfo, onContinueLastRoom }) {
               </div>
             </div>
             {isHost && gameState.players.length >= 3 && gameState.status === 'waiting' ? <button onClick={()=>send({type:'start_game'})} style={{ width:'100%', padding:'13px 0', borderRadius:12, fontWeight:900, fontSize:16, background:'linear-gradient(135deg,#f5c842,#e8a020)', color:'#0d1117', border:'none' }}>开始游戏</button> : isHost ? <div style={{ textAlign:'center', color:'#64748b', fontSize:12, padding:'10px 0' }}>{gameState.status === 'playing' ? '游戏进行中...' : '至少需要 3 名玩家才能开始'}</div> : <div style={{ textAlign:'center', color:'#64748b', fontSize:12, padding:'10px 0' }}>等待房主开始游戏...</div>}
+            <button onClick={onExitRoom} style={{ marginTop:10, width:'100%', padding:'10px 0', borderRadius:12, background:'rgba(127,29,29,.22)', border:'1px solid rgba(248,113,113,.35)', color:'#fecaca', fontWeight:900 }}>退出房间</button>
           </div>
         )}
       </div>
