@@ -4,9 +4,9 @@ import Card, { MiniCard } from '../components/Card';
 const CARD_ORDER = ['3','4','5','6','7','8','9','10','J','Q','K','A','2','小王','大王'];
 const BOMB_LEVEL = { '50K': 1, color4: 2, same8: 3, joker4: 4 };
 const SUIT_ORDER = { '♠': 4, '♥': 3, '♣': 2, '♦': 1 };
-const TYPE_LABEL = { single:'单张', pair:'对子', triple:'三张', bomb:'💥炸弹' };
-const AVATARS = ['🐲','🐯','🦊','🐺'];
-const AVATAR_COLORS = ['#9333ea','#0891b2','#d97706','#dc2626'];
+const TYPE_LABEL = { single:'单张', pair:'对子', triple:'三张', bomb:'炸弹' };
+const AVATARS = ['龙','虎','狐','狼'];
+const AVATAR_COLORS = ['#7c3aed','#0891b2','#d97706','#dc2626'];
 const SCORE_RANKS = new Set(['5', '10', 'K']);
 
 function cardValue(rank) { return CARD_ORDER.indexOf(rank); }
@@ -148,7 +148,6 @@ function arrangeHand(hand) {
     else normal.push(card);
   });
 
-  // 普通牌在左，5/10/K 得分牌在中，炸弹集中到最右边。
   return [...normal, ...scoreCards, ...bombs];
 }
 
@@ -173,7 +172,7 @@ function patternLabel(pattern) {
   if (pattern.bombType === 'color4') return `${pattern.color === 'black' ? '黑' : '红'}四炸`;
   if (pattern.bombType === 'same8') return '八张炸弹';
   if (pattern.bombType === 'joker4') return '四王炸弹';
-  return '💥炸弹';
+  return '炸弹';
 }
 
 function detectSelectedType(cards) {
@@ -196,6 +195,7 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   const isFirst = !gameState?.lastPlay;
   const sortedHand = arranged ? arrangeHand(myHand) : sortCards(myHand);
   const lastPlayKey = gameState?.lastPlayCards?.map(c => c.id).join('|') || '';
+  const myFinished = myHand.length === 0 && gameState?.status === 'playing';
 
   useEffect(() => { if (isMyTurn && navigator.vibrate) navigator.vibrate([100, 50, 100]); }, [isMyTurn]);
   useEffect(() => { setSending(false); }, [myHand, gameState?.currentPlayer]);
@@ -217,19 +217,19 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   useEffect(() => {
     if (gameState?.lastPlay?.type === 'bomb') {
       setBombAnim(true);
-      setTimeout(() => setBombAnim(false), 1000);
+      setTimeout(() => setBombAnim(false), 700);
     }
   }, [lastPlayKey, gameState?.lastPlay?.type]);
 
   const toggleCard = useCallback((id) => {
-    if (sending) return;
+    if (sending || myFinished) return;
     setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  }, [sending]);
+  }, [sending, myFinished]);
 
   function releaseSendingSoon() { setTimeout(() => setSending(false), 1500); }
 
   function playCards() {
-    if (!isMyTurn || !selected.size || sending) return;
+    if (!isMyTurn || !selected.size || sending || myFinished) return;
     const cardIds = [...selected];
     send({ type: 'play_cards', cardIds });
     setSending(true);
@@ -238,7 +238,7 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   }
 
   function pass() {
-    if (!isMyTurn || isFirst || sending) return;
+    if (!isMyTurn || isFirst || sending || myFinished) return;
     send({ type: 'pass' });
     setSending(true);
     setSelected(new Set());
@@ -254,7 +254,7 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   function arrangeCards() {
     setArranged(true);
     setSelected(new Set());
-    toast?.('已理牌：5、10、K和炸弹已放到右侧', 'success');
+    toast?.('已理牌：得分牌和炸弹在右侧', 'success');
   }
 
   function selectAll() { setSelected(new Set(sortedHand.map(c => c.id))); }
@@ -280,33 +280,36 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   const lpPlayer = players.find(p => p.id === gameState?.lastPlayerId);
 
   return (
-    <div className="felt-texture" style={{
-      height:'100%', display:'flex', flexDirection:'column', background:'#1a4a2a',
-      animation: bombAnim ? 'shake 0.5s ease' : 'none', position:'relative', overflow:'hidden',
+    <div style={{
+      height:'100%', display:'flex', flexDirection:'column', background:'#0f3a24',
+      animation: bombAnim ? 'shake 0.35s ease' : 'none', position:'relative', overflow:'hidden',
       fontFamily:"'PingFang SC','Microsoft YaHei',sans-serif",
     }}>
-      {bombAnim && <div style={{ position:'fixed', inset:0, zIndex:100, background:'rgba(255,0,0,0.3)', animation:'pulse 0.2s infinite' }} />}
+      {bombAnim && <div style={{ position:'fixed', inset:0, zIndex:100, background:'rgba(245,158,11,0.12)', pointerEvents:'none' }} />}
 
       <div style={{ position:'fixed', top:'40%', left:'50%', transform:'translateX(-50%)', zIndex:110, pointerEvents:'none' }}>
-        {floats.map(f => <div key={f.id} style={{ fontSize:32, fontWeight:900, color:'#f5c518', textShadow:'0 0 10px rgba(0,0,0,0.5)', animation:'floatUp 2.5s ease-out forwards' }}>{f.text}</div>)}
+        {floats.map(f => <div key={f.id} style={{ fontSize:30, fontWeight:900, color:'#fbbf24', textShadow:'0 2px 8px rgba(0,0,0,0.45)', animation:'floatUp 2.5s ease-out forwards' }}>{f.text}</div>)}
       </div>
 
-      <div style={{ height:'var(--scorebar-h, 48px)', display:'flex', padding:'0 8px', alignItems:'center', background:'rgba(0,0,0,0.3)', borderBottom:'1px solid rgba(255,255,255,0.1)', zIndex:20 }}>
+      <div style={{ height:'var(--scorebar-h, 48px)', display:'flex', padding:'4px 8px', alignItems:'center', background:'#0b2417', borderBottom:'1px solid rgba(255,255,255,0.08)', zIndex:20 }}>
         {players.map((p, i) => {
           const isCurrent = gameState?.currentPlayer === i;
+          const finishIndex = gameState?.finishOrder?.indexOf(p.id) ?? -1;
+          const finished = finishIndex >= 0 || p.cardCount === 0;
           return (
             <div key={p.id} style={{
-              flex:1, minWidth:0, display:'flex', alignItems:'center', gap:6, padding:'3px 6px',
-              borderRadius:18, margin:'0 3px', background: isCurrent ? 'rgba(245,197,24,0.2)' : 'transparent',
-              border: `1px solid ${isCurrent ? '#f5c518' : 'transparent'}`, boxShadow: isCurrent ? '0 0 15px rgba(245,197,24,0.4)' : 'none',
-              transition:'all 0.3s', opacity:p.isOnline ? 1 : 0.45,
+              flex:1, minWidth:0, display:'flex', alignItems:'center', gap:6, padding:'3px 7px',
+              borderRadius:14, margin:'0 3px', background: isCurrent ? 'rgba(245,197,24,0.14)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.05)'}`,
+              boxShadow: isCurrent ? '0 0 10px rgba(245,197,24,0.25)' : 'none',
+              transition:'all 0.2s', opacity:p.isOnline ? 1 : 0.45,
             }}>
-              <div style={{ width:22, height:22, borderRadius:'50%', background:AVATAR_COLORS[i], display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, flexShrink:0 }}>{AVATARS[i]}</div>
+              <div style={{ width:22, height:22, borderRadius:'50%', background:AVATAR_COLORS[i], display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:900, color:'#fff', flexShrink:0 }}>{AVATARS[i]}</div>
               <div style={{ flex:1, overflow:'hidden' }}>
-                <div style={{ fontSize:10, color:'#eee', whiteSpace:'nowrap', textOverflow:'ellipsis', overflow:'hidden' }}>{p.name}{!p.isOnline ? ' 离线' : ''}</div>
-                <div style={{ fontSize:12, fontWeight:900, color:'#f5c518' }}>{p.score} <span style={{fontSize:9}}>pts</span></div>
+                <div style={{ fontSize:10, color:'#f8fafc', whiteSpace:'nowrap', textOverflow:'ellipsis', overflow:'hidden' }}>{p.name}{!p.isOnline ? ' 离线' : ''}</div>
+                <div style={{ fontSize:11, fontWeight:900, color:'#fbbf24' }}>{p.score}分</div>
               </div>
-              <div style={{ fontSize:11, color:'#fff', opacity:0.7, flexShrink:0 }}>🎴{p.cardCount}</div>
+              <div style={{ fontSize:10, color: finished ? '#4ade80' : '#cbd5e1', flexShrink:0, fontWeight:800 }}>{finished ? `第${finishIndex + 1 || ''}走` : `牌${p.cardCount}`}</div>
             </div>
           );
         })}
@@ -318,17 +321,17 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
         </div>
 
         <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0 }}>
-          <div style={{ height:'38%', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
+          <div style={{ height:'36%', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
             {topOpp && <OpponentTop player={topOpp} idx={players.indexOf(topOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(topOpp)} />}
           </div>
-          <div style={{ height:'62%', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
-            <div style={{ position:'absolute', width:'80%', height:'80%', borderRadius:'50%', border:'2px solid rgba(255,255,255,0.05)', background:'rgba(0,0,0,0.1)', boxShadow: isMyTurn ? 'inset 0 0 30px rgba(245,197,24,0.2)' : 'none', animation: isMyTurn ? 'myTurnPulse 2s infinite' : 'none' }} />
+          <div style={{ height:'64%', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
+            <div style={{ position:'absolute', width:'78%', height:'76%', borderRadius:'34px', border:'1px solid rgba(255,255,255,0.06)', background:'rgba(255,255,255,0.025)', boxShadow: isMyTurn ? 'inset 0 0 20px rgba(245,197,24,0.14)' : 'none' }} />
             {lp ? (
               <div style={{ zIndex:5, textAlign:'center', maxWidth:'96%' }}>
-                <div style={{ marginBottom:5, fontSize:12, fontWeight:900, color:'#f5c518', textShadow:'0 2px 4px rgba(0,0,0,0.5)' }}>{lpPlayer?.name} : {patternLabel(lp)}</div>
+                <div style={{ marginBottom:5, fontSize:12, fontWeight:900, color:'#fbbf24', textShadow:'0 2px 4px rgba(0,0,0,0.5)' }}>{lpPlayer?.name} · {patternLabel(lp)}</div>
                 <div style={{ display:'flex', gap:3, justifyContent:'center', flexWrap:'wrap' }}>{lpCards.map(c => <MiniCard key={c.id} card={c} />)}</div>
               </div>
-            ) : <div style={{ color:'rgba(255,255,255,0.2)', fontSize:14 }}>{isMyTurn ? '请出牌' : '等待中...'}</div>}
+            ) : <div style={{ color:'rgba(255,255,255,0.35)', fontSize:14 }}>{isMyTurn ? '请出牌' : '等待中...'}</div>}
           </div>
         </div>
 
@@ -337,13 +340,13 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
         </div>
       </div>
 
-      <div style={{ paddingBottom:'var(--hand-bottom-pad, 8px)', zIndex:30, flexShrink:0 }}>
-        <div style={{ height:18, textAlign:'center', fontSize:12, color:'#f5c518', fontWeight:900, textShadow:'0 1px 2px rgba(0,0,0,0.8)' }}>
-          {selected.size > 0 ? `已选${selected.size}张 · ${selectedType}` : sending ? '正在出牌...' : arranged ? '已理牌：得分牌和炸弹在右侧' : ''}
+      <div style={{ paddingBottom:'var(--hand-bottom-pad, 8px)', zIndex:30, flexShrink:0, background:'linear-gradient(to top, rgba(0,0,0,0.28), transparent)' }}>
+        <div style={{ height:18, textAlign:'center', fontSize:12, color:'#fbbf24', fontWeight:900, textShadow:'0 1px 2px rgba(0,0,0,0.8)' }}>
+          {myFinished ? '你已出完，等待本局打完' : selected.size > 0 ? `已选${selected.size}张 · ${selectedType}` : sending ? '正在出牌...' : arranged ? '已理牌：得分牌和炸弹在右侧' : ''}
         </div>
 
         <div style={{ display:'flex', justifyContent:'center', padding:'var(--hand-y-pad-top, 10px) var(--hand-x-pad, 40px) var(--hand-y-pad-bottom, 20px)', overflow:'visible', touchAction:'manipulation' }}>
-          <div style={{ display:'flex', justifyContent:'center', minWidth:0 }}>
+          <div style={{ display:'flex', justifyContent:'center', minWidth:0, opacity: myFinished ? 0.35 : 1 }}>
             {sortedHand.map((card, i) => (
               <div key={card.id} style={{ marginLeft: i === 0 ? 0 : 'var(--hand-overlap, -24px)' }}>
                 <Card card={card} selected={selected.has(card.id)} onClick={() => toggleCard(card.id)} />
@@ -353,22 +356,22 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
         </div>
 
         <div style={{ display:'flex', gap:7, padding:'0 10px', alignItems:'center' }}>
-          <button disabled={sending} onClick={arrangeCards} className="btn-gold-outline" style={{ padding:'6px 11px', borderRadius:16, fontSize:12, fontWeight:900 }}>🧹理牌</button>
-          <button disabled={sending} onClick={hint} className="btn-gold-outline" style={{ padding:'6px 11px', borderRadius:16, fontSize:12, fontWeight:900 }}>💡提示</button>
-          <button disabled={sending} onClick={selectAll} className="btn-gold-outline" style={{ padding:'6px 11px', borderRadius:16, fontSize:12, fontWeight:900 }}>全选</button>
+          <button disabled={sending || myFinished} onClick={arrangeCards} className="btn-lite" style={{ padding:'6px 11px', borderRadius:14, fontSize:12, fontWeight:900 }}>理牌</button>
+          <button disabled={sending || myFinished} onClick={hint} className="btn-lite" style={{ padding:'6px 11px', borderRadius:14, fontSize:12, fontWeight:900 }}>提示</button>
+          <button disabled={sending || myFinished} onClick={selectAll} className="btn-lite" style={{ padding:'6px 11px', borderRadius:14, fontSize:12, fontWeight:900 }}>全选</button>
           <div style={{ flex:1 }} />
-          <button disabled={!isMyTurn || isFirst || sending} onClick={pass} className="btn-pass" style={{ padding:'8px 18px', borderRadius:16, fontSize:14, fontWeight:900 }}>过牌</button>
-          <button disabled={!isMyTurn || !selected.size || sending} onClick={playCards} className="btn-play" style={{ padding:'8px 24px', borderRadius:16, fontSize:16, fontWeight:900 }}>出牌{selected.size > 0 ? `(${selected.size})` : ''}</button>
+          <button disabled={!isMyTurn || isFirst || sending || myFinished} onClick={pass} className="btn-pass" style={{ padding:'8px 18px', borderRadius:14, fontSize:14, fontWeight:900 }}>过牌</button>
+          <button disabled={!isMyTurn || !selected.size || sending || myFinished} onClick={playCards} className="btn-play" style={{ padding:'8px 24px', borderRadius:14, fontSize:16, fontWeight:900 }}>出牌{selected.size > 0 ? `(${selected.size})` : ''}</button>
         </div>
       </div>
 
       <style>{`
-        .btn-gold-outline { background:rgba(0,0,0,0.3); border:1px solid #f5c518; color:#f5c518; }
-        .btn-gold-outline:disabled { opacity:0.45; }
-        .btn-pass { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); color:#fff; }
+        .btn-lite { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); color:#f8fafc; }
+        .btn-lite:disabled { opacity:0.35; }
+        .btn-pass { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#fff; }
         .btn-pass:disabled { opacity:0.3; }
-        .btn-play { background:linear-gradient(to bottom, #f5c518, #e8a800); border:none; color:#1a4a2a; box-shadow:0 4px 10px rgba(0,0,0,0.3); }
-        .btn-play:disabled { background:#555; color:#888; box-shadow:none; }
+        .btn-play { background:#f5c518; border:none; color:#102016; box-shadow:0 3px 10px rgba(0,0,0,0.28); }
+        .btn-play:disabled { background:#45524a; color:#9ca3af; box-shadow:none; }
         @keyframes myTurnPulse { 0%, 100% { border-color:rgba(245,197,24,0.1); } 50% { border-color:rgba(245,197,24,0.6); } }
       `}</style>
     </div>
@@ -378,26 +381,20 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
 function OpponentSide({ player, idx, isCurrent }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, opacity: player.isOnline ? 1 : 0.5 }}>
-      <div style={{ width:46, height:46, borderRadius:'50%', background:AVATAR_COLORS[idx], display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, border: `3px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.2)'}`, boxShadow: isCurrent ? '0 0 20px #f5c518' : 'none' }}>{AVATARS[idx]}</div>
+      <div style={{ width:42, height:42, borderRadius:'50%', background:AVATAR_COLORS[idx], display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, fontWeight:900, color:'#fff', border: `2px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.2)'}`, boxShadow: isCurrent ? '0 0 14px rgba(245,197,24,0.45)' : 'none' }}>{AVATARS[idx]}</div>
       <div style={{ fontSize:11, fontWeight:900, color:'#fff', textAlign:'center', maxWidth:70, overflow:'hidden', textOverflow:'ellipsis' }}>{player.name}{!player.isOnline ? ' 离线' : ''}</div>
-      <div style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
-        {[...Array(Math.min(player.cardCount, 5))].map((_, i) => <div key={i} style={{ marginTop: i === 0 ? 0 : -24 }}><Card faceDown tiny /></div>)}
-        {player.cardCount > 5 && <div style={{ fontSize:10, color:'#f5c518', marginTop:4 }}>+{player.cardCount-5}</div>}
-      </div>
+      <div style={{ fontSize:10, color:'#cbd5e1' }}>{player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div>
     </div>
   );
 }
 
 function OpponentTop({ player, idx, isCurrent }) {
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:10, opacity: player.isOnline ? 1 : 0.5 }}>
-      <div style={{ width:38, height:38, borderRadius:'50%', background:AVATAR_COLORS[idx], display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, border: `2px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.2)'}`, boxShadow: isCurrent ? '0 0 15px #f5c518' : 'none' }}>{AVATARS[idx]}</div>
+    <div style={{ display:'flex', alignItems:'center', gap:9, opacity: player.isOnline ? 1 : 0.5, padding:'6px 10px', borderRadius:16, background:'rgba(0,0,0,0.14)', border:`1px solid ${isCurrent ? '#f5c51866' : 'rgba(255,255,255,0.06)'}` }}>
+      <div style={{ width:34, height:34, borderRadius:'50%', background:AVATAR_COLORS[idx], display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:900, color:'#fff', border: `2px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.2)'}`, boxShadow: isCurrent ? '0 0 12px rgba(245,197,24,0.45)' : 'none' }}>{AVATARS[idx]}</div>
       <div style={{ display:'flex', flexDirection:'column' }}>
         <div style={{ fontSize:11, fontWeight:900, color:'#fff' }}>{player.name}{!player.isOnline ? ' 离线' : ''}</div>
-        <div style={{ display:'flex' }}>
-          {[...Array(Math.min(player.cardCount, 8))].map((_, i) => <div key={i} style={{ marginLeft: i === 0 ? 0 : -16 }}><Card faceDown tiny /></div>)}
-          {player.cardCount > 8 && <div style={{ fontSize:10, color:'#f5c518', marginLeft:5, alignSelf:'center' }}>+{player.cardCount-8}</div>}
-        </div>
+        <div style={{ fontSize:10, color:'#cbd5e1' }}>{player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div>
       </div>
     </div>
   );
