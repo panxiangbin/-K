@@ -7,6 +7,7 @@ const SUIT_ORDER = { '♠': 4, '♥': 3, '♣': 2, '♦': 1 };
 const TYPE_LABEL = { single:'单张', pair:'对子', triple:'三张', bomb:'💥炸弹' };
 const AVATARS = ['🐲','🐯','🦊','🐺'];
 const AVATAR_COLORS = ['#9333ea','#0891b2','#d97706','#dc2626'];
+const SCORE_RANKS = new Set(['5', '10', 'K']);
 
 function cardValue(rank) { return CARD_ORDER.indexOf(rank); }
 function isBlack(suit) { return suit === '♠' || suit === '♣'; }
@@ -128,6 +129,29 @@ function getAllBombs(hand) {
   return results;
 }
 
+function getBombIds(hand) {
+  const ids = new Set();
+  getAllBombs(hand).forEach(combo => combo.forEach(card => ids.add(card.id)));
+  return ids;
+}
+
+function arrangeHand(hand) {
+  const sorted = sortCards(hand);
+  const bombIds = getBombIds(sorted);
+  const normal = [];
+  const scoreCards = [];
+  const bombs = [];
+
+  sorted.forEach(card => {
+    if (bombIds.has(card.id)) bombs.push(card);
+    else if (SCORE_RANKS.has(card.rank)) scoreCards.push(card);
+    else normal.push(card);
+  });
+
+  // 普通牌在左，5/10/K 得分牌在中，炸弹集中到最右边。
+  return [...normal, ...scoreCards, ...bombs];
+}
+
 function getHint(hand, lastPlay) {
   if (!hand.length) return [];
   if (!lastPlay) return [hand[0].id];
@@ -163,13 +187,14 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   const [floats, setFloats] = useState([]);
   const [bombAnim, setBombAnim] = useState(false);
   const [sending, setSending] = useState(false);
+  const [arranged, setArranged] = useState(false);
   const floatId = useRef(0);
   const prevScores = useRef({});
 
   const myIdx = gameState?.players?.findIndex(p => p.id === myInfo?.playerId) ?? -1;
   const isMyTurn = gameState?.currentPlayer === myIdx;
   const isFirst = !gameState?.lastPlay;
-  const sortedHand = sortCards(myHand);
+  const sortedHand = arranged ? arrangeHand(myHand) : sortCards(myHand);
   const lastPlayKey = gameState?.lastPlayCards?.map(c => c.id).join('|') || '';
 
   useEffect(() => { if (isMyTurn && navigator.vibrate) navigator.vibrate([100, 50, 100]); }, [isMyTurn]);
@@ -224,6 +249,12 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
     const ids = getHint(sortedHand, gameState?.lastPlay);
     if (ids.length) setSelected(new Set(ids));
     else toast('没有合适的牌可以出', 'dim');
+  }
+
+  function arrangeCards() {
+    setArranged(true);
+    setSelected(new Set());
+    toast?.('已理牌：5、10、K和炸弹已放到右侧', 'success');
   }
 
   function selectAll() { setSelected(new Set(sortedHand.map(c => c.id))); }
@@ -308,7 +339,7 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
 
       <div style={{ paddingBottom:'var(--hand-bottom-pad, 8px)', zIndex:30, flexShrink:0 }}>
         <div style={{ height:18, textAlign:'center', fontSize:12, color:'#f5c518', fontWeight:900, textShadow:'0 1px 2px rgba(0,0,0,0.8)' }}>
-          {selected.size > 0 ? `已选${selected.size}张 · ${selectedType}` : sending ? '正在出牌...' : ''}
+          {selected.size > 0 ? `已选${selected.size}张 · ${selectedType}` : sending ? '正在出牌...' : arranged ? '已理牌：得分牌和炸弹在右侧' : ''}
         </div>
 
         <div style={{ display:'flex', justifyContent:'center', padding:'var(--hand-y-pad-top, 10px) var(--hand-x-pad, 40px) var(--hand-y-pad-bottom, 20px)', overflow:'visible', touchAction:'manipulation' }}>
@@ -322,6 +353,7 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
         </div>
 
         <div style={{ display:'flex', gap:7, padding:'0 10px', alignItems:'center' }}>
+          <button disabled={sending} onClick={arrangeCards} className="btn-gold-outline" style={{ padding:'6px 11px', borderRadius:16, fontSize:12, fontWeight:900 }}>🧹理牌</button>
           <button disabled={sending} onClick={hint} className="btn-gold-outline" style={{ padding:'6px 11px', borderRadius:16, fontSize:12, fontWeight:900 }}>💡提示</button>
           <button disabled={sending} onClick={selectAll} className="btn-gold-outline" style={{ padding:'6px 11px', borderRadius:16, fontSize:12, fontWeight:900 }}>全选</button>
           <div style={{ flex:1 }} />
