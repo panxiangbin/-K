@@ -4,60 +4,61 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0d1117" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="五十K" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="/icon.svg" />
   <title>河南五十K</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
     html,body,#root{height:100%;width:100%;overflow:hidden;background:#0d1117;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
     #root{padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
-    /* 强制横屏提示：如果用户是竖屏，提示旋转 */
-    #rotate-tip{display:none;position:fixed;inset:0;background:#0d1117;z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:16px;color:#f5c518;font-size:18px;font-weight:700;text-align:center}
-    #rotate-tip span{font-size:60px;animation:spin 2s linear infinite}
-    #force-enter{margin-top:20px;padding:12px 32px;background:#f5c518;color:#000;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer}
-    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* 手机竖屏时强提示横屏，不再提供“直接进入”按钮，避免竖屏误玩导致界面挤坏。 */
+    #rotate-tip{
+      display:none;position:fixed;inset:0;z-index:9999;
+      align-items:center;justify-content:center;flex-direction:column;gap:14px;
+      color:#f5c518;text-align:center;background:radial-gradient(ellipse at 50% 30%,#1e1060 0%,#0d1117 58%,#05070a 100%);
+      padding:28px;font-weight:800;letter-spacing:.5px;
+    }
+    #rotate-tip .phone{font-size:58px;animation:turnPhone 1.6s ease-in-out infinite;filter:drop-shadow(0 0 18px rgba(245,197,24,.35))}
+    #rotate-tip .title{font-size:22px;line-height:1.35;color:#f5c518}
+    #rotate-tip .desc{font-size:14px;line-height:1.8;color:#d6c98a;font-weight:500;max-width:320px}
+    #rotate-tip .hint{margin-top:8px;padding:8px 14px;border:1px solid rgba(245,197,24,.35);border-radius:999px;color:#f5c518;background:rgba(245,197,24,.08);font-size:13px}
+    @keyframes turnPhone{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
   </style>
 </head>
 <body>
-  <!-- 竖屏提示 -->
-  <div id="rotate-tip">
-    <span>📱</span>
-    <p>请旋转手机横屏游戏</p>
-    <button id="force-enter">直接进入游戏</button>
+  <div id="rotate-tip" aria-live="polite">
+    <div class="phone">📱↔️</div>
+    <div class="title">请横屏游玩</div>
+    <div class="desc">五十K 是围桌牌局，竖屏会挡住手牌和按钮。把手机横过来后，会自动进入游戏。</div>
+    <div class="hint">建议打开系统自动旋转</div>
   </div>
 
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
   <script>
-    if('serviceWorker' in navigator){
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js');
+    // 旧版本注册过 Service Worker/PWA，容易缓存旧页面并诱导安装。当前先全部清掉，避免“下载APP”假按钮和旧缓存残留。
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs){
+        regs.forEach(function(reg){ reg.unregister(); });
       });
     }
-    // PWA 安装提示
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', e => {
-      e.preventDefault();
-      deferredPrompt = e;
-      window.__pwaPrompt = () => { deferredPrompt && deferredPrompt.prompt(); };
-    });
-    // 用 JS 检测方向，避免 Capacitor WebView 里 CSS 媒体查询失效
+    if (window.caches) {
+      caches.keys().then(function(keys){
+        keys.forEach(function(key){ caches.delete(key); });
+      });
+    }
+
+    // 用 JS 检测方向，避免部分手机 WebView 里 CSS 媒体查询失效。
     (function(){
+      function isTouchDevice(){ return ('ontouchstart' in window) || navigator.maxTouchPoints > 0; }
       function checkOri(){
         var tip = document.getElementById('rotate-tip');
         var portrait = window.innerHeight > window.innerWidth;
-        tip.style.display = portrait ? 'flex' : 'none';
+        tip.style.display = (isTouchDevice() && portrait) ? 'flex' : 'none';
       }
       window.addEventListener('resize', checkOri);
       window.addEventListener('orientationchange', function(){ setTimeout(checkOri, 300); });
       document.addEventListener('DOMContentLoaded', checkOri);
-      document.getElementById('force-enter').addEventListener('click', function(){
-        document.getElementById('rotate-tip').style.display = 'none';
-      });
+      checkOri();
     })();
   </script>
 </body>
