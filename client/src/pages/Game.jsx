@@ -4,8 +4,9 @@ import Card, { MiniCard } from '../components/Card';
 const CARD_ORDER = ['3','4','5','6','7','8','9','10','J','Q','K','A','2','小王','大王'];
 const SCORE_MAP = { '5': 5, '10': 10, 'K': 10 };
 const BOMB_LEVEL = { '50K': 1, color4: 2, same8: 3, joker4: 4 };
+// 同花五十K大小：黑桃 > 红桃 > 梅花 > 方块
 const SUIT_ORDER = { '♠': 4, '♥': 3, '♣': 2, '♦': 1 };
-const TYPE_LABEL = { single:'单张', pair:'对子', triple:'三张', four:'四张', bomb:'炸弹' };
+const TYPE_LABEL = { single:'单张', pair:'对子', triple:'三张', four:'普通四张', five:'普通五张', six:'普通六张', seven:'普通七张', bomb:'炸弹' };
 const AVATARS = ['龙','虎','狐','狼'];
 const AVATAR_COLORS = ['#7c3aed','#0891b2','#d97706','#dc2626'];
 const SCORE_RANKS = new Set(['5', '10', 'K']);
@@ -15,6 +16,7 @@ function isBlack(suit) { return suit === '♠' || suit === '♣'; }
 function isRed(suit) { return suit === '♥' || suit === '♦'; }
 function sortCards(cards) { return [...cards].sort((a,b) => cardValue(a.rank) - cardValue(b.rank)); }
 function calcScore(cards = []) { return cards.reduce((sum, c) => sum + (SCORE_MAP[c.rank] || 0), 0); }
+function isSameRank(cards) { return cards.length > 0 && cards.every(c => c.rank === cards[0].rank); }
 
 function detect50K(cards) {
   if (cards.length !== 3) return null;
@@ -33,7 +35,7 @@ function detectPattern(cards) {
   if (n === 3) {
     const f50k = detect50K(cards);
     if (f50k) return f50k;
-    return cards.every(c => c.rank === cards[0].rank) ? { type: 'triple', rank: cards[0].rank } : null;
+    return isSameRank(cards) ? { type: 'triple', rank: cards[0].rank } : null;
   }
   if (n === 4) {
     const jokers = cards.filter(c => c.suit === 'joker');
@@ -42,7 +44,7 @@ function detectPattern(cards) {
       const hasSmall = jokers.filter(c => c.rank === '小王').length === 2;
       if (hasBig && hasSmall) return { type: 'bomb', bombType: 'joker4', rank: '大王', suit: null };
     }
-    if (cards.every(c => c.rank === cards[0].rank)) {
+    if (isSameRank(cards)) {
       const rank = cards[0].rank;
       const allBlack = cards.every(c => isBlack(c.suit));
       const allRed = cards.every(c => isRed(c.suit));
@@ -52,7 +54,12 @@ function detectPattern(cards) {
     }
     return null;
   }
-  if (n === 8 && cards.every(c => c.rank === cards[0].rank)) return { type: 'bomb', bombType: 'same8', rank: cards[0].rank };
+  // 5/6/7张同点数可以出，但不是炸弹
+  if (n === 5 && isSameRank(cards)) return { type: 'five', rank: cards[0].rank };
+  if (n === 6 && isSameRank(cards)) return { type: 'six', rank: cards[0].rank };
+  if (n === 7 && isSameRank(cards)) return { type: 'seven', rank: cards[0].rank };
+  // 8张同点数才是八张炸弹
+  if (n === 8 && isSameRank(cards)) return { type: 'bomb', bombType: 'same8', rank: cards[0].rank };
   return null;
 }
 
@@ -70,9 +77,11 @@ function comparePatterns(newP, oldP) {
     if (newP.bombType === 'joker4') return false;
     if (newP.bombType === 'same8') return cardValue(newP.rank) > cardValue(oldP.rank);
     if (newP.bombType === 'color4') {
+      // 红/黑四炸：先比点数；同点数时黑 > 红
+      const rankDiff = cardValue(newP.rank) - cardValue(oldP.rank);
+      if (rankDiff !== 0) return rankDiff > 0;
       const colorOrder = { black: 2, red: 1 };
-      if (newP.color !== oldP.color) return colorOrder[newP.color] > colorOrder[oldP.color];
-      return cardValue(newP.rank) > cardValue(oldP.rank);
+      return colorOrder[newP.color] > colorOrder[oldP.color];
     }
     if (newP.bombType === '50K') return (SUIT_ORDER[newP.suit] || 0) > (SUIT_ORDER[oldP.suit] || 0);
   }
@@ -85,6 +94,9 @@ function getPatternLen(p) {
   if (p.type === 'pair') return 2;
   if (p.type === 'triple') return 3;
   if (p.type === 'four') return 4;
+  if (p.type === 'five') return 5;
+  if (p.type === 'six') return 6;
+  if (p.type === 'seven') return 7;
   return null;
 }
 
@@ -111,8 +123,8 @@ function getAllBombs(hand) {
     if (group.length >= 8) results.push(group.slice(0, 8));
     const blacks = group.filter(c => isBlack(c.suit));
     const reds = group.filter(c => isRed(c.suit));
-    if (blacks.length >= 4) results.push(blacks.slice(0, 4));
-    if (reds.length >= 4) results.push(reds.slice(0, 4));
+    if (blacks.length >= 4) combosPushUnique(results, blacks.slice(0, 4));
+    if (reds.length >= 4) combosPushUnique(results, reds.slice(0, 4));
   }
   for (const suit of ['♠','♥','♣','♦']) {
     const five = hand.find(c => c.rank === '5' && c.suit === suit);
@@ -121,6 +133,11 @@ function getAllBombs(hand) {
     if (five && ten && king) results.push([five, ten, king]);
   }
   return results;
+}
+
+function combosPushUnique(results, combo) {
+  const key = combo.map(c => c.id).sort().join('|');
+  if (!results.some(x => x.map(c => c.id).sort().join('|') === key)) results.push(combo);
 }
 
 function getBombIds(hand) { const ids = new Set(); getAllBombs(hand).forEach(combo => combo.forEach(card => ids.add(card.id))); return ids; }
@@ -172,6 +189,10 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
   const [turnProgress, setTurnProgress] = useState(0);
   const floatId = useRef(0);
   const prevScores = useRef({});
+  const pointerDownRef = useRef(false);
+  const dragMovedRef = useRef(false);
+  const dragStartCardRef = useRef(null);
+  const ignoreClickRef = useRef(false);
 
   const players = gameState?.players || [];
   const myIdx = players.findIndex(p => p.id === myInfo?.playerId);
@@ -211,10 +232,50 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
     if (gameState?.lastPlay?.type === 'bomb') { setBombAnim(true); setTimeout(() => setBombAnim(false), 700); }
   }, [lastPlayKey, gameState?.lastPlay?.type]);
 
+  const addSelected = useCallback((id) => {
+    if (sending || myFinished || !id) return;
+    setSelected(s => {
+      if (s.has(id)) return s;
+      const n = new Set(s);
+      n.add(id);
+      return n;
+    });
+  }, [sending, myFinished]);
+
   const toggleCard = useCallback((id) => {
     if (sending || myFinished) return;
     setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }, [sending, myFinished]);
+
+  function handleCardPointerDown(id) {
+    if (sending || myFinished) return;
+    pointerDownRef.current = true;
+    dragMovedRef.current = false;
+    dragStartCardRef.current = id;
+  }
+
+  function handleHandPointerMove(e) {
+    if (!pointerDownRef.current || sending || myFinished) return;
+    dragMovedRef.current = true;
+    addSelected(dragStartCardRef.current);
+    const el = document.elementFromPoint(e.clientX, e.clientY)?.closest?.('[data-card-id]');
+    if (el) addSelected(el.dataset.cardId);
+  }
+
+  function endSlideSelect() {
+    if (dragMovedRef.current) {
+      ignoreClickRef.current = true;
+      setTimeout(() => { ignoreClickRef.current = false; }, 250);
+    }
+    pointerDownRef.current = false;
+    dragMovedRef.current = false;
+    dragStartCardRef.current = null;
+  }
+
+  function handleCardClick(id) {
+    if (ignoreClickRef.current) return;
+    toggleCard(id);
+  }
 
   function releaseSendingSoon() { setTimeout(() => setSending(false), 1200); }
   function playCards() {
@@ -303,11 +364,23 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
         {me && <div style={{ display:'flex', justifyContent:'center', marginBottom:1 }}><SelfPanel player={me} isCurrent={isMyTurn} /></div>}
         <StatusBar myFinished={myFinished} selectedCount={selected.size} selectedType={selectedType} canPlaySelected={canPlaySelected} sending={sending} isMyTurn={isMyTurn} arranged={arranged} lastPlay={gameState?.lastPlay} />
 
-        <div style={{ display:'flex', justifyContent:'center', padding:'var(--hand-y-pad-top, 10px) var(--hand-x-pad, 40px) var(--hand-y-pad-bottom, 18px)', overflow:'visible', touchAction:'manipulation' }}>
+        <div
+          onPointerMove={handleHandPointerMove}
+          onPointerUp={endSlideSelect}
+          onPointerCancel={endSlideSelect}
+          onPointerLeave={endSlideSelect}
+          style={{ display:'flex', justifyContent:'center', padding:'var(--hand-y-pad-top, 10px) var(--hand-x-pad, 40px) var(--hand-y-pad-bottom, 18px)', overflow:'visible', touchAction:'none' }}
+        >
           <div style={{ display:'flex', justifyContent:'center', minWidth:0, opacity: myFinished ? 0.35 : 1 }}>
             {sortedHand.map((card, i) => (
-              <div key={card.id} style={{ marginLeft: i === 0 ? 0 : 'var(--hand-overlap, -24px)', filter:selected.has(card.id) ? 'drop-shadow(0 0 8px rgba(251,191,36,0.8))' : 'none' }}>
-                <Card card={card} selected={selected.has(card.id)} onClick={() => toggleCard(card.id)} />
+              <div
+                key={card.id}
+                data-card-id={card.id}
+                onPointerDown={() => handleCardPointerDown(card.id)}
+                onClick={() => handleCardClick(card.id)}
+                style={{ marginLeft: i === 0 ? 0 : 'var(--hand-overlap, -24px)', filter:selected.has(card.id) ? 'drop-shadow(0 0 8px rgba(251,191,36,0.8))' : 'none' }}
+              >
+                <Card card={card} selected={selected.has(card.id)} />
               </div>
             ))}
           </div>
@@ -361,7 +434,7 @@ function StatusBar({ myFinished, selectedCount, selectedType, canPlaySelected, s
   } else if (sending) text = '正在出牌...';
   else if (isMyTurn) text = lastPlay ? `请出牌，需压过：${patternLabel(lastPlay)}` : '你先出牌，选择任意合法牌型';
   else if (arranged) text = '已理牌：再点“还原”恢复普通排序';
-  else text = '看中间本轮出牌区，等待轮到你';
+  else text = '可点选，也可以按住手牌横向滑动多选';
   return <div style={{ height:22, display:'flex', justifyContent:'center', alignItems:'center' }}><div style={{ padding:'3px 12px', borderRadius:12, background:'rgba(0,0,0,0.24)', border:`1px solid ${color}33`, fontSize:12, color, fontWeight:900, textShadow:'0 1px 2px rgba(0,0,0,0.8)', animation:isMyTurn && selectedCount === 0 ? 'softPulse 1.3s ease-in-out infinite' : 'none' }}>{text}</div></div>;
 }
 
