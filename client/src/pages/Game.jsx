@@ -21,9 +21,7 @@ function detect50K(cards) {
   const sorted = [...cards].sort((a,b) => cardValue(a.rank) - cardValue(b.rank));
   if (sorted.map(c => c.rank).join(',') !== '5,10,K') return null;
   const suit = sorted[0].suit;
-  if (suit !== 'joker' && sorted.every(c => c.suit === suit)) {
-    return { type: 'bomb', bombType: '50K', rank: 'K', suit };
-  }
+  if (suit !== 'joker' && sorted.every(c => c.suit === suit)) return { type: 'bomb', bombType: '50K', rank: 'K', suit };
   return null;
 }
 
@@ -95,9 +93,7 @@ function getCombinations(arr, n) {
   const result = [];
   function pick(start, current) {
     if (current.length === n) { result.push([...current]); return; }
-    for (let i = start; i < arr.length; i++) {
-      current.push(arr[i]); pick(i + 1, current); current.pop();
-    }
+    for (let i = start; i < arr.length; i++) { current.push(arr[i]); pick(i + 1, current); current.pop(); }
   }
   pick(0, []);
   return result;
@@ -108,7 +104,6 @@ function getAllBombs(hand) {
   const big = hand.filter(c => c.rank === '大王');
   const small = hand.filter(c => c.rank === '小王');
   if (big.length >= 2 && small.length >= 2) results.push([big[0], big[1], small[0], small[1]]);
-
   const rankGroups = {};
   for (const c of hand) { if (!rankGroups[c.rank]) rankGroups[c.rank] = []; rankGroups[c.rank].push(c); }
   for (const group of Object.values(rankGroups)) {
@@ -118,7 +113,6 @@ function getAllBombs(hand) {
     if (blacks.length >= 4) results.push(blacks.slice(0, 4));
     if (reds.length >= 4) results.push(reds.slice(0, 4));
   }
-
   for (const suit of ['♠','♥','♣','♦']) {
     const five = hand.find(c => c.rank === '5' && c.suit === suit);
     const ten = hand.find(c => c.rank === '10' && c.suit === suit);
@@ -129,7 +123,6 @@ function getAllBombs(hand) {
 }
 
 function getBombIds(hand) { const ids = new Set(); getAllBombs(hand).forEach(combo => combo.forEach(card => ids.add(card.id))); return ids; }
-
 function arrangeHand(hand) {
   const sorted = sortCards(hand);
   const bombIds = getBombIds(sorted);
@@ -168,12 +161,13 @@ function detectSelectedType(cards) {
   return pattern ? patternLabel(pattern) : '?';
 }
 
-export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast }) {
+export default function Game({ send, gameState, myHand, myInfo, toast, onReturnLobby, onExitRoom }) {
   const [selected, setSelected] = useState(new Set());
   const [floats, setFloats] = useState([]);
   const [bombAnim, setBombAnim] = useState(false);
   const [sending, setSending] = useState(false);
   const [arranged, setArranged] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
   const floatId = useRef(0);
   const prevScores = useRef({});
 
@@ -204,9 +198,7 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   }, [gameState?.players]);
 
   useEffect(() => {
-    if (gameState?.lastPlay?.type === 'bomb') {
-      setBombAnim(true); setTimeout(() => setBombAnim(false), 700);
-    }
+    if (gameState?.lastPlay?.type === 'bomb') { setBombAnim(true); setTimeout(() => setBombAnim(false), 700); }
   }, [lastPlayKey, gameState?.lastPlay?.type]);
 
   const toggleCard = useCallback((id) => {
@@ -218,14 +210,10 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
   function playCards() { if (!isMyTurn || !selected.size || sending || myFinished) return; send({ type: 'play_cards', cardIds: [...selected] }); setSending(true); setSelected(new Set()); releaseSendingSoon(); }
   function pass() { if (!isMyTurn || isFirst || sending || myFinished) return; send({ type: 'pass' }); setSending(true); setSelected(new Set()); releaseSendingSoon(); }
   function hint() { const ids = getHint(sortedHand, gameState?.lastPlay); if (ids.length) setSelected(new Set(ids)); else toast('没有合适的牌可以出', 'dim'); }
-  function arrangeCards() { setArranged(true); setSelected(new Set()); toast?.('已理牌：得分牌和炸弹在右侧', 'success'); }
-  function selectAll() { setSelected(new Set(sortedHand.map(c => c.id))); }
+  function toggleArrange() { setArranged(v => { const next = !v; toast?.(next ? '已理牌：分牌和炸弹靠右' : '已还原普通排序', 'success'); return next; }); setSelected(new Set()); }
 
   const selectedCards = sortedHand.filter(c => selected.has(c.id));
   const selectedType = detectSelectedType(selectedCards);
-  const lp = gameState?.lastPlay;
-  const lpCards = gameState?.lastPlayCards || [];
-  const lpPlayer = players.find(p => p.id === gameState?.lastPlayerId);
   const currentPlayer = players[gameState?.currentPlayer];
   const pileScore = calcScore(gameState?.pile || []);
 
@@ -241,6 +229,23 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
     topOpp = players[(myIdx + 1 + 2) % 2];
   }
 
+  const trickItems = [
+    { label: '上方', player: topOpp },
+    { label: '左边', player: leftOpp },
+    { label: '右边', player: rightOpp },
+    { label: '我', player: me },
+  ].filter(x => x.player);
+
+  function confirmReturn() {
+    setConfirmAction(null);
+    onReturnLobby?.();
+  }
+
+  function confirmExit() {
+    setConfirmAction(null);
+    onExitRoom?.();
+  }
+
   return (
     <div style={{ height:'100%', display:'flex', flexDirection:'column', background:'#0f3a24', animation: bombAnim ? 'shake 0.35s ease' : 'none', position:'relative', overflow:'hidden', fontFamily:"'PingFang SC','Microsoft YaHei',sans-serif" }}>
       {bombAnim && <div style={{ position:'fixed', inset:0, zIndex:100, background:'rgba(245,158,11,0.12)', pointerEvents:'none' }} />}
@@ -249,46 +254,40 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
         {floats.map(f => <div key={f.id} style={{ fontSize:30, fontWeight:900, color:'#fbbf24', textShadow:'0 2px 8px rgba(0,0,0,0.45)', animation:'floatUp 2.5s ease-out forwards' }}>{f.text}</div>)}
       </div>
 
-      <div style={{ height:34, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'4px 12px', background:'#0b2417', borderBottom:'1px solid rgba(255,255,255,0.08)', zIndex:20 }}>
-        <div style={{ fontSize:12, color:'#f8fafc', fontWeight:900 }}>河南五十K <span style={{ color:'#94a3b8', fontWeight:600 }}>· {gameState?.mode === 'solo' ? '单机练习' : `房间${gameState?.id || ''}`}</span></div>
-        <div style={{ fontSize:12, color:isMyTurn ? '#fbbf24' : '#cbd5e1', fontWeight:900 }}>{isMyTurn ? '轮到你：请出牌' : `轮到：${currentPlayer?.name || '等待'}`}</div>
-        <div style={{ fontSize:11, color:'#94a3b8' }}>第{gameState?.roundNum || 1}局</div>
+      <div style={{ height:42, display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, padding:'4px 12px', background:'#0b2417', borderBottom:'1px solid rgba(255,255,255,0.08)', zIndex:20 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
+          <button onClick={() => setConfirmAction('return')} className="top-action">返回</button>
+          <button onClick={() => setConfirmAction('exit')} className="top-action danger">退出</button>
+        </div>
+        <div style={{ fontSize:12, color:'#f8fafc', fontWeight:900, whiteSpace:'nowrap' }}>河南五十K <span style={{ color:'#94a3b8', fontWeight:600 }}>· {gameState?.mode === 'solo' ? '单机练习' : `房间${gameState?.id || ''}`}</span></div>
+        <div style={{ fontSize:12, color:isMyTurn ? '#fbbf24' : '#cbd5e1', fontWeight:900, minWidth:115, textAlign:'right', whiteSpace:'nowrap' }}>{isMyTurn ? '轮到你：请出牌' : `轮到：${currentPlayer?.name || '等待'}`}</div>
       </div>
 
       <div style={{ flex:1, display:'flex', position:'relative', zIndex:10, minHeight:0 }}>
-        <div style={{ width:'var(--side-col-w, 100px)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-          {leftOpp && <OpponentSide player={leftOpp} idx={players.indexOf(leftOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(leftOpp)} side="left" />}
+        <div style={{ width:'var(--side-col-w, 96px)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          {leftOpp && <OpponentSide player={leftOpp} idx={players.indexOf(leftOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(leftOpp)} />}
         </div>
 
         <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0 }}>
-          <div style={{ height:'24%', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
+          <div style={{ height:'21%', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
             {topOpp && <OpponentTop player={topOpp} idx={players.indexOf(topOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(topOpp)} />}
           </div>
 
-          <div style={{ height:'76%', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
-            <div style={{ position:'absolute', width:'82%', height:'82%', borderRadius:'32px', border:'1px solid rgba(255,255,255,0.07)', background:'radial-gradient(circle at center, rgba(255,255,255,0.045), rgba(255,255,255,0.015))', boxShadow: isMyTurn ? 'inset 0 0 22px rgba(245,197,24,0.16)' : 'none' }} />
-            <div style={{ zIndex:5, textAlign:'center', maxWidth:'96%' }}>
-              <div style={{ fontSize:isMyTurn ? 34 : 16, color:isMyTurn ? '#fbbf24' : '#cbd5e1', fontWeight:900, marginBottom:8, textShadow:isMyTurn ? '0 0 16px rgba(251,191,36,0.45)' : 'none' }}>{isMyTurn ? '请出牌' : '牌桌'}</div>
-              {lp ? (
-                <>
-                  <div style={{ marginBottom:5, fontSize:12, fontWeight:900, color:'#fbbf24' }}>上一手：{lpPlayer?.name} · {patternLabel(lp)}</div>
-                  <div style={{ display:'flex', gap:3, justifyContent:'center', flexWrap:'wrap' }}>{lpCards.map(c => <MiniCard key={c.id} card={c} />)}</div>
-                  <div style={{ margin:'7px auto 0', width:'fit-content', padding:'3px 16px', borderRadius:14, background:'rgba(0,0,0,0.3)', fontSize:12, color:'#e5e7eb' }}>本墩分数 <span style={{ color:'#fbbf24', fontWeight:900 }}>{pileScore}分</span></div>
-                </>
-              ) : <div style={{ color:'rgba(255,255,255,0.35)', fontSize:13 }}>{isMyTurn ? '先手出牌' : '等待出牌...'}</div>}
-            </div>
+          <div style={{ height:'79%', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
+            <div style={{ position:'absolute', width:'86%', height:'90%', borderRadius:'28px', border:'1px solid rgba(255,255,255,0.07)', background:'radial-gradient(circle at center, rgba(255,255,255,0.045), rgba(255,255,255,0.015))', boxShadow: isMyTurn ? 'inset 0 0 22px rgba(245,197,24,0.16)' : 'none' }} />
+            <TrickBoard items={trickItems} trickPlays={gameState?.trickPlays || []} pileScore={pileScore} isMyTurn={isMyTurn} />
           </div>
         </div>
 
-        <div style={{ width:'var(--side-col-w, 100px)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-          {rightOpp && <OpponentSide player={rightOpp} idx={players.indexOf(rightOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(rightOpp)} side="right" />}
+        <div style={{ width:'var(--side-col-w, 96px)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          {rightOpp && <OpponentSide player={rightOpp} idx={players.indexOf(rightOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(rightOpp)} />}
         </div>
       </div>
 
       <div style={{ paddingBottom:'var(--hand-bottom-pad, 8px)', zIndex:30, flexShrink:0, background:'linear-gradient(to top, rgba(0,0,0,0.30), transparent)' }}>
         {me && <div style={{ display:'flex', justifyContent:'center', marginBottom:1 }}><SelfPanel player={me} isCurrent={isMyTurn} /></div>}
         <div style={{ height:18, textAlign:'center', fontSize:12, color:'#fbbf24', fontWeight:900, textShadow:'0 1px 2px rgba(0,0,0,0.8)' }}>
-          {myFinished ? '你已出完，等待本局打完' : selected.size > 0 ? `已选${selected.size}张 · ${selectedType}` : sending ? '正在出牌...' : isMyTurn ? '请出牌' : arranged ? '已理牌：得分牌和炸弹在右侧' : ''}
+          {myFinished ? '你已出完，等待本局打完' : selected.size > 0 ? `已选${selected.size}张 · ${selectedType}` : sending ? '正在出牌...' : isMyTurn ? '请出牌' : arranged ? '已理牌：再点还原' : ''}
         </div>
 
         <div style={{ display:'flex', justifyContent:'center', padding:'var(--hand-y-pad-top, 10px) var(--hand-x-pad, 40px) var(--hand-y-pad-bottom, 20px)', overflow:'visible', touchAction:'manipulation' }}>
@@ -301,23 +300,73 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
           </div>
         </div>
 
-        <div style={{ display:'flex', alignItems:'center', gap:10, padding:'0 10px 2px' }}>
-          <div style={{ display:'flex', gap:18, fontSize:11, color:'#cbd5e1', flex:1, paddingLeft:8 }}><span>普通</span><span>分牌</span><span>炸弹</span></div>
-          <button disabled={sending || myFinished} onClick={arrangeCards} className="btn-lite">理牌</button>
+        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'0 10px 2px' }}>
+          <div style={{ display:'flex', gap:14, fontSize:11, color:'#cbd5e1', flex:1, paddingLeft:8, whiteSpace:'nowrap' }}><span>普通</span><span>分牌</span><span>炸弹</span></div>
+          <button disabled={sending || myFinished} onClick={toggleArrange} className="btn-lite">{arranged ? '还原' : '理牌'}</button>
           <button disabled={sending || myFinished} onClick={hint} className="btn-lite">提示</button>
           <button disabled={!isMyTurn || isFirst || sending || myFinished} onClick={pass} className="btn-pass">过牌</button>
           <button disabled={!isMyTurn || !selected.size || sending || myFinished} onClick={playCards} className="btn-play">出牌{selected.size > 0 ? `(${selected.size})` : ''}</button>
         </div>
       </div>
 
+      {confirmAction && (
+        <ConfirmModal
+          title={confirmAction === 'return' ? '是否返回大厅？' : '是否退出当前房间？'}
+          desc={confirmAction === 'return' ? '当前房间会保留，你可以从大厅继续回来。' : gameState?.mode === 'solo' ? '退出后单机局直接作废，下次不会自动恢复。' : '退出后会清除本机房间记录，下次不会自动回到这局。'}
+          cancelText="取消"
+          okText={confirmAction === 'return' ? '返回大厅' : '确认退出'}
+          danger={confirmAction === 'exit'}
+          onCancel={() => setConfirmAction(null)}
+          onOk={confirmAction === 'return' ? confirmReturn : confirmExit}
+        />
+      )}
+
       <style>{`
-        .btn-lite { padding:7px 13px; border-radius:14px; font-size:12px; font-weight:900; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); color:#f8fafc; }
+        .top-action { height:28px; padding:0 9px; border-radius:10px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#f8fafc; font-size:12px; font-weight:900; }
+        .top-action.danger { color:#fecaca; border-color:rgba(248,113,113,0.35); }
+        .btn-lite { padding:7px 12px; border-radius:14px; font-size:12px; font-weight:900; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); color:#f8fafc; }
         .btn-lite:disabled { opacity:0.35; }
-        .btn-pass { padding:8px 18px; border-radius:14px; font-size:14px; font-weight:900; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#fff; }
+        .btn-pass { padding:8px 16px; border-radius:14px; font-size:14px; font-weight:900; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#fff; }
         .btn-pass:disabled { opacity:0.3; }
-        .btn-play { padding:8px 24px; border-radius:14px; font-size:16px; font-weight:900; background:#f5c518; border:none; color:#102016; box-shadow:0 3px 10px rgba(0,0,0,0.28); }
+        .btn-play { padding:8px 22px; border-radius:14px; font-size:16px; font-weight:900; background:#f5c518; border:none; color:#102016; box-shadow:0 3px 10px rgba(0,0,0,0.28); }
         .btn-play:disabled { background:#45524a; color:#9ca3af; box-shadow:none; }
       `}</style>
+    </div>
+  );
+}
+
+function TrickBoard({ items, trickPlays, pileScore, isMyTurn }) {
+  return (
+    <div style={{ zIndex:5, width:'min(680px, 96%)', padding:'10px 12px', borderRadius:24, background:'rgba(4,22,14,0.34)', border:'1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+        <div style={{ fontSize:15, fontWeight:900, color:'#fbbf24' }}>本轮出牌</div>
+        <div style={{ fontSize:12, color:isMyTurn ? '#fbbf24' : '#cbd5e1', fontWeight:900 }}>{isMyTurn ? '请出牌' : '等待对方出牌'}</div>
+        <div style={{ fontSize:12, color:'#e5e7eb' }}>本墩 <span style={{ color:'#fbbf24', fontWeight:900 }}>{pileScore}分</span></div>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:7 }}>
+        {items.map(({ label, player }) => {
+          const entry = trickPlays.find(x => x.playerId === player.id);
+          return <TrickCell key={player.id} label={label} player={player} entry={entry} />;
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TrickCell({ label, player, entry }) {
+  const hasPlayed = entry?.action === 'play';
+  const passed = entry?.action === 'pass';
+  return (
+    <div style={{ minHeight:62, borderRadius:16, background:'rgba(255,255,255,0.045)', border:'1px solid rgba(255,255,255,0.07)', padding:'6px 8px', overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6, marginBottom:4 }}>
+        <div style={{ fontSize:11, color:'#94a3b8', whiteSpace:'nowrap' }}>{label} · <span style={{ color:'#fff', fontWeight:900 }}>{player.name}</span>{player.isBot ? <span style={{ color:'#fbbf24' }}> 机</span> : null}</div>
+        <div style={{ fontSize:11, color:hasPlayed ? '#fbbf24' : passed ? '#94a3b8' : '#64748b', fontWeight:900 }}>{hasPlayed ? patternLabel(entry.pattern) : passed ? '过牌' : '待出'}</div>
+      </div>
+      {hasPlayed ? (
+        <div style={{ display:'flex', gap:2, alignItems:'center', overflow:'hidden' }}>{(entry.cards || []).slice(0, 8).map(c => <MiniCard key={c.id} card={c} />)}</div>
+      ) : (
+        <div style={{ height:34, display:'flex', alignItems:'center', color:passed ? '#94a3b8' : 'rgba(255,255,255,0.28)', fontSize:13, fontWeight:800 }}>{passed ? '已过牌' : '等待操作'}</div>
+      )}
     </div>
   );
 }
@@ -326,22 +375,22 @@ function PlayerAvatar({ player, idx, size = 40 }) {
   return <div style={{ width:size, height:size, borderRadius:'50%', background:AVATAR_COLORS[idx] || '#475569', display:'flex', alignItems:'center', justifyContent:'center', fontSize:size > 36 ? 16 : 13, fontWeight:900, color:'#fff', flexShrink:0 }}>{player?.isBot ? '机' : (AVATARS[idx] || '玩')}</div>;
 }
 
-function OpponentSide({ player, idx, isCurrent, side }) {
+function OpponentSide({ player, idx, isCurrent }) {
   return (
-    <div style={{ width:74, padding:'10px 6px', borderRadius:18, background:isCurrent?'rgba(245,197,24,0.13)':'rgba(0,0,0,0.16)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 14px rgba(245,197,24,0.32)':'none', display:'flex', flexDirection:'column', alignItems:'center', gap:5, opacity: player.isOnline ? 1 : 0.45 }}>
-      <PlayerAvatar player={player} idx={idx} size={38} />
-      <div style={{ fontSize:11, fontWeight:900, color:'#fff', maxWidth:66, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{player.name}</div>
+    <div style={{ width:72, padding:'9px 5px', borderRadius:18, background:isCurrent?'rgba(245,197,24,0.13)':'rgba(0,0,0,0.16)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 14px rgba(245,197,24,0.32)':'none', display:'flex', flexDirection:'column', alignItems:'center', gap:4, opacity: player.isOnline ? 1 : 0.45 }}>
+      <PlayerAvatar player={player} idx={idx} size={36} />
+      <div style={{ fontSize:11, fontWeight:900, color:'#fff', maxWidth:64, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{player.name}</div>
       <div style={{ fontSize:10, color:'#fbbf24', fontWeight:800 }}>{player.score}分</div>
-      <div style={{ fontSize:10, color:'#cbd5e1' }}>{player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div>
+      <div style={{ fontSize:10, color:'#cbd5e1' }}>{player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div>
     </div>
   );
 }
 
 function OpponentTop({ player, idx, isCurrent }) {
   return (
-    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 14px', borderRadius:18, background:isCurrent?'rgba(245,197,24,0.14)':'rgba(0,0,0,0.16)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 14px rgba(245,197,24,0.32)':'none', opacity: player.isOnline ? 1 : 0.45 }}>
-      <PlayerAvatar player={player} idx={idx} size={36} />
-      <div><div style={{ fontSize:12, color:'#fff', fontWeight:900 }}>{player.name}</div><div style={{ fontSize:10, color:'#cbd5e1' }}>{player.score}分 · {player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div></div>
+    <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:18, background:isCurrent?'rgba(245,197,24,0.14)':'rgba(0,0,0,0.16)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 14px rgba(245,197,24,0.32)':'none', opacity: player.isOnline ? 1 : 0.45 }}>
+      <PlayerAvatar player={player} idx={idx} size={34} />
+      <div><div style={{ fontSize:12, color:'#fff', fontWeight:900 }}>{player.name}</div><div style={{ fontSize:10, color:'#cbd5e1' }}>{player.score}分 · {player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div></div>
     </div>
   );
 }
@@ -352,6 +401,21 @@ function SelfPanel({ player, isCurrent }) {
       <div style={{ fontSize:11, color:'#fbbf24', fontWeight:900 }}>我</div>
       <div style={{ fontSize:12, color:'#fff', fontWeight:900 }}>{player.name}</div>
       <div style={{ fontSize:11, color:'#cbd5e1' }}>{player.score}分 · {player.cardCount}张</div>
+    </div>
+  );
+}
+
+function ConfirmModal({ title, desc, cancelText, okText, danger, onCancel, onOk }) {
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:2000, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+      <div style={{ width:330, borderRadius:22, background:'#f8fafc', color:'#0f172a', padding:18, boxShadow:'0 12px 30px rgba(0,0,0,0.35)' }}>
+        <div style={{ fontSize:20, fontWeight:900, marginBottom:8 }}>{title}</div>
+        <div style={{ fontSize:14, color:'#475569', lineHeight:1.6, marginBottom:18 }}>{desc}</div>
+        <div style={{ display:'flex', gap:10 }}>
+          <button onClick={onCancel} style={{ flex:1, height:44, borderRadius:14, border:'1px solid #cbd5e1', background:'#fff', color:'#334155', fontSize:15, fontWeight:900 }}>{cancelText}</button>
+          <button onClick={onOk} style={{ flex:1, height:44, borderRadius:14, border:'none', background:danger ? '#ef4444' : '#f5c518', color:danger ? '#fff' : '#102016', fontSize:15, fontWeight:900 }}>{okText}</button>
+        </div>
+      </div>
     </div>
   );
 }
