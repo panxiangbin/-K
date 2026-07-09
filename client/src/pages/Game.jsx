@@ -48,6 +48,7 @@ function detectPattern(cards) {
       const allRed = cards.every(c => isRed(c.suit));
       if (allBlack) return { type: 'bomb', bombType: 'color4', rank, color: 'black' };
       if (allRed) return { type: 'bomb', bombType: 'color4', rank, color: 'red' };
+      return { type: 'bomb', bombType: 'color4', rank, color: 'mixed' };
     }
     return null;
   }
@@ -68,7 +69,7 @@ function comparePatterns(newP, oldP) {
     if (newP.bombType === 'joker4') return false;
     if (newP.bombType === 'same8') return cardValue(newP.rank) > cardValue(oldP.rank);
     if (newP.bombType === 'color4') {
-      const colorOrder = { black: 2, red: 1 };
+      const colorOrder = { black: 3, red: 2, mixed: 1 };
       if (newP.color !== oldP.color) return colorOrder[newP.color] > colorOrder[oldP.color];
       return cardValue(newP.rank) > cardValue(oldP.rank);
     }
@@ -114,6 +115,7 @@ function getAllBombs(hand) {
   }
   for (const group of Object.values(rankGroups)) {
     if (group.length >= 8) results.push(group.slice(0, 8));
+    if (group.length >= 4) results.push(group.slice(0, 4));
     const blacks = group.filter(c => isBlack(c.suit));
     const reds = group.filter(c => isRed(c.suit));
     if (blacks.length >= 4) results.push(blacks.slice(0, 4));
@@ -169,7 +171,11 @@ function patternLabel(pattern) {
   if (!pattern) return '出牌';
   if (pattern.type !== 'bomb') return TYPE_LABEL[pattern.type] || '出牌';
   if (pattern.bombType === '50K') return `${pattern.suit}五十K`;
-  if (pattern.bombType === 'color4') return `${pattern.color === 'black' ? '黑' : '红'}四炸`;
+  if (pattern.bombType === 'color4') {
+    if (pattern.color === 'black') return '黑四炸';
+    if (pattern.color === 'red') return '红四炸';
+    return '四炸';
+  }
   if (pattern.bombType === 'same8') return '八张炸弹';
   if (pattern.bombType === 'joker4') return '四王炸弹';
   return '炸弹';
@@ -342,7 +348,7 @@ export default function Game({ send, gameState, myHand, setMyHand, myInfo, toast
 
       <div style={{ paddingBottom:'var(--hand-bottom-pad, 8px)', zIndex:30, flexShrink:0, background:'linear-gradient(to top, rgba(0,0,0,0.28), transparent)' }}>
         <div style={{ height:18, textAlign:'center', fontSize:12, color:'#fbbf24', fontWeight:900, textShadow:'0 1px 2px rgba(0,0,0,0.8)' }}>
-          {myFinished ? '你已出完，等待本局打完' : selected.size > 0 ? `已选${selected.size}张 · ${selectedType}` : sending ? '正在出牌...' : arranged ? '已理牌：得分牌和炸弹在右侧' : ''}
+          {myFinished ? '你已出完，等待本局打完' : selected.size > 0 ? `已选${selected.size}张 · ${selectedType}` : sending ? '正在出牌...' : isMyTurn ? '请出牌' : arranged ? '已理牌：得分牌和炸弹在右侧' : ''}
         </div>
 
         <div style={{ display:'flex', justifyContent:'center', padding:'var(--hand-y-pad-top, 10px) var(--hand-x-pad, 40px) var(--hand-y-pad-bottom, 20px)', overflow:'visible', touchAction:'manipulation' }}>
