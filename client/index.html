@@ -7,35 +7,27 @@
   <title>河南五十K</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-    html,body,#root{height:100%;width:100%;overflow:hidden;background:#0d1117;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
-    #root{padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+    html,body{height:100%;width:100%;overflow:hidden;background:#0d1117;font-family:'PingFang SC','Microsoft YaHei',sans-serif}
+    #root{height:100%;width:100%;overflow:hidden;background:#0d1117;padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
 
-    /* 手机竖屏时强提示横屏，不再提供“直接进入”按钮，避免竖屏误玩导致界面挤坏。 */
-    #rotate-tip{
-      display:none;position:fixed;inset:0;z-index:9999;
-      align-items:center;justify-content:center;flex-direction:column;gap:14px;
-      color:#f5c518;text-align:center;background:radial-gradient(ellipse at 50% 30%,#1e1060 0%,#0d1117 58%,#05070a 100%);
-      padding:28px;font-weight:800;letter-spacing:.5px;
+    /* 手机竖屏打开时，不再弹提示，而是把整个游戏画布强制旋转成横屏布局。 */
+    body.force-landscape #root{
+      position:fixed;
+      top:50%;
+      left:50%;
+      width:100vh;
+      height:100vw;
+      transform:translate(-50%,-50%) rotate(90deg);
+      transform-origin:center center;
+      padding:env(safe-area-inset-left) env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom);
     }
-    #rotate-tip .phone{font-size:58px;animation:turnPhone 1.6s ease-in-out infinite;filter:drop-shadow(0 0 18px rgba(245,197,24,.35))}
-    #rotate-tip .title{font-size:22px;line-height:1.35;color:#f5c518}
-    #rotate-tip .desc{font-size:14px;line-height:1.8;color:#d6c98a;font-weight:500;max-width:320px}
-    #rotate-tip .hint{margin-top:8px;padding:8px 14px;border:1px solid rgba(245,197,24,.35);border-radius:999px;color:#f5c518;background:rgba(245,197,24,.08);font-size:13px}
-    @keyframes turnPhone{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
   </style>
 </head>
 <body>
-  <div id="rotate-tip" aria-live="polite">
-    <div class="phone">📱↔️</div>
-    <div class="title">请横屏游玩</div>
-    <div class="desc">五十K 是围桌牌局，竖屏会挡住手牌和按钮。把手机横过来后，会自动进入游戏。</div>
-    <div class="hint">建议打开系统自动旋转</div>
-  </div>
-
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
   <script>
-    // 旧版本注册过 Service Worker/PWA，容易缓存旧页面并诱导安装。当前先全部清掉，避免“下载APP”假按钮和旧缓存残留。
+    // 旧版本注册过 Service Worker/PWA，容易缓存旧页面。当前先全部清掉，避免旧横屏提示或安装按钮残留。
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(regs){
         regs.forEach(function(reg){ reg.unregister(); });
@@ -47,18 +39,28 @@
       });
     }
 
-    // 用 JS 检测方向，避免部分手机 WebView 里 CSS 媒体查询失效。
     (function(){
       function isTouchDevice(){ return ('ontouchstart' in window) || navigator.maxTouchPoints > 0; }
-      function checkOri(){
-        var tip = document.getElementById('rotate-tip');
+      function applyForcedLandscape(){
         var portrait = window.innerHeight > window.innerWidth;
-        tip.style.display = (isTouchDevice() && portrait) ? 'flex' : 'none';
+        document.body.classList.toggle('force-landscape', isTouchDevice() && portrait);
       }
-      window.addEventListener('resize', checkOri);
-      window.addEventListener('orientationchange', function(){ setTimeout(checkOri, 300); });
-      document.addEventListener('DOMContentLoaded', checkOri);
-      checkOri();
+
+      // 尝试锁定系统横屏；普通手机浏览器经常会拒绝，所以同时保留 CSS 强制横屏兜底。
+      function tryLockLandscape(){
+        try {
+          if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(function(){});
+          }
+        } catch(e) {}
+      }
+
+      window.addEventListener('resize', applyForcedLandscape);
+      window.addEventListener('orientationchange', function(){ setTimeout(applyForcedLandscape, 300); });
+      document.addEventListener('DOMContentLoaded', function(){ applyForcedLandscape(); tryLockLandscape(); });
+      document.addEventListener('click', tryLockLandscape, { once:true });
+      document.addEventListener('touchstart', tryLockLandscape, { once:true });
+      applyForcedLandscape();
     })();
   </script>
 </body>
