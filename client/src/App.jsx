@@ -3,6 +3,9 @@ import { useWebSocket } from './hooks/useWebSocket';
 import Lobby from './pages/Lobby';
 import Game from './pages/Game';
 import Settlement from './pages/Settlement';
+import langaishouBase64 from './assets/langaishouBase64';
+
+const LANGAISHOU_AUDIO_SRC = `data:audio/mpeg;base64,${langaishouBase64}`;
 
 function savePlayerSession(msg) {
   if (!msg?.roomId || !msg?.playerId || !msg?.playerToken) return;
@@ -33,7 +36,7 @@ function playRecordedBombVoice() {
   return new Promise((resolve) => {
     try {
       if (typeof window === 'undefined') { resolve(false); return; }
-      const audio = new Audio('/sounds/langaishou.mp3?v=1');
+      const audio = new Audio(LANGAISHOU_AUDIO_SRC);
       audio.volume = 1;
       audio.preload = 'auto';
       let done = false;
@@ -80,7 +83,7 @@ export default function App() {
     localStorage.setItem('henan50k:soundOn', '1');
     setSoundOn(true);
     const ok = await playBombLine();
-    toast(ok ? '人声已开启：以后炸弹会喊“懒干受”' : '还没有真人喊话音频，需要添加 /sounds/langaishou.mp3', ok ? 'success' : 'dim');
+    toast(ok ? '人声已开启：以后炸弹会喊“懒干受”' : '人声播放被浏览器拦截，请再点一次测试人声', ok ? 'success' : 'dim');
   }, [toast]);
 
   const resetToLobby = useCallback(() => {
@@ -128,7 +131,7 @@ export default function App() {
           toast('💥 ' + msg.playerName + ' 炸弹！懒干受！', 'bomb');
           if (soundOn) {
             playBombLine().then(ok => {
-              if (!ok) toast('缺少真人喊话音频：/sounds/langaishou.mp3', 'dim');
+              if (!ok) toast('人声播放被浏览器拦截，请点右上角“测试人声”', 'dim');
             });
           } else {
             toast('点右上角“测试人声”一次，炸弹就会喊话', 'dim');
