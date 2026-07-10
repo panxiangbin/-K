@@ -136,20 +136,29 @@ function arrangeHand(hand) {
   return [...normal, ...scoreCards, ...bombs];
 }
 
-function getHint(hand, lastPlay) {
+function getHints(hand, lastPlay) {
   if (!hand.length) return [];
-  if (!lastPlay) return [hand[0].id];
+  if (!lastPlay) return [[hand[0].id]];
   const candidates = [];
   if (lastPlay.type !== 'bomb') {
     const n = getPatternLen(lastPlay);
     candidates.push(...getNormalCandidates(hand, n));
   }
   candidates.push(...getAllBombs(hand));
+  const seen = new Set();
+  const result = [];
   for (const combo of candidates) {
     const pattern = detectPattern(combo);
-    if (pattern && comparePatterns(pattern, lastPlay)) return combo.map(c => c.id);
+    if (pattern && comparePatterns(pattern, lastPlay)) {
+      const ids = combo.map(c => c.id);
+      const key = ids.join('|');
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(ids);
+      }
+    }
   }
-  return [];
+  return result;
 }
 
 function patternLabel(pattern) {
@@ -175,13 +184,13 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
   const [sending, setSending] = useState(false);
   const [arranged, setArranged] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
-  const [turnProgress, setTurnProgress] = useState(0);
   const floatId = useRef(0);
   const prevScores = useRef({});
   const pointerDownRef = useRef(false);
   const dragMovedRef = useRef(false);
   const dragStartCardRef = useRef(null);
   const ignoreClickRef = useRef(false);
+  const hintCursorRef = useRef(0);
 
   const players = gameState?.players || [];
   const myIdx = players.findIndex(p => p.id === myInfo?.playerId);
@@ -190,17 +199,11 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
   const isFirst = !gameState?.lastPlay;
   const sortedHand = arranged ? arrangeHand(myHand) : sortCards(myHand);
   const lastPlayKey = gameState?.lastPlayCards?.map(c => c.id).join('|') || '';
-  const turnKey = `${gameState?.currentPlayer ?? 'x'}-${lastPlayKey}-${gameState?.trickPlays?.length || 0}`;
   const myFinished = myHand.length === 0 && gameState?.status === 'playing';
 
   useEffect(() => { if (isMyTurn && navigator.vibrate) navigator.vibrate([100, 50, 100]); }, [isMyTurn]);
   useEffect(() => { setSending(false); }, [myHand, gameState?.currentPlayer]);
-  useEffect(() => {
-    setTurnProgress(0);
-    const start = Date.now();
-    const timer = setInterval(() => setTurnProgress(Math.min(100, Math.round(((Date.now() - start) / 20000) * 100))), 250);
-    return () => clearInterval(timer);
-  }, [turnKey]);
+  useEffect(() => { hintCursorRef.current = 0; }, [lastPlayKey, myHand.length]);
   useEffect(() => {
     if (!gameState) return;
     gameState.players.forEach(p => {
@@ -265,8 +268,15 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
     releaseSendingSoon();
   }
   function pass() { if (!isMyTurn || isFirst || sending || myFinished) return; send({ type: 'pass' }); setSending(true); setSelected(new Set()); releaseSendingSoon(); }
-  function hint() { const ids = getHint(sortedHand, gameState?.lastPlay); if (ids.length) { setSelected(new Set(ids)); toast('已帮你选出一手可出的牌', 'success'); } else toast('没有合适的牌可以出', 'dim'); }
-  function toggleArrange() { setArranged(v => { const next = !v; toast?.(next ? '已理牌：分牌和炸弹靠右' : '已还原普通排序', 'success'); return next; }); setSelected(new Set()); }
+  function hint() {
+    const hints = getHints(sortedHand, gameState?.lastPlay);
+    if (!hints.length) { toast('没有合适的牌可以出', 'dim'); return; }
+    const idx = hintCursorRef.current % hints.length;
+    setSelected(new Set(hints[idx]));
+    hintCursorRef.current += 1;
+    toast(`提示 ${idx + 1}/${hints.length}`, 'success');
+  }
+  function toggleArrange() { setArranged(v => { const next = !v; toast?.(next ? '已理牌：分牌和炸弹靠右' : '已还原普通排序', 'success'); return next; }); setSelected(new Set()); hintCursorRef.current = 0; }
   function clearSelection() { setSelected(new Set()); toast?.('已清空选牌', 'dim'); }
 
   const selectedCards = sortedHand.filter(c => selected.has(c.id));
@@ -304,16 +314,13 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
         {floats.map(f => <div key={f.id} style={{ fontSize:30, fontWeight:900, color:'#fbbf24', textShadow:'0 2px 8px rgba(0,0,0,0.45)', animation:'floatUp 2.5s ease-out forwards' }}>{f.text}</div>)}
       </div>
 
-      <div style={{ height:46, display:'flex', flexDirection:'column', background:'#0b2417', borderBottom:'1px solid rgba(255,255,255,0.08)', zIndex:20 }}>
-        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, padding:'4px 10px 2px' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
-            <button onClick={() => setConfirmAction('return')} className="top-action">返回</button>
-            <button onClick={() => setConfirmAction('exit')} className="top-action danger">退出</button>
-          </div>
-          <div style={{ fontSize:12, color:'#f8fafc', fontWeight:900, whiteSpace:'nowrap' }}>河南五十K <span style={{ color:'#94a3b8', fontWeight:600 }}>· {gameState?.mode === 'solo' ? `${gameState?.maxPlayers || players.length}人单机` : `房间${gameState?.id || ''}`}</span></div>
-          <div style={{ fontSize:12, color:isMyTurn ? '#fbbf24' : '#cbd5e1', fontWeight:900, minWidth:126, textAlign:'right', whiteSpace:'nowrap' }}>{isMyTurn ? '轮到你：请出牌' : `轮到：${currentPlayer?.name || '等待'}`}</div>
+      <div style={{ height:44, display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, padding:'4px 10px', background:'#0b2417', borderBottom:'1px solid rgba(255,255,255,0.08)', zIndex:20 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
+          <button onClick={() => setConfirmAction('return')} className="top-action">返回</button>
+          <button onClick={() => setConfirmAction('exit')} className="top-action danger">退出</button>
         </div>
-        <div style={{ height:3, background:'rgba(255,255,255,0.08)' }}><div style={{ height:'100%', width:`${turnProgress}%`, background:isMyTurn ? '#fbbf24' : '#38bdf8', transition:'width .25s linear' }} /></div>
+        <div style={{ fontSize:12, color:'#f8fafc', fontWeight:900, whiteSpace:'nowrap' }}>河南五十K <span style={{ color:'#94a3b8', fontWeight:600 }}>· {gameState?.mode === 'solo' ? `${gameState?.maxPlayers || players.length}人单机` : `房间${gameState?.id || ''}`}</span></div>
+        <div style={{ fontSize:12, color:isMyTurn ? '#fbbf24' : '#cbd5e1', fontWeight:900, minWidth:126, textAlign:'right', whiteSpace:'nowrap' }}>{isMyTurn ? '轮到你：请出牌' : `轮到：${currentPlayer?.name || '等待'}`}</div>
       </div>
 
       <div style={{ flex:1, display:'flex', position:'relative', zIndex:10, minHeight:0 }}>
