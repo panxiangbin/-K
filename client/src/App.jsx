@@ -29,22 +29,28 @@ function clearSavedSession(roomId) {
   localStorage.removeItem('henan50k:lastRoomId');
 }
 
-function speakBombLine() {
+function speakText(text) {
   try {
-    if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
-    const u = new SpeechSynthesisUtterance('懒干受！');
+    if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
+    window.speechSynthesis.resume?.();
+    const u = new SpeechSynthesisUtterance(text);
     u.lang = 'zh-CN';
     u.volume = 1;
-    u.rate = 0.82;
-    u.pitch = 0.7;
+    u.rate = 0.78;
+    u.pitch = 0.68;
     const voices = window.speechSynthesis.getVoices?.() || [];
     const zhVoice = voices.find(v => /zh|Chinese|中文|普通话/i.test(`${v.lang} ${v.name}`));
     if (zhVoice) u.voice = zhVoice;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(u);
+    return true;
   } catch {
-    // 语音不可用时不影响正常游戏
+    return false;
   }
+}
+
+function speakBombLine() {
+  return speakText('懒干受！');
 }
 
 export default function App() {
@@ -54,6 +60,7 @@ export default function App() {
   const [myInfo, setMyInfo] = useState(null);
   const [settlementData, setSettlementData] = useState(null);
   const [toasts, setToasts] = useState([]);
+  const [soundOn, setSoundOn] = useState(() => localStorage.getItem('henan50k:soundOn') === '1');
   const tid = useRef(0);
   const autoRejoinTried = useRef(false);
 
@@ -62,6 +69,13 @@ export default function App() {
     setToasts(t => [...t, { id, text, type }]);
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2500);
   }, []);
+
+  const enableSound = useCallback(() => {
+    localStorage.setItem('henan50k:soundOn', '1');
+    setSoundOn(true);
+    const ok = speakText('声音已开启');
+    toast(ok ? '声音已开启，出炸弹会喊话' : '已开启声音，但当前浏览器可能不支持语音', ok ? 'success' : 'dim');
+  }, [toast]);
 
   const resetToLobby = useCallback(() => {
     setPage('lobby');
@@ -106,7 +120,8 @@ export default function App() {
         setGameState(msg.state);
         if (msg.pattern?.type === 'bomb') {
           toast('💥 ' + msg.playerName + ' 炸弹！', 'bomb');
-          speakBombLine();
+          if (soundOn) speakBombLine();
+          else toast('点右上角“开启声音”后，炸弹会喊话', 'dim');
         }
         break;
       case 'player_finished':
@@ -131,9 +146,13 @@ export default function App() {
       default:
         break;
     }
-  }, [toast, resetToLobby]);
+  }, [toast, resetToLobby, soundOn]);
 
   const { send, connected } = useWebSocket(onMessage);
+
+  useEffect(() => {
+    try { window.speechSynthesis?.getVoices?.(); } catch {}
+  }, []);
 
   useEffect(() => {
     if (!connected) { autoRejoinTried.current = false; return; }
@@ -181,7 +200,13 @@ export default function App() {
         {connected ? '在线' : '连接中...'}
       </div>
 
-      <div style={{ position: 'fixed', top: 36, left: '50%', transform: 'translateX(-50%)', zIndex: 999, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', pointerEvents: 'none' }}>
+      {!soundOn && (
+        <button onClick={enableSound} style={{ position:'fixed', top:34, right:8, zIndex:1001, minHeight:30, padding:'0 10px', borderRadius:14, border:'1px solid rgba(251,191,36,.45)', background:'rgba(120,53,15,.88)', color:'#fbbf24', fontSize:12, fontWeight:900, boxShadow:'0 4px 12px rgba(0,0,0,.25)' }}>
+          开启声音
+        </button>
+      )}
+
+      <div style={{ position: 'fixed', top: soundOn ? 36 : 70, left: '50%', transform: 'translateX(-50%)', zIndex: 999, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', pointerEvents: 'none' }}>
         {toasts.map(t => {
           const s = TOAST_STYLE[t.type] || TOAST_STYLE.info;
           return <div key={t.id} style={{ padding: '7px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: s.color, background: s.bg + 'ee', border: `1px solid ${s.color}44`, animation: 'floatUp 2.5s ease-out forwards', whiteSpace: 'nowrap', backdropFilter: 'blur(6px)' }}>{t.text}</div>;
