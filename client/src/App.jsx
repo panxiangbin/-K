@@ -6,6 +6,7 @@ import Settlement from './pages/Settlement';
 import langaishouBase64 from './assets/langaishouBase64';
 
 const LANGAISHOU_AUDIO_SRC = `data:audio/mpeg;base64,${langaishouBase64}`;
+const VOICE_VERSION = 'V2';
 
 function savePlayerSession(msg) {
   if (!msg?.roomId || !msg?.playerId || !msg?.playerToken) return;
@@ -83,7 +84,7 @@ export default function App() {
     localStorage.setItem('henan50k:soundOn', '1');
     setSoundOn(true);
     const ok = await playBombLine();
-    toast(ok ? '人声已开启：以后炸弹会喊“懒干受”' : '人声播放被浏览器拦截，请再点一次测试人声', ok ? 'success' : 'dim');
+    toast(ok ? `人声${VOICE_VERSION}已开启：以后炸弹会喊“懒干受”` : `人声${VOICE_VERSION}播放被浏览器拦截，请再点一次测试人声`, ok ? 'success' : 'dim');
   }, [toast]);
 
   const resetToLobby = useCallback(() => {
@@ -131,10 +132,10 @@ export default function App() {
           toast('💥 ' + msg.playerName + ' 炸弹！懒干受！', 'bomb');
           if (soundOn) {
             playBombLine().then(ok => {
-              if (!ok) toast('人声播放被浏览器拦截，请点右上角“测试人声”', 'dim');
+              if (!ok) toast(`人声${VOICE_VERSION}被浏览器拦截，请点右上角“测试人声V2”`, 'dim');
             });
           } else {
-            toast('点右上角“测试人声”一次，炸弹就会喊话', 'dim');
+            toast('点右上角“测试人声V2”一次，炸弹就会喊话', 'dim');
           }
         }
         break;
@@ -211,7 +212,7 @@ export default function App() {
       </div>
 
       <button onClick={enableSound} style={{ position:'fixed', top:34, right:8, zIndex:1001, minHeight:30, padding:'0 10px', borderRadius:14, border:'1px solid rgba(251,191,36,.45)', background: soundOn ? 'rgba(20,83,45,.88)' : 'rgba(120,53,15,.88)', color:soundOn ? '#86efac' : '#fbbf24', fontSize:12, fontWeight:900, boxShadow:'0 4px 12px rgba(0,0,0,.25)' }}>
-        {soundOn ? '测试人声' : '开启人声'}
+        {soundOn ? `测试人声${VOICE_VERSION}` : `开启人声${VOICE_VERSION}`}
       </button>
 
       <div style={{ position: 'fixed', top: 70, left: '50%', transform: 'translateX(-50%)', zIndex: 999, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', pointerEvents: 'none' }}>
