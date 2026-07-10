@@ -29,56 +29,34 @@ function clearSavedSession(roomId) {
   localStorage.removeItem('henan50k:lastRoomId');
 }
 
-let audioCtx = null;
-function playBombFallbackSound() {
-  try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return false;
-    audioCtx = audioCtx || new AudioContextClass();
-    audioCtx.resume?.();
-    const now = audioCtx.currentTime;
-    [0, 0.13, 0.26].forEach((offset, i) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(i === 1 ? 320 : 240, now + offset);
-      gain.gain.setValueAtTime(0.0001, now + offset);
-      gain.gain.exponentialRampToValueAtTime(0.42, now + offset + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.11);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now + offset);
-      osc.stop(now + offset + 0.12);
-    });
-    return true;
-  } catch {
-    return false;
-  }
+function playRecordedBombVoice() {
+  return new Promise((resolve) => {
+    try {
+      if (typeof window === 'undefined') { resolve(false); return; }
+      const audio = new Audio('/sounds/langaishou.mp3?v=1');
+      audio.volume = 1;
+      audio.preload = 'auto';
+      let done = false;
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        audio.onplaying = null;
+        audio.onerror = null;
+        resolve(ok);
+      };
+      audio.onplaying = () => finish(true);
+      audio.onerror = () => finish(false);
+      const p = audio.play();
+      if (p && typeof p.catch === 'function') p.catch(() => finish(false));
+      setTimeout(() => finish(false), 1200);
+    } catch {
+      resolve(false);
+    }
+  });
 }
 
-function speakText(text) {
-  try {
-    if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return false;
-    window.speechSynthesis.resume?.();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'zh-CN';
-    u.volume = 1;
-    u.rate = 0.72;
-    u.pitch = 0.62;
-    const voices = window.speechSynthesis.getVoices?.() || [];
-    const zhVoice = voices.find(v => /zh|Chinese|中文|普通话|Mandarin/i.test(`${v.lang} ${v.name}`));
-    if (zhVoice) u.voice = zhVoice;
-    window.speechSynthesis.cancel();
-    setTimeout(() => window.speechSynthesis.speak(u), 30);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function speakBombLine() {
-  playBombFallbackSound();
-  return speakText('懒干受！');
+async function playBombLine() {
+  return playRecordedBombVoice();
 }
 
 export default function App() {
@@ -98,11 +76,11 @@ export default function App() {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2500);
   }, []);
 
-  const enableSound = useCallback(() => {
+  const enableSound = useCallback(async () => {
     localStorage.setItem('henan50k:soundOn', '1');
     setSoundOn(true);
-    const ok = speakBombLine();
-    toast(ok ? '声音已开启：以后炸弹会喊“懒干受”' : '已尝试开启声音，请检查手机媒体音量', ok ? 'success' : 'dim');
+    const ok = await playBombLine();
+    toast(ok ? '人声已开启：以后炸弹会喊“懒干受”' : '还没有真人喊话音频，需要添加 /sounds/langaishou.mp3', ok ? 'success' : 'dim');
   }, [toast]);
 
   const resetToLobby = useCallback(() => {
@@ -148,8 +126,13 @@ export default function App() {
         setGameState(msg.state);
         if (msg.pattern?.type === 'bomb') {
           toast('💥 ' + msg.playerName + ' 炸弹！懒干受！', 'bomb');
-          if (soundOn) speakBombLine();
-          else toast('点右上角“测试喊话”一次，炸弹就会出声', 'dim');
+          if (soundOn) {
+            playBombLine().then(ok => {
+              if (!ok) toast('缺少真人喊话音频：/sounds/langaishou.mp3', 'dim');
+            });
+          } else {
+            toast('点右上角“测试人声”一次，炸弹就会喊话', 'dim');
+          }
         }
         break;
       case 'player_finished':
@@ -177,10 +160,6 @@ export default function App() {
   }, [toast, resetToLobby, soundOn]);
 
   const { send, connected } = useWebSocket(onMessage);
-
-  useEffect(() => {
-    try { window.speechSynthesis?.getVoices?.(); } catch {}
-  }, []);
 
   useEffect(() => {
     if (!connected) { autoRejoinTried.current = false; return; }
@@ -229,7 +208,7 @@ export default function App() {
       </div>
 
       <button onClick={enableSound} style={{ position:'fixed', top:34, right:8, zIndex:1001, minHeight:30, padding:'0 10px', borderRadius:14, border:'1px solid rgba(251,191,36,.45)', background: soundOn ? 'rgba(20,83,45,.88)' : 'rgba(120,53,15,.88)', color:soundOn ? '#86efac' : '#fbbf24', fontSize:12, fontWeight:900, boxShadow:'0 4px 12px rgba(0,0,0,.25)' }}>
-        {soundOn ? '测试喊话' : '开启声音'}
+        {soundOn ? '测试人声' : '开启人声'}
       </button>
 
       <div style={{ position: 'fixed', top: 70, left: '50%', transform: 'translateX(-50%)', zIndex: 999, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', pointerEvents: 'none' }}>
