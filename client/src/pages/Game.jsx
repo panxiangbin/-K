@@ -376,6 +376,8 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
         .btn-play { min-height:46px; padding:0 24px; border-radius:16px; font-size:17px; font-weight:900; background:#f5c518; border:none; color:#102016; box-shadow:0 3px 12px rgba(0,0,0,0.32); }
         .btn-play:disabled { background:#45524a; color:#9ca3af; box-shadow:none; }
         @keyframes softPulse { 0%,100%{opacity:.85;transform:scale(1)} 50%{opacity:1;transform:scale(1.02)} }
+        @keyframes turnSeatPulse { 0%,100%{box-shadow:0 0 12px rgba(245,197,24,.50),0 0 0 2px rgba(245,197,24,.65); transform:scale(1)} 50%{box-shadow:0 0 26px rgba(245,197,24,.95),0 0 0 4px rgba(245,197,24,.85); transform:scale(1.04)} }
+        @keyframes avatarPulse { 0%,100%{filter:brightness(1); transform:scale(1)} 50%{filter:brightness(1.25); transform:scale(1.09)} }
       `}</style>
     </div>
   );
@@ -384,7 +386,7 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
 function StatusBar({ myFinished, selectedCount, selectedType, canPlaySelected, sending, isMyTurn, arranged, lastPlay }) {
   let text = '';
   let color = '#fbbf24';
-  if (myFinished) text = '你已出完，等待本局打完';
+  if (myFinished) text = '你已出完，等待本墩结束后再结算分牌';
   else if (selectedCount > 0) {
     text = `已选${selectedCount}张 · ${selectedType}${canPlaySelected ? '' : '（可点出牌，由系统判断）'}`;
     color = canPlaySelected ? '#fbbf24' : '#fb923c';
@@ -427,20 +429,24 @@ function TrickCell({ label, player, entry }) {
   );
 }
 
-function PlayerAvatar({ player, idx, size = 40 }) {
-  return <div style={{ width:size, height:size, borderRadius:'50%', background:AVATAR_COLORS[idx] || '#475569', display:'flex', alignItems:'center', justifyContent:'center', fontSize:size > 36 ? 16 : 13, fontWeight:900, color:'#fff', flexShrink:0 }}>{player?.isBot ? '机' : (AVATARS[idx] || '玩')}</div>;
+function TurnBadge() {
+  return <div style={{ marginTop:2, padding:'2px 8px', borderRadius:999, background:'#f5c518', color:'#102016', fontSize:10, fontWeight:900, boxShadow:'0 0 12px rgba(245,197,24,.65)' }}>出牌中</div>;
+}
+
+function PlayerAvatar({ player, idx, size = 40, isCurrent = false }) {
+  return <div style={{ width:size, height:size, borderRadius:'50%', background:AVATAR_COLORS[idx] || '#475569', display:'flex', alignItems:'center', justifyContent:'center', fontSize:size > 36 ? 16 : 13, fontWeight:900, color:'#fff', flexShrink:0, border:isCurrent ? '3px solid #f5c518' : '1px solid rgba(255,255,255,.18)', boxShadow:isCurrent ? '0 0 20px rgba(245,197,24,.85)' : 'none', animation:isCurrent ? 'avatarPulse 1s ease-in-out infinite' : 'none' }}>{player?.isBot ? '机' : (AVATARS[idx] || '玩')}</div>;
 }
 
 function OpponentSide({ player, idx, isCurrent }) {
-  return <div style={{ width:76, padding:'10px 5px', borderRadius:18, background:isCurrent?'rgba(245,197,24,0.13)':'rgba(0,0,0,0.16)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 14px rgba(245,197,24,0.32)':'none', display:'flex', flexDirection:'column', alignItems:'center', gap:4, opacity: player.isOnline ? 1 : 0.45 }}><PlayerAvatar player={player} idx={idx} size={38} /><div style={{ fontSize:11, fontWeight:900, color:'#fff', maxWidth:68, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{player.name}</div><div style={{ fontSize:10, color:'#fbbf24', fontWeight:800 }}>{player.score}分</div><div style={{ fontSize:10, color:'#cbd5e1' }}>{player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div></div>;
+  return <div style={{ width:82, padding:'10px 5px', borderRadius:20, background:isCurrent?'linear-gradient(180deg, rgba(245,197,24,0.25), rgba(120,53,15,0.20))':'rgba(0,0,0,0.16)', border:`2px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 24px rgba(245,197,24,0.55), inset 0 0 12px rgba(245,197,24,0.18)':'none', animation:isCurrent?'turnSeatPulse 1.1s ease-in-out infinite':'none', display:'flex', flexDirection:'column', alignItems:'center', gap:4, opacity: player.isOnline ? 1 : 0.45, transform:isCurrent?'scale(1.04)':'none' }}><PlayerAvatar player={player} idx={idx} size={isCurrent ? 44 : 38} isCurrent={isCurrent} /><div style={{ fontSize:11, fontWeight:900, color:isCurrent ? '#fef3c7' : '#fff', maxWidth:72, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{player.name}</div><div style={{ fontSize:10, color:'#fbbf24', fontWeight:800 }}>{player.score}分</div><div style={{ fontSize:10, color:'#cbd5e1' }}>{player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div>{isCurrent && <TurnBadge />}</div>;
 }
 
 function OpponentTop({ player, idx, isCurrent }) {
-  return <div style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:18, background:isCurrent?'rgba(245,197,24,0.14)':'rgba(0,0,0,0.16)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 14px rgba(245,197,24,0.32)':'none', opacity: player.isOnline ? 1 : 0.45 }}><PlayerAvatar player={player} idx={idx} size={34} /><div><div style={{ fontSize:12, color:'#fff', fontWeight:900 }}>{player.name}</div><div style={{ fontSize:10, color:'#cbd5e1' }}>{player.score}分 · {player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div></div></div>;
+  return <div style={{ display:'flex', alignItems:'center', gap:8, padding:isCurrent?'7px 14px':'6px 12px', borderRadius:20, background:isCurrent?'linear-gradient(180deg, rgba(245,197,24,0.25), rgba(120,53,15,0.20))':'rgba(0,0,0,0.16)', border:`2px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 24px rgba(245,197,24,0.55), inset 0 0 12px rgba(245,197,24,0.18)':'none', animation:isCurrent?'turnSeatPulse 1.1s ease-in-out infinite':'none', opacity: player.isOnline ? 1 : 0.45, transform:isCurrent?'scale(1.05)':'none' }}><PlayerAvatar player={player} idx={idx} size={isCurrent ? 40 : 34} isCurrent={isCurrent} /><div><div style={{ fontSize:12, color:isCurrent ? '#fef3c7' : '#fff', fontWeight:900 }}>{player.name}</div><div style={{ fontSize:10, color:'#cbd5e1' }}>{player.score}分 · {player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div>{isCurrent && <TurnBadge />}</div></div>;
 }
 
 function SelfPanel({ player, isCurrent }) {
-  return <div style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 12px', borderRadius:16, background:isCurrent?'rgba(245,197,24,0.14)':'rgba(0,0,0,0.22)', border:`1px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}` }}><div style={{ fontSize:11, color:'#fbbf24', fontWeight:900 }}>我</div><div style={{ fontSize:12, color:'#fff', fontWeight:900 }}>{player.name}</div><div style={{ fontSize:11, color:'#cbd5e1' }}>{player.score}分 · {player.cardCount}张</div></div>;
+  return <div style={{ display:'flex', alignItems:'center', gap:8, padding:isCurrent?'5px 14px':'4px 12px', borderRadius:18, background:isCurrent?'linear-gradient(180deg, rgba(245,197,24,0.26), rgba(120,53,15,0.22))':'rgba(0,0,0,0.22)', border:`2px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 24px rgba(245,197,24,0.55)':'none', animation:isCurrent?'turnSeatPulse 1.1s ease-in-out infinite':'none' }}><div style={{ fontSize:11, color:'#fbbf24', fontWeight:900 }}>我</div><div style={{ fontSize:12, color:isCurrent ? '#fef3c7' : '#fff', fontWeight:900 }}>{player.name}</div><div style={{ fontSize:11, color:'#cbd5e1' }}>{player.score}分 · {player.cardCount}张</div>{isCurrent && <TurnBadge />}</div>;
 }
 
 function ConfirmModal({ title, desc, cancelText, okText, danger, onCancel, onOk }) {
