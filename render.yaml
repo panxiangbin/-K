@@ -1,10 +1,12 @@
 services:
   - type: web
     name: henan-50k
-    env: node
-    buildCommand: "cd client && npm install && npm run build && cd ../server && npm install"
-    startCommand: "node server/index.js"
+    runtime: node
+    plan: free
+    buildCommand: cd client && npm install && npm run build && cd ../server && npm install
+    startCommand: node server/index.js
+    healthCheckPath: /
+    autoDeployTrigger: commit
     envVars:
       - key: NODE_ENV
         value: production
-    plan: free
