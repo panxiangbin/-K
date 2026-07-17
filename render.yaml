@@ -3,7 +3,7 @@ services:
     name: henan-50k
     runtime: node
     plan: free
-    buildCommand: cd client && npm install && npm run build && cd ../server && npm install
+    buildCommand: cd client && npm install --include=dev && npm run build && cd ../server && npm install --omit=dev
     startCommand: node server/index.js
     healthCheckPath: /
     autoDeployTrigger: commit
