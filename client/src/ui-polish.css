@@ -1,0 +1,137 @@
+/* 河南五十K：第三轮视觉统一优化，仅调整外观与可读性 */
+
+:root {
+  --ui-glass: rgba(8, 28, 18, 0.72);
+  --ui-glass-strong: rgba(5, 20, 13, 0.88);
+  --ui-line: rgba(255, 255, 255, 0.12);
+  --ui-line-strong: rgba(245, 197, 24, 0.34);
+  --ui-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body,
+button,
+input {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  isolation: isolate;
+}
+
+#root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(245, 197, 24, 0.06), transparent 30%),
+    radial-gradient(circle at 15% 85%, rgba(34, 197, 94, 0.055), transparent 28%);
+}
+
+input {
+  caret-color: #f5c518;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+input::placeholder {
+  color: rgba(203, 213, 225, 0.48);
+}
+
+input:focus {
+  border-color: rgba(245, 197, 24, 0.72) !important;
+  background-color: rgba(255, 255, 255, 0.075) !important;
+  box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.12), 0 8px 20px rgba(0, 0, 0, 0.20);
+}
+
+button {
+  position: relative;
+}
+
+button:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), transparent 40%);
+  opacity: 0.42;
+}
+
+button:disabled {
+  opacity: 0.42 !important;
+}
+
+.top-action,
+.btn-lite,
+.btn-pass,
+.btn-play {
+  text-wrap: nowrap;
+}
+
+.top-action {
+  backdrop-filter: blur(12px) saturate(1.15);
+}
+
+.btn-lite,
+.btn-pass {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 5px 14px rgba(0,0,0,0.24) !important;
+}
+
+.btn-play:not(:disabled) {
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.22), 0 8px 22px rgba(245,197,24,0.34), inset 0 1px 0 rgba(255,255,255,0.66) !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  input:hover {
+    border-color: rgba(255,255,255,0.30) !important;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 680px) {
+  body {
+    background:
+      radial-gradient(circle at 50% 18%, rgba(245,197,24,0.09), transparent 28%),
+      linear-gradient(180deg, #07160e, #030806);
+  }
+
+  input {
+    min-height: 46px;
+    font-size: 16px !important;
+  }
+
+  .top-action,
+  .btn-lite,
+  .btn-pass,
+  .btn-play {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.26) !important;
+  }
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  input {
+    min-height: 38px;
+  }
+
+  .top-action,
+  .btn-lite,
+  .btn-pass,
+  .btn-play {
+    letter-spacing: 0 !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .top-action,
+  .btn-lite,
+  .btn-pass,
+  .btn-play,
+  input {
+    border-width: 2px !important;
+  }
+}
