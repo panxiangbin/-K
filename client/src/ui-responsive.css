@@ -1,0 +1,122 @@
+/* 河南五十K：补充手机竖屏与超窄横屏适配，只调整视觉与触控尺寸 */
+
+/* 竖屏手机：优先保证手牌、玩家座位和操作按钮都能完整显示 */
+@media (orientation: portrait) and (max-width: 680px) {
+  :root {
+    --side-col-w: 48px;
+    --card-w: 43px;
+    --card-h: 64px;
+    --card-rank-font: 12px;
+    --card-suit-font: 9px;
+    --card-center-font: 21px;
+    --card-selected-offset: -12px;
+    --hand-overlap: -34px;
+    --hand-x-pad: 8px;
+    --hand-y-pad-top: 4px;
+    --hand-y-pad-bottom: 7px;
+    --hand-bottom-pad: max(6px, env(safe-area-inset-bottom));
+    --mini-card-w: 24px;
+    --mini-card-h: 34px;
+    --mini-rank-font: 8px;
+    --mini-suit-font: 7px;
+    --mini-center-font: 13px;
+  }
+
+  .top-action {
+    min-height: 30px !important;
+    padding: 0 8px !important;
+    font-size: 11px !important;
+  }
+
+  .btn-lite,
+  .btn-pass {
+    min-height: 38px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    border-radius: 13px !important;
+    font-size: 11px !important;
+    letter-spacing: 0 !important;
+  }
+
+  .btn-play {
+    min-height: 42px !important;
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+    border-radius: 14px !important;
+    font-size: 14px !important;
+    letter-spacing: 0 !important;
+  }
+}
+
+/* 很窄的旧手机：进一步压缩横向尺寸，避免底部按钮挤出屏幕 */
+@media (max-width: 390px) and (orientation: portrait) {
+  :root {
+    --side-col-w: 42px;
+    --card-w: 40px;
+    --card-h: 59px;
+    --card-rank-font: 11px;
+    --card-center-font: 19px;
+    --hand-overlap: -32px;
+    --mini-card-w: 22px;
+    --mini-card-h: 31px;
+  }
+
+  .btn-lite,
+  .btn-pass {
+    min-height: 36px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    font-size: 10px !important;
+  }
+
+  .btn-play {
+    min-height: 40px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* 超窄横屏：常见于浏览器地址栏未收起时，保持按钮仍可点击 */
+@media (max-width: 680px) and (max-height: 390px) and (orientation: landscape) {
+  :root {
+    --side-col-w: 64px;
+    --card-w: 42px;
+    --card-h: 60px;
+    --card-rank-font: 11px;
+    --card-center-font: 19px;
+    --card-selected-offset: -10px;
+    --hand-overlap: -31px;
+    --hand-y-pad-top: 2px;
+    --hand-y-pad-bottom: 4px;
+  }
+
+  .top-action {
+    min-height: 28px !important;
+    padding: 0 7px !important;
+    font-size: 10px !important;
+  }
+
+  .btn-lite,
+  .btn-pass {
+    min-height: 34px !important;
+    padding-left: 7px !important;
+    padding-right: 7px !important;
+    font-size: 10px !important;
+  }
+
+  .btn-play {
+    min-height: 37px !important;
+    padding-left: 13px !important;
+    padding-right: 13px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* 刘海屏与圆角屏安全区 */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
