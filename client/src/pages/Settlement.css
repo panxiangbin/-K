@@ -1,0 +1,199 @@
+.settlement-page {
+  isolation: isolate;
+}
+
+.settlement-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 28%, rgba(245, 200, 66, 0.10), transparent 28%),
+    radial-gradient(circle at 82% 72%, rgba(129, 140, 248, 0.10), transparent 32%);
+  z-index: 0;
+}
+
+.settlement-page > * {
+  position: relative;
+  z-index: 1;
+}
+
+.settlement-hero,
+.settlement-content {
+  min-width: 0;
+}
+
+.settlement-score-card {
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.settlement-score-card:hover {
+  transform: translateY(-1px);
+}
+
+.settlement-next-button {
+  min-height: 44px;
+  letter-spacing: .04em;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settlement-next-button:active {
+  transform: translateY(1px) scale(.99);
+}
+
+.settlement-history {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 200, 66, .35) transparent;
+}
+
+@media (max-width: 760px), (orientation: portrait) {
+  .settlement-page {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    flex-direction: column !important;
+    padding-top: max(56px, env(safe-area-inset-top)) !important;
+    padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .settlement-hero {
+    width: 100% !important;
+    min-height: auto !important;
+    padding: 10px 14px 12px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid rgba(255,255,255,.08) !important;
+  }
+
+  .settlement-hero-icon {
+    font-size: 38px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .settlement-leader-name {
+    font-size: 21px !important;
+  }
+
+  .settlement-leader-meta {
+    margin-bottom: 7px !important;
+  }
+
+  .settlement-leader-score {
+    font-size: 38px !important;
+    line-height: 1 !important;
+  }
+
+  .settlement-round-badge {
+    margin-top: 9px !important;
+    padding: 5px 13px !important;
+  }
+
+  .settlement-content {
+    width: 100% !important;
+    flex: 0 0 auto !important;
+    justify-content: flex-start !important;
+    padding: 12px max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left)) !important;
+    gap: 7px !important;
+  }
+
+  .settlement-score-card {
+    padding: 9px 10px !important;
+    gap: 8px !important;
+  }
+
+  .settlement-history {
+    max-height: 112px;
+    overflow-y: auto;
+  }
+
+  .settlement-next-button {
+    position: sticky;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    z-index: 4;
+  }
+}
+
+@media (max-width: 390px) {
+  .settlement-page {
+    padding-top: max(52px, env(safe-area-inset-top)) !important;
+  }
+
+  .settlement-hero {
+    padding-top: 7px !important;
+    padding-bottom: 9px !important;
+  }
+
+  .settlement-hero-icon {
+    font-size: 32px !important;
+  }
+
+  .settlement-leader-name {
+    font-size: 18px !important;
+  }
+
+  .settlement-leader-score {
+    font-size: 32px !important;
+  }
+
+  .settlement-section-heading {
+    align-items: flex-start !important;
+    gap: 4px !important;
+  }
+
+  .settlement-score-card {
+    border-radius: 10px !important;
+  }
+
+  .settlement-score-detail {
+    font-size: 9px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .settlement-hero {
+    padding: 10px !important;
+  }
+
+  .settlement-hero-icon {
+    font-size: 42px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .settlement-leader-name {
+    font-size: 20px !important;
+  }
+
+  .settlement-leader-score {
+    font-size: 38px !important;
+  }
+
+  .settlement-round-badge {
+    margin-top: 10px !important;
+  }
+
+  .settlement-content {
+    padding: 8px 12px !important;
+    gap: 5px !important;
+  }
+
+  .settlement-score-card {
+    padding: 6px 9px !important;
+  }
+
+  .settlement-history {
+    max-height: 70px;
+    overflow-y: auto;
+  }
+
+  .settlement-next-button {
+    min-height: 38px;
+    padding: 8px 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settlement-score-card,
+  .settlement-next-button {
+    animation: none !important;
+    transition: none !important;
+  }
+}
