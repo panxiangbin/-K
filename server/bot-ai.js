@@ -137,12 +137,19 @@ function estimateRemainingStructure(hand, playedCards) {
   const groups = Object.values(groupByRank(remainingHand));
   const singletonCount = groups.filter(group => group.length === 1).length;
   const pairOrBetterCount = groups.filter(group => group.length >= 2).length;
+  const controlGroups = groups.filter(group => group.length >= 2);
+  const strongestControlGroup = controlGroups.sort((a, b) => {
+    const rankDiff = cardValue(b[0].rank) - cardValue(a[0].rank);
+    return rankDiff || b.length - a.length;
+  })[0] || null;
 
   return {
     estimatedTurns: groups.length,
     singletonCount,
     pairOrBetterCount,
     remainingPoints: calcPileScore(remainingHand),
+    remainingControlRank: strongestControlGroup ? cardValue(strongestControlGroup[0].rank) : -1,
+    remainingControlSize: strongestControlGroup ? strongestControlGroup.length : 0,
   };
 }
 
@@ -195,6 +202,13 @@ function scoreLead(candidate, handLength, context) {
   score += candidate.estimatedTurns * 210;
   score += candidate.singletonCount * 95;
   score -= candidate.pairOrBetterCount * 25;
+
+  // 两三手残局优先先处理较难重新拿牌权的低牌组，把较大的对子/三张留作控制牌。
+  // 只在剩余结构很短时启用，避免中盘为了“留大牌”而破坏正常的整组出牌节奏。
+  if (handLength <= 7 && candidate.estimatedTurns <= 2 && candidate.remainingControlSize >= 2) {
+    score -= candidate.remainingControlRank * 14;
+    score -= Math.min(candidate.remainingControlSize, 4) * 12;
+  }
 
   // 残局里不要把5、10、K分牌孤零零留到最后送给对手。
   // 手牌越少，留下的分值惩罚越高；中前盘只做轻微倾向，避免过早乱甩分。
