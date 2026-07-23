@@ -1,0 +1,51 @@
+name: Quality Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: quality-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
+
+      - name: Install client dependencies
+        working-directory: client
+        run: npm install --include=dev
+
+      - name: Build client
+        working-directory: client
+        run: npm run build
+
+      - name: Install server dependencies
+        working-directory: server
+        run: npm install --omit=dev
+
+      - name: Test smart bot strategy
+        working-directory: server
+        run: npm test
+
+      - name: Check server syntax
+        run: |
+          node --check server/index.js
+          node --check server/game-logic.js
+          node --check server/bot-ai.js
+          node --check server/bot-ai-hook.js
