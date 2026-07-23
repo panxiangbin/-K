@@ -12,6 +12,9 @@ Module._extensions['.js'] = function smartBotLoader(module, filename) {
     return originalJsLoader(module, filename);
   }
 
+  // 只拦截一次服务器入口，随后立即恢复 Node 默认加载器，避免影响后续模块。
+  Module._extensions['.js'] = originalJsLoader;
+
   const source = fs.readFileSync(filename, 'utf8');
   if (!source.includes(oldCall)) {
     throw new Error('无法接入智能电脑：服务器出牌调用位置已变化');
