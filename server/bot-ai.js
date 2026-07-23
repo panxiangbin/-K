@@ -177,13 +177,17 @@ function normalizeContext(context) {
   return { pileScore, minOpponentCards };
 }
 
-function scoreLead(candidate, handLength) {
+function scoreLead(candidate, handLength, context) {
   if (candidate.remaining === 0) return -1000000;
 
   let score = 0;
   score -= candidate.cards.length * 190;
   score += candidate.rankValue * 12;
-  score += candidate.points * 10;
+
+  // 中前盘避免过早把10、K等成组分牌直接送出；进入残局或对手牌少时，
+  // 则主动处理完整分牌组，避免高分对子/三张拖到最后失去牌权。
+  const scoreCardUrgency = handLength <= 6 || context.minOpponentCards <= 2;
+  score += candidate.points * (scoreCardUrgency ? -8 : 10);
 
   if (candidate.splitCount > 0) score += 850 + candidate.splitCount * 180;
   if (candidate.breaksBomb) score += 3200;
@@ -259,7 +263,7 @@ function chooseBotMove(hand, lastPlay, rawContext = {}) {
   if (!lastPlay) {
     const nonBombs = candidates.filter(candidate => !candidate.isBomb);
     const pool = nonBombs.length ? nonBombs : candidates;
-    return pool.sort((a, b) => scoreLead(a, hand.length) - scoreLead(b, hand.length))[0].cards;
+    return pool.sort((a, b) => scoreLead(a, hand.length, context) - scoreLead(b, hand.length, context))[0].cards;
   }
 
   if (lastPlay.type !== 'bomb') {
