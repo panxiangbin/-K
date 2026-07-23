@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "test": "node bot-ai.test.js",
     "dev": "nodemon index.js"
   },
   "dependencies": {
