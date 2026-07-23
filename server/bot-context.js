@@ -24,13 +24,27 @@ function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
     }
   }
 
+  const nextOpponentCards = nextOpponent ? nextOpponent.hand.length : Infinity;
+
+  // 下家已进入1～3张的直接收尾区时，优先封锁马上行动的人。
+  // 若下家暂时安全（4张以上），但桌上另有人只剩1～2张，则提前按全桌最危险玩家布防，
+  // 避免电脑只盯着下家，等下一圈才发现远处玩家已经可以一手走完。
+  let minOpponentCards = nextOpponentCards;
+  let threatSource = nextOpponent ? 'next' : 'none';
+  if (!Number.isFinite(nextOpponentCards)) {
+    minOpponentCards = globalMinOpponentCards;
+    threatSource = Number.isFinite(globalMinOpponentCards) ? 'table' : 'none';
+  } else if (nextOpponentCards > 3 && globalMinOpponentCards <= 2) {
+    minOpponentCards = globalMinOpponentCards;
+    threatSource = 'table';
+  }
+
   return {
     pileScore: calcPileScore(room?.pile || []),
-    // 先看紧接着行动的人。纸牌残局里，下家能否立刻走完比远处玩家更紧迫。
-    // 若座位数据异常或没有可行动下家，再退回全桌最少手牌数。
-    minOpponentCards: nextOpponent ? nextOpponent.hand.length : globalMinOpponentCards,
-    nextOpponentCards: nextOpponent ? nextOpponent.hand.length : Infinity,
+    minOpponentCards,
+    nextOpponentCards,
     globalMinOpponentCards,
+    threatSource,
   };
 }
 
