@@ -9,7 +9,11 @@ const replacements = [
   {
     name: '智能电脑出牌',
     oldCode: 'const move = chooseBotMove(player.hand, room.lastPlay);',
-    newCode: "const move = require('./bot-ai').chooseBotMove(player.hand, room.lastPlay);",
+    newCode: `const activeOpponents = room.players.filter(p => p.id !== player.id && !p.left && p.hand && p.hand.length > 0);
+    const move = require('./bot-ai').chooseBotMove(player.hand, room.lastPlay, {
+      pileScore: calcPileScore(room.pile || []),
+      minOpponentCards: activeOpponents.length ? Math.min(...activeOpponents.map(p => p.hand.length)) : Infinity,
+    });`,
   },
   {
     name: '静态资源缓存',
