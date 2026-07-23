@@ -40,6 +40,29 @@ const replacements = [
 
 app.get('*', (req, res) => {`,
   },
+  {
+    name: 'WebSocket心跳清理',
+    oldCode: "wss.on('connection', (ws) => {",
+    newCode: `const wsHeartbeatInterval = setInterval(() => {
+  for (const socket of wss.clients) {
+    if (socket.isAlive === false) {
+      socket.terminate();
+      continue;
+    }
+
+    socket.isAlive = false;
+    socket.ping();
+  }
+}, 30000);
+
+// 心跳计时器不应阻止 Node 正常退出；服务器关闭时也及时清理。
+if (typeof wsHeartbeatInterval.unref === 'function') wsHeartbeatInterval.unref();
+wss.on('close', () => clearInterval(wsHeartbeatInterval));
+
+wss.on('connection', (ws) => {
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });`,
+  },
 ];
 
 Module._extensions['.js'] = function optimizedServerLoader(module, filename) {
