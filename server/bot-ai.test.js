@@ -69,4 +69,25 @@ run('只剩一个合法牌组时一手出完', () => {
   assert.equal(detectPattern(move).type, 'pair');
 });
 
+run('普通局面跟单张仍优先最小普通牌，不浪费炸弹', () => {
+  const hand = [
+    card('6', '♦'),
+    card('5', '♠'), card('10', '♠'), card('K', '♠'),
+  ];
+  const move = chooseBotMove(hand, { type: 'single', rank: '4' }, { pileScore: 5, minOpponentCards: 6 });
+  assert.equal(move.length, 1);
+  assert.equal(move[0].rank, '6');
+});
+
+run('对手只剩一张且牌堆分高时，允许用最小炸弹抢回牌权', () => {
+  const hand = [
+    card('6', '♦'),
+    card('5', '♠'), card('10', '♠'), card('K', '♠'),
+  ];
+  const move = chooseBotMove(hand, { type: 'single', rank: '4' }, { pileScore: 30, minOpponentCards: 1 });
+  const pattern = detectPattern(move);
+  assert.equal(pattern.type, 'bomb');
+  assert.equal(pattern.bombType, '50K');
+});
+
 console.log('智能电脑策略测试全部通过。');
