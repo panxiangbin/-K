@@ -67,6 +67,16 @@ run('跟对子时使用完整对子，不拆三张牌组', () => {
   assert.deepEqual(ranks(move), ['6', '6']);
 });
 
+run('跟对子时兼顾剩余结构，避免留下孤张', () => {
+  const hand = [
+    card('5', '♠'), card('5', '♥'), card('5', '♣'),
+    card('6', '♠'), card('6', '♥'), card('6', '♣'), card('6', '♦'),
+  ];
+  const move = chooseBotMove(hand, { type: 'pair', rank: '4' });
+  assert.equal(move.length, 2);
+  assert.deepEqual(ranks(move), ['6', '6']);
+});
+
 run('有普通小牌时不拆同花五十K炸弹', () => {
   const hand = [card('5', '♠'), card('10', '♠'), card('K', '♠'), card('3', '♦')];
   const move = chooseBotMove(hand, null);
