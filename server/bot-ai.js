@@ -152,6 +152,14 @@ function describeCandidate(candidate, hand, groups, protectedIds) {
   };
 }
 
+function normalizeContext(context) {
+  const pileScore = Number.isFinite(context?.pileScore) ? Math.max(0, context.pileScore) : 0;
+  const minOpponentCards = Number.isFinite(context?.minOpponentCards)
+    ? Math.max(0, context.minOpponentCards)
+    : Infinity;
+  return { pileScore, minOpponentCards };
+}
+
 function scoreLead(candidate, handLength) {
   if (candidate.remaining === 0) return -1000000;
 
@@ -174,19 +182,30 @@ function scoreLead(candidate, handLength) {
   return score;
 }
 
-function scoreFollow(candidate) {
+function scoreFollow(candidate, context) {
   if (candidate.remaining === 0) return -1000000;
 
   let score = candidate.rankValue * 20 + candidate.points * 8;
   if (candidate.splitCount > 0) score += 700 + candidate.splitCount * 160;
   if (candidate.breaksBomb) score += 3000;
-  if (candidate.isBomb) score += patternWeight(candidate.pattern);
+
+  if (candidate.isBomb) {
+    score += patternWeight(candidate.pattern);
+
+    // 平常珍惜炸弹；牌堆分高或对手临近出完时，允许用最小炸弹主动抢回牌权。
+    const endgameEmergency = context.minOpponentCards <= 1;
+    const highValueEmergency = context.minOpponentCards <= 2 && context.pileScore >= 20;
+    if (endgameEmergency) score -= 2600;
+    else if (highValueEmergency) score -= 1800;
+  }
+
   return score;
 }
 
-function chooseBotMove(hand, lastPlay) {
+function chooseBotMove(hand, lastPlay, rawContext = {}) {
   if (!Array.isArray(hand) || hand.length === 0) return null;
 
+  const context = normalizeContext(rawContext);
   const groups = groupByRank(hand);
   const protectedIds = getProtectedBombCardIds(hand);
   const candidates = getCandidateCombos(hand)
@@ -208,16 +227,17 @@ function chooseBotMove(hand, lastPlay) {
     return pool.sort((a, b) => scoreLead(a, hand.length) - scoreLead(b, hand.length))[0].cards;
   }
 
-  // 跟牌时优先用同牌型最小代价压住，避免无谓拆炸弹；规则要求有牌能压就必须出。
+  // 通常优先用同牌型最小代价压住；残局或高分牌堆危急时，把最小炸弹放进同一评分池。
   if (lastPlay.type !== 'bomb') {
     const sameType = candidates.filter(candidate => candidate.pattern.type === lastPlay.type);
-    if (sameType.length) {
-      return sameType.sort((a, b) => scoreFollow(a) - scoreFollow(b))[0].cards;
+    const urgent = context.minOpponentCards <= 1 || (context.minOpponentCards <= 2 && context.pileScore >= 20);
+    if (sameType.length && !urgent) {
+      return sameType.sort((a, b) => scoreFollow(a, context) - scoreFollow(b, context))[0].cards;
     }
   }
 
-  // 只有同牌型压不住时才动炸弹，并选择刚好够用的最小炸弹。
-  return candidates.sort((a, b) => scoreFollow(a) - scoreFollow(b))[0].cards;
+  // 规则要求有牌能压就必须出；从所有合法牌中选择当前局面代价最低的一手。
+  return candidates.sort((a, b) => scoreFollow(a, context) - scoreFollow(b, context))[0].cards;
 }
 
 module.exports = { chooseBotMove };
