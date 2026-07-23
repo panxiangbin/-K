@@ -131,6 +131,21 @@ function patternWeight(pattern) {
   return score;
 }
 
+function estimateRemainingStructure(hand, playedCards) {
+  const playedIds = new Set(playedCards.map(card => card.id));
+  const remainingHand = hand.filter(card => !playedIds.has(card.id));
+  const groups = Object.values(groupByRank(remainingHand));
+  const singletonCount = groups.filter(group => group.length === 1).length;
+  const pairOrBetterCount = groups.filter(group => group.length >= 2).length;
+
+  // 每个同点数组理论上至少需要一手；孤张越多，后续越难连续出完。
+  return {
+    estimatedTurns: groups.length,
+    singletonCount,
+    pairOrBetterCount,
+  };
+}
+
 function describeCandidate(candidate, hand, groups, protectedIds) {
   const { cards, pattern } = candidate;
   const isBomb = pattern.type === 'bomb';
@@ -140,6 +155,7 @@ function describeCandidate(candidate, hand, groups, protectedIds) {
   const breaksBomb = !isBomb && cards.some(card => protectedIds.has(card.id));
   const remaining = hand.length - cards.length;
   const points = calcPileScore(cards);
+  const structure = estimateRemainingStructure(hand, cards);
 
   return {
     ...candidate,
@@ -149,6 +165,7 @@ function describeCandidate(candidate, hand, groups, protectedIds) {
     remaining,
     points,
     rankValue: cardValue(pattern.rank || cards[0]?.rank),
+    ...structure,
   };
 }
 
@@ -172,6 +189,11 @@ function scoreLead(candidate, handLength) {
 
   if (candidate.splitCount > 0) score += 850 + candidate.splitCount * 180;
   if (candidate.breaksBomb) score += 3200;
+
+  // 同样能出多张时，优先让剩余手牌更整齐、预计出完手数更少。
+  score += candidate.estimatedTurns * 210;
+  score += candidate.singletonCount * 95;
+  score -= candidate.pairOrBetterCount * 25;
 
   // 炸弹主要用来抢分和收尾，手牌还多时不要随便先炸。
   if (candidate.isBomb) {
