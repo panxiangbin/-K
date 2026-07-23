@@ -61,6 +61,17 @@ run('两手残局先出低对子，保留高三张用于重新控制牌权', () 
   assert.equal(detectPattern(move).type, 'pair');
 });
 
+run('对手只剩一张时先出对子封牌，不主动送出单张', () => {
+  const hand = [
+    card('3', '♦'),
+    card('A', '♠'), card('A', '♥'),
+  ];
+  const move = chooseBotMove(hand, null, { minOpponentCards: 1 });
+  assert.equal(move.length, 2);
+  assert.deepEqual(ranks(move), ['A', 'A']);
+  assert.equal(detectPattern(move).type, 'pair');
+});
+
 run('残局先手优先处理分牌，不把5孤零零留到最后', () => {
   const hand = [card('5', '♦'), card('6', '♣')];
   const move = chooseBotMove(hand, null);
