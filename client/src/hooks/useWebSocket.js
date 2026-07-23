@@ -5,6 +5,7 @@ const INITIAL_RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 15000;
 const CONNECT_TIMEOUT = 12000;
 const WAKE_HINT_DELAY = 6000;
+const SEND_HINT_COOLDOWN = 1500;
 const STATUS_BANNER_ID = 'henan50k-connection-status';
 
 function getWsUrl() {
@@ -73,6 +74,7 @@ export function useWebSocket(onMessage) {
   const connectTimer = useRef(null);
   const wakeHintTimer = useRef(null);
   const reconnectDelay = useRef(INITIAL_RECONNECT_DELAY);
+  const lastSendHintAt = useRef(0);
   const [connected, setConnected] = useState(false);
   const onMsg = useRef(onMessage);
   onMsg.current = onMessage;
@@ -233,6 +235,18 @@ export function useWebSocket(onMessage) {
     if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify(msg));
       return true;
+    }
+
+    // 用户在服务器尚未唤醒或网络断开时点击按钮，原来会像“没反应”。
+    // 现在给出明确提示；冷却时间避免快速连点时反复刷新状态播报。
+    const now = Date.now();
+    if (now - lastSendHintAt.current >= SEND_HINT_COOLDOWN) {
+      lastSendHintAt.current = now;
+      if (navigator.onLine) {
+        showConnectionStatus('游戏服务器尚未连接，请稍等，连接成功后再试一次。');
+      } else {
+        showConnectionStatus('当前网络已断开，网络恢复后会自动重新连接。', 'offline');
+      }
     }
     return false;
   }, []);
