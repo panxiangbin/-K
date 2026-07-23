@@ -142,6 +142,7 @@ function estimateRemainingStructure(hand, playedCards) {
     estimatedTurns: groups.length,
     singletonCount,
     pairOrBetterCount,
+    remainingPoints: calcPileScore(remainingHand),
   };
 }
 
@@ -191,6 +192,15 @@ function scoreLead(candidate, handLength) {
   score += candidate.singletonCount * 95;
   score -= candidate.pairOrBetterCount * 25;
 
+  // 残局里不要把5、10、K分牌孤零零留到最后送给对手。
+  // 手牌越少，留下的分值惩罚越高；中前盘只做轻微倾向，避免过早乱甩分。
+  if (candidate.remaining <= 5) {
+    const endgameFactor = 6 - candidate.remaining;
+    score += candidate.remainingPoints * endgameFactor * 18;
+  } else {
+    score += candidate.remainingPoints * 2;
+  }
+
   if (candidate.isBomb) {
     score += handLength <= 8 ? 180 : 1900;
     score += patternWeight(candidate.pattern) / 20;
@@ -211,6 +221,10 @@ function scoreFollow(candidate, context) {
   score += candidate.estimatedTurns * 120;
   score += candidate.singletonCount * 260;
   score -= candidate.pairOrBetterCount * 60;
+
+  if (candidate.remaining <= 4) {
+    score += candidate.remainingPoints * (5 - candidate.remaining) * 12;
+  }
 
   if (candidate.isBomb) {
     score += patternWeight(candidate.pattern);
