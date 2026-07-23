@@ -14,6 +14,7 @@ function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
   const globalMinOpponentCards = activeOpponents.length
     ? Math.min(...activeOpponents.map(player => player.hand.length))
     : Infinity;
+  const pileScore = calcPileScore(room?.pile || []);
 
   let nextOpponent = null;
   for (let offset = 1; offset < players.length; offset++) {
@@ -27,20 +28,26 @@ function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
   const nextOpponentCards = nextOpponent ? nextOpponent.hand.length : Infinity;
 
   // 下家已进入1～3张的直接收尾区时，优先封锁马上行动的人。
-  // 若下家暂时安全（4张以上），但桌上另有人只剩1～2张，则提前按全桌最危险玩家布防，
-  // 避免电脑只盯着下家，等下一圈才发现远处玩家已经可以一手走完。
+  // 若下家暂时安全，但远处玩家只剩1～2张，则按牌堆价值分级处理：
+  // 低分牌堆只保持观察，避免电脑过早改变正常牌型；20分及以上时才升级为全桌紧急威胁，
+  // 让电脑更积极抢回高价值牌堆，同时不会因为远处一张牌就无条件乱炸。
   let minOpponentCards = nextOpponentCards;
   let threatSource = nextOpponent ? 'next' : 'none';
   if (!Number.isFinite(nextOpponentCards)) {
     minOpponentCards = globalMinOpponentCards;
     threatSource = Number.isFinite(globalMinOpponentCards) ? 'table' : 'none';
   } else if (nextOpponentCards > 3 && globalMinOpponentCards <= 2) {
-    minOpponentCards = globalMinOpponentCards;
-    threatSource = 'table';
+    if (pileScore >= 20) {
+      minOpponentCards = globalMinOpponentCards;
+      threatSource = 'table';
+    } else {
+      minOpponentCards = nextOpponentCards;
+      threatSource = 'table-watch';
+    }
   }
 
   return {
-    pileScore: calcPileScore(room?.pile || []),
+    pileScore,
     minOpponentCards,
     nextOpponentCards,
     globalMinOpponentCards,
