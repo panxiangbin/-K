@@ -138,7 +138,6 @@ function estimateRemainingStructure(hand, playedCards) {
   const singletonCount = groups.filter(group => group.length === 1).length;
   const pairOrBetterCount = groups.filter(group => group.length >= 2).length;
 
-  // 每个同点数组理论上至少需要一手；孤张越多，后续越难连续出完。
   return {
     estimatedTurns: groups.length,
     singletonCount,
@@ -181,8 +180,6 @@ function scoreLead(candidate, handLength) {
   if (candidate.remaining === 0) return -1000000;
 
   let score = 0;
-
-  // 先手尽量一次甩掉完整的对子、三张或更多同点牌，而不是把牌组拆成单张。
   score -= candidate.cards.length * 190;
   score += candidate.rankValue * 12;
   score += candidate.points * 10;
@@ -190,12 +187,10 @@ function scoreLead(candidate, handLength) {
   if (candidate.splitCount > 0) score += 850 + candidate.splitCount * 180;
   if (candidate.breaksBomb) score += 3200;
 
-  // 同样能出多张时，优先让剩余手牌更整齐、预计出完手数更少。
   score += candidate.estimatedTurns * 210;
   score += candidate.singletonCount * 95;
   score -= candidate.pairOrBetterCount * 25;
 
-  // 炸弹主要用来抢分和收尾，手牌还多时不要随便先炸。
   if (candidate.isBomb) {
     score += handLength <= 8 ? 180 : 1900;
     score += patternWeight(candidate.pattern) / 20;
@@ -211,10 +206,15 @@ function scoreFollow(candidate, context) {
   if (candidate.splitCount > 0) score += 700 + candidate.splitCount * 160;
   if (candidate.breaksBomb) score += 3000;
 
+  // 跟牌不只看“刚好压住”，还看出完后手牌是否更整齐。
+  // 少孤张、保留更多对子或三张，通常比留下散牌更容易连续收尾。
+  score += candidate.estimatedTurns * 120;
+  score += candidate.singletonCount * 260;
+  score -= candidate.pairOrBetterCount * 60;
+
   if (candidate.isBomb) {
     score += patternWeight(candidate.pattern);
 
-    // 平常珍惜炸弹；牌堆分高或对手临近出完时，允许用最小炸弹主动抢回牌权。
     const endgameEmergency = context.minOpponentCards <= 1;
     const highValueEmergency = context.minOpponentCards <= 2 && context.pileScore >= 20;
     if (endgameEmergency) score -= 2600;
@@ -237,7 +237,6 @@ function chooseBotMove(hand, lastPlay, rawContext = {}) {
 
   if (!candidates.length) return null;
 
-  // 能一手出完永远优先。
   const finishing = candidates
     .filter(candidate => candidate.remaining === 0)
     .sort((a, b) => b.cards.length - a.cards.length || patternWeight(a.pattern) - patternWeight(b.pattern));
@@ -249,7 +248,6 @@ function chooseBotMove(hand, lastPlay, rawContext = {}) {
     return pool.sort((a, b) => scoreLead(a, hand.length) - scoreLead(b, hand.length))[0].cards;
   }
 
-  // 通常优先用同牌型最小代价压住；残局或高分牌堆危急时，把最小炸弹放进同一评分池。
   if (lastPlay.type !== 'bomb') {
     const sameType = candidates.filter(candidate => candidate.pattern.type === lastPlay.type);
     const urgent = context.minOpponentCards <= 1 || (context.minOpponentCards <= 2 && context.pileScore >= 20);
@@ -258,7 +256,6 @@ function chooseBotMove(hand, lastPlay, rawContext = {}) {
     }
   }
 
-  // 规则要求有牌能压就必须出；从所有合法牌中选择当前局面代价最低的一手。
   return candidates.sort((a, b) => scoreFollow(a, context) - scoreFollow(b, context))[0].cards;
 }
 
