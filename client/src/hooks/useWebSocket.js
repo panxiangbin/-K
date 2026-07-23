@@ -4,6 +4,8 @@ const RENDER_URL = 'wss://henan-50k.onrender.com';
 const INITIAL_RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 15000;
 const CONNECT_TIMEOUT = 12000;
+const WAKE_HINT_DELAY = 6000;
+const STATUS_BANNER_ID = 'henan50k-connection-status';
 
 function getWsUrl() {
   const { protocol, hostname, host } = window.location;
@@ -20,10 +22,56 @@ function getWsUrl() {
   return `${protocol === 'https:' ? 'wss:' : 'ws:'}//${host}`;
 }
 
+function getStatusBanner() {
+  let banner = document.getElementById(STATUS_BANNER_ID);
+  if (banner) return banner;
+
+  banner = document.createElement('div');
+  banner.id = STATUS_BANNER_ID;
+  banner.setAttribute('role', 'status');
+  banner.setAttribute('aria-live', 'polite');
+  Object.assign(banner.style, {
+    position: 'fixed',
+    left: '50%',
+    bottom: 'max(18px, env(safe-area-inset-bottom))',
+    transform: 'translateX(-50%)',
+    zIndex: '1200',
+    width: 'min(calc(100% - 32px), 440px)',
+    boxSizing: 'border-box',
+    padding: '10px 14px',
+    borderRadius: '14px',
+    border: '1px solid rgba(251, 191, 36, 0.38)',
+    background: 'rgba(30, 41, 59, 0.94)',
+    color: '#f8fafc',
+    boxShadow: '0 10px 28px rgba(0, 0, 0, 0.32)',
+    backdropFilter: 'blur(10px)',
+    fontSize: '13px',
+    lineHeight: '1.45',
+    textAlign: 'center',
+    pointerEvents: 'none',
+  });
+  document.body.appendChild(banner);
+  return banner;
+}
+
+function showConnectionStatus(text, tone = 'waking') {
+  const banner = getStatusBanner();
+  banner.textContent = text;
+  banner.style.borderColor = tone === 'offline'
+    ? 'rgba(248, 113, 113, 0.48)'
+    : 'rgba(251, 191, 36, 0.38)';
+  banner.style.color = tone === 'offline' ? '#fecaca' : '#fef3c7';
+}
+
+function hideConnectionStatus() {
+  document.getElementById(STATUS_BANNER_ID)?.remove();
+}
+
 export function useWebSocket(onMessage) {
   const ws = useRef(null);
   const reconnectTimer = useRef(null);
   const connectTimer = useRef(null);
+  const wakeHintTimer = useRef(null);
   const reconnectDelay = useRef(INITIAL_RECONNECT_DELAY);
   const [connected, setConnected] = useState(false);
   const onMsg = useRef(onMessage);
@@ -45,6 +93,21 @@ export function useWebSocket(onMessage) {
       connectTimer.current = null;
     }
 
+    function clearWakeHintTimer() {
+      if (!wakeHintTimer.current) return;
+      clearTimeout(wakeHintTimer.current);
+      wakeHintTimer.current = null;
+    }
+
+    function scheduleWakeHint() {
+      clearWakeHintTimer();
+      wakeHintTimer.current = setTimeout(() => {
+        wakeHintTimer.current = null;
+        if (stopped || ws.current?.readyState === WebSocket.OPEN || !navigator.onLine) return;
+        showConnectionStatus('服务器正在启动，首次打开可能需要稍等一会儿，页面会自动连接。');
+      }, WAKE_HINT_DELAY);
+    }
+
     function scheduleReconnect() {
       if (stopped || reconnectTimer.current || !navigator.onLine) return;
       const delay = reconnectDelay.current;
@@ -62,6 +125,7 @@ export function useWebSocket(onMessage) {
       const socket = new WebSocket(url);
       ws.current = socket;
       clearConnectTimer();
+      scheduleWakeHint();
 
       // 某些手机网络或服务器刚唤醒时，WebSocket 可能长期卡在 CONNECTING。
       // 超时后主动关闭并进入退避重连，避免界面永远停在“连接中”。
@@ -74,6 +138,8 @@ export function useWebSocket(onMessage) {
         if (stopped || ws.current !== socket) return;
         clearConnectTimer();
         clearReconnectTimer();
+        clearWakeHintTimer();
+        hideConnectionStatus();
         reconnectDelay.current = INITIAL_RECONNECT_DELAY;
         setConnected(true);
       };
@@ -82,6 +148,7 @@ export function useWebSocket(onMessage) {
         clearConnectTimer();
         if (ws.current === socket) ws.current = null;
         setConnected(false);
+        if (navigator.onLine) scheduleWakeHint();
         scheduleReconnect();
       };
 
@@ -115,7 +182,9 @@ export function useWebSocket(onMessage) {
     function handleOffline() {
       clearReconnectTimer();
       clearConnectTimer();
+      clearWakeHintTimer();
       setConnected(false);
+      showConnectionStatus('当前网络已断开，网络恢复后会自动重新连接。', 'offline');
 
       // 浏览器的 OPEN 状态可能滞后于真实网络状态；主动丢弃，
       // 网络恢复后由 online 事件建立一条全新的连接。
@@ -124,20 +193,28 @@ export function useWebSocket(onMessage) {
       if (staleSocket) staleSocket.close();
     }
 
+    function handleOnline() {
+      showConnectionStatus('网络已恢复，正在重新连接游戏服务器…');
+      reconnectNow();
+    }
+
     function handleVisibilityChange() {
       if (document.visibilityState === 'visible') reconnectNow();
     }
 
-    window.addEventListener('online', reconnectNow);
+    window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    connect();
+    if (!navigator.onLine) handleOffline();
+    else connect();
 
     return () => {
       stopped = true;
       clearConnectTimer();
       clearReconnectTimer();
-      window.removeEventListener('online', reconnectNow);
+      clearWakeHintTimer();
+      hideConnectionStatus();
+      window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       const socket = ws.current;
