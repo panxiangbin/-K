@@ -38,6 +38,18 @@ run('先手有对子时优先完整打出对子', () => {
   assert.equal(detectPattern(move).type, 'pair');
 });
 
+run('先手规划剩余牌结构，优先整组减少后续手数', () => {
+  const hand = [
+    card('3', '♠'), card('3', '♥'), card('3', '♣'),
+    card('4', '♠'), card('4', '♥'),
+    card('5', '♦'),
+  ];
+  const move = chooseBotMove(hand, null);
+  assert.equal(move.length, 3);
+  assert.deepEqual(ranks(move), ['3', '3', '3']);
+  assert.equal(detectPattern(move).type, 'triple');
+});
+
 run('跟单张时使用独立单张，不拆三张牌组', () => {
   const hand = [card('5', '♠'), card('5', '♥'), card('5', '♣'), card('6', '♦')];
   const move = chooseBotMove(hand, { type: 'single', rank: '4' });
