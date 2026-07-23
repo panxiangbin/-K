@@ -57,6 +57,20 @@ run('残局先手优先处理分牌，不把5孤零零留到最后', () => {
   assert.equal(move[0].rank, '5');
 });
 
+run('对手牌少时优先处理成组10分牌，普通局面不过早送分', () => {
+  const hand = [
+    card('3', '♠'), card('3', '♥'),
+    card('4', '♠'), card('4', '♥'),
+    card('7', '♠'), card('7', '♥'),
+    card('10', '♠'), card('10', '♥'),
+    card('6', '♦'),
+  ];
+  const normalMove = chooseBotMove(hand, null, { minOpponentCards: 8 });
+  const urgentMove = chooseBotMove(hand, null, { minOpponentCards: 2 });
+  assert.notDeepEqual(ranks(normalMove), ['10', '10']);
+  assert.deepEqual(ranks(urgentMove), ['10', '10']);
+});
+
 run('跟单张时使用独立单张，不拆三张牌组', () => {
   const hand = [card('5', '♠'), card('5', '♥'), card('5', '♣'), card('6', '♦')];
   const move = chooseBotMove(hand, { type: 'single', rank: '4' });
