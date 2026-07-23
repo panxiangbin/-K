@@ -116,6 +116,12 @@ export function useWebSocket(onMessage) {
       clearReconnectTimer();
       clearConnectTimer();
       setConnected(false);
+
+      // 浏览器的 OPEN 状态可能滞后于真实网络状态；主动丢弃，
+      // 网络恢复后由 online 事件建立一条全新的连接。
+      const staleSocket = ws.current;
+      ws.current = null;
+      if (staleSocket) staleSocket.close();
     }
 
     function handleVisibilityChange() {
