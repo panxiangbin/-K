@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     buildCommand: cd client && npm install --include=dev && npm run build && cd ../server && npm install --omit=dev
-    startCommand: node server/index.js
+    startCommand: node -r ./server/bot-ai-hook.js server/index.js
     healthCheckPath: /
     autoDeployTrigger: commit
     envVars:
