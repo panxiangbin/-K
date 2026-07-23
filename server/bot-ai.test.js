@@ -50,6 +50,13 @@ run('先手规划剩余牌结构，优先整组减少后续手数', () => {
   assert.equal(detectPattern(move).type, 'triple');
 });
 
+run('残局先手优先处理分牌，不把5孤零零留到最后', () => {
+  const hand = [card('5', '♦'), card('6', '♣')];
+  const move = chooseBotMove(hand, null);
+  assert.equal(move.length, 1);
+  assert.equal(move[0].rank, '5');
+});
+
 run('跟单张时使用独立单张，不拆三张牌组', () => {
   const hand = [card('5', '♠'), card('5', '♥'), card('5', '♣'), card('6', '♦')];
   const move = chooseBotMove(hand, { type: 'single', rank: '4' });
