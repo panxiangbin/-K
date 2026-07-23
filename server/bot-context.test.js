@@ -33,7 +33,20 @@ const scorePile = cards => cards.length * 5;
   const context = getBotTurnContext(room, 0, 'bot', scorePile);
   assert.strictEqual(context.nextOpponentCards, 5);
   assert.strictEqual(context.globalMinOpponentCards, 1);
-  assert.strictEqual(context.minOpponentCards, 1, '下家暂时安全时，应提前防范全桌只剩一张的玩家');
+  assert.strictEqual(context.minOpponentCards, 5, '低分牌堆不应因远处玩家一张牌就过度防守');
+  assert.strictEqual(context.threatSource, 'table-watch');
+}
+
+{
+  const room = {
+    players: [player('bot', 8), player('next', 5), player('far', 1), player('other', 6)],
+    pile: [{ id: 'p1' }, { id: 'p2' }, { id: 'p3' }, { id: 'p4' }],
+  };
+  const context = getBotTurnContext(room, 0, 'bot', scorePile);
+  assert.strictEqual(context.pileScore, 20);
+  assert.strictEqual(context.nextOpponentCards, 5);
+  assert.strictEqual(context.globalMinOpponentCards, 1);
+  assert.strictEqual(context.minOpponentCards, 1, '高分牌堆应升级远处残局玩家为紧急威胁');
   assert.strictEqual(context.threatSource, 'table');
 }
 
