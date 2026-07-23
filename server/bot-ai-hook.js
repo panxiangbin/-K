@@ -29,6 +29,16 @@ const replacements = [
   },
 }));`,
   },
+  {
+    name: '轻量健康检查',
+    oldCode: "app.get('*', (req, res) => {",
+    newCode: `app.get('/healthz', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).type('text/plain').send('ok');
+});
+
+app.get('*', (req, res) => {`,
+  },
 ];
 
 Module._extensions['.js'] = function optimizedServerLoader(module, filename) {
