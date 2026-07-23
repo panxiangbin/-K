@@ -1,12 +1,23 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import Lobby from './pages/Lobby';
-import Game from './pages/Game';
-import Settlement from './pages/Settlement';
-import langaishouBase64 from './assets/langaishouBase64';
 
-const LANGAISHOU_AUDIO_SRC = `data:audio/mpeg;base64,${langaishouBase64}`;
+const Game = lazy(() => import('./pages/Game'));
+const Settlement = lazy(() => import('./pages/Settlement'));
 const VOICE_VERSION = 'V2';
+let recordedBombAudioSrcPromise = null;
+
+function loadRecordedBombAudioSrc() {
+  if (!recordedBombAudioSrcPromise) {
+    recordedBombAudioSrcPromise = import('./assets/langaishouBase64')
+      .then(module => `data:audio/mpeg;base64,${module.default}`)
+      .catch(error => {
+        recordedBombAudioSrcPromise = null;
+        throw error;
+      });
+  }
+  return recordedBombAudioSrcPromise;
+}
 
 function savePlayerSession(msg) {
   if (!msg?.roomId || !msg?.playerId || !msg?.playerToken) return;
@@ -33,11 +44,12 @@ function clearSavedSession(roomId) {
   localStorage.removeItem('henan50k:lastRoomId');
 }
 
-function playRecordedBombVoice() {
-  return new Promise((resolve) => {
-    try {
-      if (typeof window === 'undefined') { resolve(false); return; }
-      const audio = new Audio(LANGAISHOU_AUDIO_SRC);
+async function playRecordedBombVoice() {
+  try {
+    if (typeof window === 'undefined') return false;
+    const audioSrc = await loadRecordedBombAudioSrc();
+    return await new Promise((resolve) => {
+      const audio = new Audio(audioSrc);
       audio.volume = 1;
       audio.preload = 'auto';
       let done = false;
@@ -53,14 +65,22 @@ function playRecordedBombVoice() {
       const p = audio.play();
       if (p && typeof p.catch === 'function') p.catch(() => finish(false));
       setTimeout(() => finish(false), 1200);
-    } catch {
-      resolve(false);
-    }
-  });
+    });
+  } catch {
+    return false;
+  }
 }
 
 async function playBombLine() {
   return playRecordedBombVoice();
+}
+
+function ScreenLoader() {
+  return (
+    <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: '#facc15', background: '#052e22', fontWeight: 800 }}>
+      正在加载牌桌…
+    </div>
+  );
 }
 
 export default function App() {
@@ -223,8 +243,10 @@ export default function App() {
       </div>
 
       {page === 'lobby' && <Lobby send={send} gameState={gameState} myInfo={myInfo} onContinueLastRoom={continueLastRoom} onExitRoom={exitRoom} />}
-      {page === 'game' && <Game send={send} gameState={gameState} myHand={myHand} setMyHand={setMyHand} myInfo={myInfo} toast={toast} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
-      {page === 'settlement' && <Settlement data={settlementData} send={send} myInfo={myInfo} gameState={gameState} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
+      <Suspense fallback={<ScreenLoader />}>
+        {page === 'game' && <Game send={send} gameState={gameState} myHand={myHand} setMyHand={setMyHand} myInfo={myInfo} toast={toast} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
+        {page === 'settlement' && <Settlement data={settlementData} send={send} myInfo={myInfo} gameState={gameState} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
+      </Suspense>
     </div>
   );
 }
