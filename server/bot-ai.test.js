@@ -50,6 +50,17 @@ run('先手规划剩余牌结构，优先整组减少后续手数', () => {
   assert.equal(detectPattern(move).type, 'triple');
 });
 
+run('两手残局先出低对子，保留高三张用于重新控制牌权', () => {
+  const hand = [
+    card('3', '♠'), card('3', '♥'),
+    card('A', '♠'), card('A', '♥'), card('A', '♣'),
+  ];
+  const move = chooseBotMove(hand, null);
+  assert.equal(move.length, 2);
+  assert.deepEqual(ranks(move), ['3', '3']);
+  assert.equal(detectPattern(move).type, 'pair');
+});
+
 run('残局先手优先处理分牌，不把5孤零零留到最后', () => {
   const hand = [card('5', '♦'), card('6', '♣')];
   const move = chooseBotMove(hand, null);
