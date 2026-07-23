@@ -2,8 +2,10 @@ import React, { useState, useCallback, useRef, useEffect, lazy, Suspense } from 
 import { useWebSocket } from './hooks/useWebSocket';
 import Lobby from './pages/Lobby';
 
-const Game = lazy(() => import('./pages/Game'));
-const Settlement = lazy(() => import('./pages/Settlement'));
+const preloadGame = () => import('./pages/Game');
+const preloadSettlement = () => import('./pages/Settlement');
+const Game = lazy(preloadGame);
+const Settlement = lazy(preloadSettlement);
 const VOICE_VERSION = 'V2';
 let recordedBombAudioSrcPromise = null;
 
@@ -196,6 +198,36 @@ export default function App() {
     const ok = send({ type: 'join_room', roomId: saved.roomId, playerId: saved.playerId, playerToken: saved.playerToken, playerName: '' });
     if (ok) toast('正在恢复连接...', 'info');
   }, [connected, myInfo, send, toast]);
+
+  useEffect(() => {
+    if (page !== 'lobby') return undefined;
+
+    // 首屏渲染完成后再利用浏览器空闲时间下载牌桌代码：
+    // 不增加大厅首屏阻塞，但用户创建/加入房间时通常已准备好牌桌。
+    let cancelled = false;
+    const warmGame = () => {
+      if (!cancelled) preloadGame().catch(() => {});
+    };
+    const idleId = typeof window.requestIdleCallback === 'function'
+      ? window.requestIdleCallback(warmGame, { timeout: 1800 })
+      : window.setTimeout(warmGame, 900);
+
+    return () => {
+      cancelled = true;
+      if (typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleId);
+      else window.clearTimeout(idleId);
+    };
+  }, [page]);
+
+  useEffect(() => {
+    if (page !== 'game') return undefined;
+
+    // 游戏进行时后台预热结算页，避免回合结束后再等待第二个代码块。
+    const timer = window.setTimeout(() => {
+      preloadSettlement().catch(() => {});
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [page]);
 
   const continueLastRoom = useCallback(() => {
     const saved = loadLastSession();
