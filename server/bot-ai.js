@@ -191,11 +191,12 @@ function scoreLead(candidate, handLength, context) {
   score -= candidate.cards.length * 190;
   score += candidate.rankValue * 12;
 
-  // 对手只剩一张时，主动出单张等于把最容易匹配的牌型送到对方面前。
-  // 只要手里还有对子、三张等合法非炸弹牌型，就优先用多张牌封住对手的单张收尾机会。
-  if (context.minOpponentCards <= 1) {
-    if (candidate.pattern.type === 'single') score += 2600;
-    else if (!candidate.isBomb) score -= Math.min(candidate.cards.length, 4) * 180;
+  // 对手只剩1～3张时，尽量不要主动送出与其剩余张数完全相同的普通牌型。
+  // 对手剩2张时少领对子、剩3张时少领三张，可降低对方一手压完的机会；
+  // 若自己本手即可出完，前面的 finishing 分支仍会直接结束，不受此限制。
+  if (context.minOpponentCards >= 1 && context.minOpponentCards <= 3 && !candidate.isBomb) {
+    if (candidate.cards.length === context.minOpponentCards) score += 2600;
+    else if (candidate.cards.length > 1) score -= Math.min(candidate.cards.length, 4) * 120;
   }
 
   // 中前盘避免过早把10、K等成组分牌直接送出；进入残局或对手牌少时，
