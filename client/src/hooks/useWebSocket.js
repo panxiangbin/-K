@@ -1,8 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { createJoinRequestGuard } from '../join-request-guard';
-import { armConnectionTimeout } from '../connection-timeout';
 import { createReconnectController } from '../reconnect-controller';
-import { bindWebSocketLifecycle } from '../websocket-lifecycle';
+import { createWebSocketAttempt } from '../websocket-attempt';
 
 const RENDER_URL = 'wss://henan-50k.onrender.com';
 const INITIAL_RECONNECT_DELAY = 1000;
@@ -51,7 +50,6 @@ function hideConnectionStatus() {
 
 export function useWebSocket(onMessage) {
   const ws = useRef(null);
-  const cancelConnectTimeout = useRef(null);
   const wakeHintTimer = useRef(null);
   const lastSendHintAt = useRef(0);
   const joinRequestGuard = useRef(createJoinRequestGuard());
@@ -61,15 +59,9 @@ export function useWebSocket(onMessage) {
 
   useEffect(() => {
     const url = getWsUrl();
-    const lifecycleCleanup = new WeakMap();
+    const attempts = new WeakMap();
     let stopped = false;
     let reconnectController;
-
-    function clearConnectTimer() {
-      if (!cancelConnectTimeout.current) return;
-      cancelConnectTimeout.current();
-      cancelConnectTimeout.current = null;
-    }
 
     function clearWakeHintTimer() {
       if (!wakeHintTimer.current) return;
@@ -86,24 +78,24 @@ export function useWebSocket(onMessage) {
       }, WAKE_HINT_DELAY);
     }
 
+    function disposeAttempt(socket) {
+      attempts.get(socket)?.dispose();
+      attempts.delete(socket);
+    }
+
     function connect() {
       if (stopped || !navigator.onLine) return;
       if (ws.current && (ws.current.readyState === WebSocket.OPEN || ws.current.readyState === WebSocket.CONNECTING)) return;
 
-      const socket = new WebSocket(url);
-      ws.current = socket;
-      clearConnectTimer();
       scheduleWakeHint();
-      cancelConnectTimeout.current = armConnectionTimeout(socket, {
+      const attempt = createWebSocketAttempt({
+        url,
+        createSocket: (targetUrl) => new WebSocket(targetUrl),
+        setCurrent: (socket) => { ws.current = socket; },
+        isCurrent: (target) => !stopped && ws.current === target,
         timeoutMs: CONNECT_TIMEOUT,
         connectingState: WebSocket.CONNECTING,
-        isCurrent: (target) => !stopped && ws.current === target,
-      });
-
-      lifecycleCleanup.set(socket, bindWebSocketLifecycle(socket, {
-        isCurrent: (target) => !stopped && ws.current === target,
         onOpen: () => {
-          clearConnectTimer();
           reconnectController.reset();
           clearWakeHintTimer();
           hideConnectionStatus();
@@ -111,9 +103,8 @@ export function useWebSocket(onMessage) {
         },
         onClose: (_, target, state) => {
           joinRequestGuard.current.clear(target);
-          lifecycleCleanup.delete(target);
+          attempts.delete(target);
           if (!state.isCurrent) return;
-          clearConnectTimer();
           ws.current = null;
           setConnected(false);
           if (navigator.onLine) scheduleWakeHint();
@@ -131,7 +122,8 @@ export function useWebSocket(onMessage) {
             // 忽略无法解析的非协议消息，保持连接继续工作。
           }
         },
-      }));
+      });
+      attempts.set(attempt.socket, attempt);
     }
 
     reconnectController = createReconnectController({
@@ -146,8 +138,8 @@ export function useWebSocket(onMessage) {
       if (ws.current?.readyState === WebSocket.CONNECTING) {
         const staleSocket = ws.current;
         ws.current = null;
-        clearConnectTimer();
         joinRequestGuard.current.clear(staleSocket);
+        disposeAttempt(staleSocket);
         staleSocket.close();
       }
       if (!ws.current || ws.current.readyState === WebSocket.CLOSED) reconnectController.reconnectNow();
@@ -156,7 +148,6 @@ export function useWebSocket(onMessage) {
 
     function handleOffline() {
       reconnectController.cancel();
-      clearConnectTimer();
       clearWakeHintTimer();
       setConnected(false);
       showConnectionStatus('当前网络已断开，网络恢复后会自动重新连接。', 'offline');
@@ -164,6 +155,7 @@ export function useWebSocket(onMessage) {
       ws.current = null;
       if (staleSocket) {
         joinRequestGuard.current.clear(staleSocket);
+        disposeAttempt(staleSocket);
         staleSocket.close();
       }
     }
@@ -186,7 +178,6 @@ export function useWebSocket(onMessage) {
     return () => {
       stopped = true;
       reconnectController.stop();
-      clearConnectTimer();
       clearWakeHintTimer();
       hideConnectionStatus();
       window.removeEventListener('online', handleOnline);
@@ -196,8 +187,7 @@ export function useWebSocket(onMessage) {
       ws.current = null;
       if (socket) {
         joinRequestGuard.current.clear(socket);
-        lifecycleCleanup.get(socket)?.();
-        lifecycleCleanup.delete(socket);
+        disposeAttempt(socket);
         socket.close();
       }
     };
