@@ -1,7 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { createJoinRequestGuard } from '../join-request-guard';
-import { createReconnectController } from '../reconnect-controller';
-import { createWebSocketAttempt } from '../websocket-attempt';
+import { createWebSocketCoordinator } from '../websocket-coordinator';
 
 const RENDER_URL = 'wss://henan-50k.onrender.com';
 const INITIAL_RECONNECT_DELAY = 1000;
@@ -49,7 +48,7 @@ function hideConnectionStatus() {
 }
 
 export function useWebSocket(onMessage) {
-  const ws = useRef(null);
+  const coordinatorRef = useRef(null);
   const wakeHintTimer = useRef(null);
   const lastSendHintAt = useRef(0);
   const joinRequestGuard = useRef(createJoinRequestGuard());
@@ -58,10 +57,7 @@ export function useWebSocket(onMessage) {
   onMsg.current = onMessage;
 
   useEffect(() => {
-    const url = getWsUrl();
-    const attempts = new WeakMap();
     let stopped = false;
-    let reconnectController;
 
     function clearWakeHintTimer() {
       if (!wakeHintTimer.current) return;
@@ -73,128 +69,82 @@ export function useWebSocket(onMessage) {
       clearWakeHintTimer();
       wakeHintTimer.current = setTimeout(() => {
         wakeHintTimer.current = null;
-        if (stopped || ws.current?.readyState === WebSocket.OPEN || !navigator.onLine) return;
+        const socket = coordinatorRef.current?.getCurrent();
+        if (stopped || socket?.readyState === WebSocket.OPEN || !navigator.onLine) return;
         showConnectionStatus('服务器正在启动，首次打开可能需要稍等一会儿，页面会自动连接。');
       }, WAKE_HINT_DELAY);
     }
 
-    function disposeAttempt(socket) {
-      attempts.get(socket)?.dispose();
-      attempts.delete(socket);
-    }
-
-    function connect() {
-      if (stopped || !navigator.onLine) return;
-      if (ws.current && (ws.current.readyState === WebSocket.OPEN || ws.current.readyState === WebSocket.CONNECTING)) return;
-
-      scheduleWakeHint();
-      const attempt = createWebSocketAttempt({
-        url,
-        createSocket: (targetUrl) => new WebSocket(targetUrl),
-        setCurrent: (socket) => { ws.current = socket; },
-        isCurrent: (target) => !stopped && ws.current === target,
-        timeoutMs: CONNECT_TIMEOUT,
-        connectingState: WebSocket.CONNECTING,
-        onOpen: () => {
-          reconnectController.reset();
-          clearWakeHintTimer();
-          hideConnectionStatus();
-          setConnected(true);
-        },
-        onClose: (_, target, state) => {
-          joinRequestGuard.current.clear(target);
-          attempts.delete(target);
-          if (!state.isCurrent) return;
-          ws.current = null;
-          setConnected(false);
-          if (navigator.onLine) scheduleWakeHint();
-          reconnectController.schedule();
-        },
-        onError: (_, target) => {
-          target.close();
-        },
-        onMessage: (event, target) => {
-          try {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'room_joined' || msg.type === 'error') joinRequestGuard.current.clear(target);
-            onMsg.current(msg);
-          } catch {
-            // 忽略无法解析的非协议消息，保持连接继续工作。
-          }
-        },
-      });
-      attempts.set(attempt.socket, attempt);
-    }
-
-    reconnectController = createReconnectController({
-      connect,
+    const coordinator = createWebSocketCoordinator({
+      url: getWsUrl(),
+      createSocket: (targetUrl) => new WebSocket(targetUrl),
       isOnline: () => navigator.onLine,
+      openState: WebSocket.OPEN,
+      connectingState: WebSocket.CONNECTING,
+      closedState: WebSocket.CLOSED,
+      timeoutMs: CONNECT_TIMEOUT,
       initialDelay: INITIAL_RECONNECT_DELAY,
       maxDelay: MAX_RECONNECT_DELAY,
+      onConnecting: scheduleWakeHint,
+      onOpen: () => {
+        clearWakeHintTimer();
+        hideConnectionStatus();
+        setConnected(true);
+      },
+      onClose: (_, __, state) => {
+        if (!state.isCurrent) return;
+        setConnected(false);
+        if (navigator.onLine) scheduleWakeHint();
+      },
+      onDisposeSocket: (socket) => joinRequestGuard.current.clear(socket),
+      onMessage: (event, socket) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'room_joined' || msg.type === 'error') joinRequestGuard.current.clear(socket);
+          onMsg.current(msg);
+        } catch {
+          // 忽略无法解析的非协议消息，保持连接继续工作。
+        }
+      },
     });
-
-    function reconnectNow() {
-      if (stopped || !navigator.onLine) return;
-      if (ws.current?.readyState === WebSocket.CONNECTING) {
-        const staleSocket = ws.current;
-        ws.current = null;
-        joinRequestGuard.current.clear(staleSocket);
-        disposeAttempt(staleSocket);
-        staleSocket.close();
-      }
-      if (!ws.current || ws.current.readyState === WebSocket.CLOSED) reconnectController.reconnectNow();
-      else reconnectController.reset();
-    }
+    coordinatorRef.current = coordinator;
 
     function handleOffline() {
-      reconnectController.cancel();
       clearWakeHintTimer();
       setConnected(false);
       showConnectionStatus('当前网络已断开，网络恢复后会自动重新连接。', 'offline');
-      const staleSocket = ws.current;
-      ws.current = null;
-      if (staleSocket) {
-        joinRequestGuard.current.clear(staleSocket);
-        disposeAttempt(staleSocket);
-        staleSocket.close();
-      }
+      coordinator.goOffline();
     }
 
     function handleOnline() {
       showConnectionStatus('网络已恢复，正在重新连接游戏服务器…');
-      reconnectNow();
+      coordinator.goOnline();
     }
 
     function handleVisibilityChange() {
-      if (document.visibilityState === 'visible') reconnectNow();
+      if (document.visibilityState === 'visible') coordinator.reconnectNow();
     }
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     if (!navigator.onLine) handleOffline();
-    else connect();
+    else coordinator.connect();
 
     return () => {
       stopped = true;
-      reconnectController.stop();
       clearWakeHintTimer();
       hideConnectionStatus();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      const socket = ws.current;
-      ws.current = null;
-      if (socket) {
-        joinRequestGuard.current.clear(socket);
-        disposeAttempt(socket);
-        socket.close();
-      }
+      coordinator.stop();
+      coordinatorRef.current = null;
     };
   }, []);
 
   const send = useCallback((msg) => {
-    const socket = ws.current;
+    const socket = coordinatorRef.current?.getCurrent();
     if (socket?.readyState === WebSocket.OPEN) {
       if (!joinRequestGuard.current.tryStart(socket, msg)) return true;
       try {
