@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { createJoinRequestGuard } from '../join-request-guard';
 
 const RENDER_URL = 'wss://henan-50k.onrender.com';
 const INITIAL_RECONNECT_DELAY = 1000;
@@ -10,46 +11,25 @@ const STATUS_BANNER_ID = 'henan50k-connection-status';
 
 function getWsUrl() {
   const { protocol, hostname, host } = window.location;
-
-  // Capacitor APK 没有同源 WebSocket，默认连接当前 Render 服务。
   if (protocol === 'capacitor:') return RENDER_URL;
-
-  // Vite 开发、本地打包预览、本地后端测试，都优先连本机服务器。
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `ws://${hostname}:3002`;
-  }
-
-  // 生产 Web 走同源 WebSocket，避免部署域名变化后仍连接旧服务器。
+  if (hostname === 'localhost' || hostname === '127.0.0.1') return `ws://${hostname}:3002`;
   return `${protocol === 'https:' ? 'wss:' : 'ws:'}//${host}`;
 }
 
 function getStatusBanner() {
   let banner = document.getElementById(STATUS_BANNER_ID);
   if (banner) return banner;
-
   banner = document.createElement('div');
   banner.id = STATUS_BANNER_ID;
   banner.setAttribute('role', 'status');
   banner.setAttribute('aria-live', 'polite');
   Object.assign(banner.style, {
-    position: 'fixed',
-    left: '50%',
-    bottom: 'max(18px, env(safe-area-inset-bottom))',
-    transform: 'translateX(-50%)',
-    zIndex: '1200',
-    width: 'min(calc(100% - 32px), 440px)',
-    boxSizing: 'border-box',
-    padding: '10px 14px',
-    borderRadius: '14px',
-    border: '1px solid rgba(251, 191, 36, 0.38)',
-    background: 'rgba(30, 41, 59, 0.94)',
-    color: '#f8fafc',
-    boxShadow: '0 10px 28px rgba(0, 0, 0, 0.32)',
-    backdropFilter: 'blur(10px)',
-    fontSize: '13px',
-    lineHeight: '1.45',
-    textAlign: 'center',
-    pointerEvents: 'none',
+    position: 'fixed', left: '50%', bottom: 'max(18px, env(safe-area-inset-bottom))',
+    transform: 'translateX(-50%)', zIndex: '1200', width: 'min(calc(100% - 32px), 440px)',
+    boxSizing: 'border-box', padding: '10px 14px', borderRadius: '14px',
+    border: '1px solid rgba(251, 191, 36, 0.38)', background: 'rgba(30, 41, 59, 0.94)',
+    color: '#f8fafc', boxShadow: '0 10px 28px rgba(0, 0, 0, 0.32)', backdropFilter: 'blur(10px)',
+    fontSize: '13px', lineHeight: '1.45', textAlign: 'center', pointerEvents: 'none',
   });
   document.body.appendChild(banner);
   return banner;
@@ -58,9 +38,7 @@ function getStatusBanner() {
 function showConnectionStatus(text, tone = 'waking') {
   const banner = getStatusBanner();
   banner.textContent = text;
-  banner.style.borderColor = tone === 'offline'
-    ? 'rgba(248, 113, 113, 0.48)'
-    : 'rgba(251, 191, 36, 0.38)';
+  banner.style.borderColor = tone === 'offline' ? 'rgba(248, 113, 113, 0.48)' : 'rgba(251, 191, 36, 0.38)';
   banner.style.color = tone === 'offline' ? '#fecaca' : '#fef3c7';
 }
 
@@ -75,6 +53,7 @@ export function useWebSocket(onMessage) {
   const wakeHintTimer = useRef(null);
   const reconnectDelay = useRef(INITIAL_RECONNECT_DELAY);
   const lastSendHintAt = useRef(0);
+  const joinRequestGuard = useRef(createJoinRequestGuard());
   const [connected, setConnected] = useState(false);
   const onMsg = useRef(onMessage);
   onMsg.current = onMessage;
@@ -129,8 +108,6 @@ export function useWebSocket(onMessage) {
       clearConnectTimer();
       scheduleWakeHint();
 
-      // 某些手机网络或服务器刚唤醒时，WebSocket 可能长期卡在 CONNECTING。
-      // 超时后主动关闭并进入退避重连，避免界面永远停在“连接中”。
       connectTimer.current = setTimeout(() => {
         if (stopped || ws.current !== socket || socket.readyState !== WebSocket.CONNECTING) return;
         socket.close();
@@ -148,6 +125,7 @@ export function useWebSocket(onMessage) {
 
       socket.onclose = () => {
         clearConnectTimer();
+        joinRequestGuard.current.clear(socket);
         if (ws.current === socket) ws.current = null;
         setConnected(false);
         if (navigator.onLine) scheduleWakeHint();
@@ -158,6 +136,7 @@ export function useWebSocket(onMessage) {
       socket.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
+          if (msg.type === 'room_joined' || msg.type === 'error') joinRequestGuard.current.clear(socket);
           onMsg.current(msg);
         } catch {
           // 忽略无法解析的非协议消息，保持连接继续工作。
@@ -169,15 +148,13 @@ export function useWebSocket(onMessage) {
       if (stopped || !navigator.onLine) return;
       clearReconnectTimer();
       reconnectDelay.current = INITIAL_RECONNECT_DELAY;
-
-      // 页面恢复或网络恢复时，如果旧连接仍卡住，直接丢弃并重新建立。
       if (ws.current?.readyState === WebSocket.CONNECTING) {
         const staleSocket = ws.current;
         ws.current = null;
         clearConnectTimer();
+        joinRequestGuard.current.clear(staleSocket);
         staleSocket.close();
       }
-
       if (!ws.current || ws.current.readyState === WebSocket.CLOSED) connect();
     }
 
@@ -187,12 +164,12 @@ export function useWebSocket(onMessage) {
       clearWakeHintTimer();
       setConnected(false);
       showConnectionStatus('当前网络已断开，网络恢复后会自动重新连接。', 'offline');
-
-      // 浏览器的 OPEN 状态可能滞后于真实网络状态；主动丢弃，
-      // 网络恢复后由 online 事件建立一条全新的连接。
       const staleSocket = ws.current;
       ws.current = null;
-      if (staleSocket) staleSocket.close();
+      if (staleSocket) {
+        joinRequestGuard.current.clear(staleSocket);
+        staleSocket.close();
+      }
     }
 
     function handleOnline() {
@@ -222,6 +199,7 @@ export function useWebSocket(onMessage) {
       const socket = ws.current;
       ws.current = null;
       if (socket) {
+        joinRequestGuard.current.clear(socket);
         socket.onopen = null;
         socket.onclose = null;
         socket.onerror = null;
@@ -232,21 +210,24 @@ export function useWebSocket(onMessage) {
   }, []);
 
   const send = useCallback((msg) => {
-    if (ws.current?.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify(msg));
-      return true;
+    const socket = ws.current;
+    if (socket?.readyState === WebSocket.OPEN) {
+      if (!joinRequestGuard.current.tryStart(socket, msg)) return true;
+      try {
+        socket.send(JSON.stringify(msg));
+        return true;
+      } catch {
+        joinRequestGuard.current.clear(socket);
+        socket.close();
+        return false;
+      }
     }
 
-    // 用户在服务器尚未唤醒或网络断开时点击按钮，原来会像“没反应”。
-    // 现在给出明确提示；冷却时间避免快速连点时反复刷新状态播报。
     const now = Date.now();
     if (now - lastSendHintAt.current >= SEND_HINT_COOLDOWN) {
       lastSendHintAt.current = now;
-      if (navigator.onLine) {
-        showConnectionStatus('游戏服务器尚未连接，请稍等，连接成功后再试一次。');
-      } else {
-        showConnectionStatus('当前网络已断开，网络恢复后会自动重新连接。', 'offline');
-      }
+      if (navigator.onLine) showConnectionStatus('游戏服务器尚未连接，请稍等，连接成功后再试一次。');
+      else showConnectionStatus('当前网络已断开，网络恢复后会自动重新连接。', 'offline');
     }
     return false;
   }, []);
