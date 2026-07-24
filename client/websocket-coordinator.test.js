@@ -5,6 +5,7 @@ class FakeSocket {
   constructor(url) {
     this.url = url;
     this.readyState = 0;
+    this.bufferedAmount = 0;
     this.closeCount = 0;
     this.onopen = null;
     this.onclose = null;
@@ -198,7 +199,71 @@ function createFakeTimers() {
   coordinator.stop();
 }
 
+{
+  const sockets = [];
+  const closes = [];
+  const coordinator = createWebSocketCoordinator({
+    url: 'wss://example.test',
+    createSocket: (url) => {
+      const socket = new FakeSocket(url);
+      sockets.push(socket);
+      return socket;
+    },
+    isOnline: () => true,
+    openState: 1,
+    connectingState: 0,
+    closedState: 3,
+    timeoutMs: 12000,
+    maxBufferedAmount: 1024,
+    onClose: (event, socket, state) => closes.push([event.reason, socket, state.synthetic]),
+  });
+
+  coordinator.connect();
+  const congested = sockets[0];
+  congested.open();
+  congested.bufferedAmount = 2048;
+
+  assert.equal(coordinator.ensureCurrent('send'), false, 'backpressured socket must be rejected');
+  assert.equal(congested.closeCount, 1, 'backpressured socket must close immediately');
+  assert.equal(sockets.length, 2, 'backpressure must trigger an immediate replacement connection');
+  assert.deepEqual(closes, [['send-backpressure', congested, true]]);
+  assert.equal(coordinator.getCurrent(), sockets[1]);
+  coordinator.stop();
+}
+
+{
+  const sockets = [];
+  const coordinator = createWebSocketCoordinator({
+    url: 'wss://example.test',
+    createSocket: (url) => {
+      const socket = new FakeSocket(url);
+      sockets.push(socket);
+      return socket;
+    },
+    isOnline: () => true,
+    openState: 1,
+    connectingState: 0,
+    closedState: 3,
+    timeoutMs: 12000,
+  });
+
+  coordinator.connect();
+  const silentlyClosed = sockets[0];
+  silentlyClosed.readyState = 3;
+  assert.equal(coordinator.ensureCurrent('visibility'), false);
+  assert.equal(sockets.length, 2, 'closed current socket must be replaced without waiting for close event');
+  assert.equal(coordinator.getCurrent(), sockets[1]);
+  coordinator.stop();
+}
+
 assert.throws(() => createWebSocketCoordinator(), /url is required/);
 assert.throws(() => createWebSocketCoordinator({ url: 'x' }), /createSocket must be a function/);
+assert.throws(() => createWebSocketCoordinator({
+  url: 'x',
+  createSocket: () => ({}),
+  isOnline: () => true,
+  timeoutMs: 1,
+  maxBufferedAmount: -1,
+}), /maxBufferedAmount must be non-negative/);
 
 console.log('websocket coordinator tests passed');
