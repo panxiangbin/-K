@@ -124,16 +124,21 @@ export function useWebSocket(onMessage) {
       };
 
       socket.onclose = () => {
-        clearConnectTimer();
         joinRequestGuard.current.clear(socket);
-        if (ws.current === socket) ws.current = null;
+        if (stopped || ws.current !== socket) return;
+        clearConnectTimer();
+        ws.current = null;
         setConnected(false);
         if (navigator.onLine) scheduleWakeHint();
         scheduleReconnect();
       };
 
-      socket.onerror = () => socket.close();
+      socket.onerror = () => {
+        if (ws.current === socket) socket.close();
+      };
+
       socket.onmessage = (event) => {
+        if (stopped || ws.current !== socket) return;
         try {
           const msg = JSON.parse(event.data);
           if (msg.type === 'room_joined' || msg.type === 'error') joinRequestGuard.current.clear(socket);
