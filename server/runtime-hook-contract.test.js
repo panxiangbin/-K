@@ -24,6 +24,15 @@ assert.doesNotThrow(
   '转换后的服务器入口必须保持可解析',
 );
 
+assert.ok(
+  !transformed.includes("app.use(express.static(path.join(__dirname, '../client/dist')));"),
+  '原始静态资源和兜底路由应由独立HTTP模块整体替换',
+);
+assert.ok(
+  transformed.includes("require('./http-delivery').configureHttpDelivery(app, express, path, __dirname);"),
+  '转换后应接入独立HTTP交付模块',
+);
+
 assert.throws(
   () => transformServerSource(source.replace(replacements[0].oldCode, '// marker removed')),
   /智能电脑出牌（匹配0处）/,
@@ -32,7 +41,7 @@ assert.throws(
 
 assert.throws(
   () => transformServerSource(`${source}\n${replacements[1].oldCode}`),
-  /静态资源缓存（匹配2处）/,
+  /HTTP静态交付与健康检查（匹配2处）/,
   '接入点重复时必须拒绝不确定替换',
 );
 
