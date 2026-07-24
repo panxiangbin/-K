@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { createJoinRequestGuard } from '../join-request-guard';
 import { armConnectionTimeout } from '../connection-timeout';
 import { createReconnectController } from '../reconnect-controller';
+import { bindWebSocketLifecycle } from '../websocket-lifecycle';
 
 const RENDER_URL = 'wss://henan-50k.onrender.com';
 const INITIAL_RECONNECT_DELAY = 1000;
@@ -60,6 +61,7 @@ export function useWebSocket(onMessage) {
 
   useEffect(() => {
     const url = getWsUrl();
+    const lifecycleCleanup = new WeakMap();
     let stopped = false;
     let reconnectController;
 
@@ -98,39 +100,38 @@ export function useWebSocket(onMessage) {
         isCurrent: (target) => !stopped && ws.current === target,
       });
 
-      socket.onopen = () => {
-        if (stopped || ws.current !== socket) return;
-        clearConnectTimer();
-        reconnectController.reset();
-        clearWakeHintTimer();
-        hideConnectionStatus();
-        setConnected(true);
-      };
-
-      socket.onclose = () => {
-        joinRequestGuard.current.clear(socket);
-        if (stopped || ws.current !== socket) return;
-        clearConnectTimer();
-        ws.current = null;
-        setConnected(false);
-        if (navigator.onLine) scheduleWakeHint();
-        reconnectController.schedule();
-      };
-
-      socket.onerror = () => {
-        if (ws.current === socket) socket.close();
-      };
-
-      socket.onmessage = (event) => {
-        if (stopped || ws.current !== socket) return;
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg.type === 'room_joined' || msg.type === 'error') joinRequestGuard.current.clear(socket);
-          onMsg.current(msg);
-        } catch {
-          // 忽略无法解析的非协议消息，保持连接继续工作。
-        }
-      };
+      lifecycleCleanup.set(socket, bindWebSocketLifecycle(socket, {
+        isCurrent: (target) => !stopped && ws.current === target,
+        onOpen: () => {
+          clearConnectTimer();
+          reconnectController.reset();
+          clearWakeHintTimer();
+          hideConnectionStatus();
+          setConnected(true);
+        },
+        onClose: (_, target, state) => {
+          joinRequestGuard.current.clear(target);
+          lifecycleCleanup.delete(target);
+          if (!state.isCurrent) return;
+          clearConnectTimer();
+          ws.current = null;
+          setConnected(false);
+          if (navigator.onLine) scheduleWakeHint();
+          reconnectController.schedule();
+        },
+        onError: (_, target) => {
+          target.close();
+        },
+        onMessage: (event, target) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'room_joined' || msg.type === 'error') joinRequestGuard.current.clear(target);
+            onMsg.current(msg);
+          } catch {
+            // 忽略无法解析的非协议消息，保持连接继续工作。
+          }
+        },
+      }));
     }
 
     reconnectController = createReconnectController({
@@ -195,10 +196,8 @@ export function useWebSocket(onMessage) {
       ws.current = null;
       if (socket) {
         joinRequestGuard.current.clear(socket);
-        socket.onopen = null;
-        socket.onclose = null;
-        socket.onerror = null;
-        socket.onmessage = null;
+        lifecycleCleanup.get(socket)?.();
+        lifecycleCleanup.delete(socket);
         socket.close();
       }
     };
