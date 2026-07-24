@@ -40,6 +40,14 @@ assert.ok(
   transformed.includes("require('./solo-room-reconnect').cancelSoloRoomCleanup(roomId)"),
   '单机玩家成功重连时应取消房间清理',
 );
+assert.ok(
+  transformed.includes("require('./reconnect-state-sync').syncReconnectingPlayer"),
+  '重连应通过独立状态同步模块恢复快照',
+);
+assert.ok(
+  !transformed.includes("if (room.status === 'playing') setTurn(room, room.currentPlayer);"),
+  '重连不得再次调用setTurn并重复安排机器人行动',
+);
 
 assert.throws(
   () => transformServerSource(source.replace(replacements[0].oldCode, '// marker removed')),
@@ -60,9 +68,9 @@ assert.throws(
 );
 
 assert.throws(
-  () => transformServerSource(source.replace(replacements[4].oldCode, '// solo reconnect marker removed')),
-  /单机重连取消清理（匹配0处）/,
-  '单机重连接入点漂移时必须阻止部署',
+  () => transformServerSource(source.replace(replacements[4].oldCode, '// reconnect sync marker removed')),
+  /重连状态快照与回合去重（匹配0处）/,
+  '重连状态同步接入点漂移时必须阻止部署',
 );
 
 console.log('runtime-hook-contract tests passed');
