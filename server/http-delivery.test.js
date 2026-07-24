@@ -1,6 +1,6 @@
 const assert = require('assert');
 const path = require('path');
-const { createStaticOptions, configureHttpDelivery } = require('./http-delivery');
+const { createStaticOptions, configureHttpDelivery, isMediaFile } = require('./http-delivery');
 
 function createResponse() {
   const headers = {};
@@ -28,6 +28,15 @@ options.setHeaders(assetResponse, '/tmp/assets/app.abc123.js');
 assert.strictEqual(assetResponse.headers['Cache-Control'], 'public, max-age=31536000, immutable');
 assert.strictEqual(options.etag, true);
 assert.strictEqual(options.lastModified, true);
+
+const mediaResponse = createResponse();
+options.setHeaders(mediaResponse, '/tmp/audio/langaishou-v2.mp3');
+assert.strictEqual(mediaResponse.headers['Cache-Control'], 'public, max-age=31536000, immutable');
+assert.strictEqual(mediaResponse.headers['Accept-Ranges'], 'bytes');
+assert.strictEqual(mediaResponse.headers['X-Content-Type-Options'], 'nosniff');
+assert.strictEqual(mediaResponse.headers['Cross-Origin-Resource-Policy'], 'same-origin');
+assert.strictEqual(isMediaFile('/tmp/audio/voice.MP3'), true);
+assert.strictEqual(isMediaFile('/tmp/assets/app.js'), false);
 
 const routes = new Map();
 const middleware = [];
