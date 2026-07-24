@@ -93,6 +93,7 @@ export default function App() {
   const [settlementData, setSettlementData] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [soundOn, setSoundOn] = useState(() => localStorage.getItem('henan50k:soundOn') === '1');
+  const [reconnectEpoch, setReconnectEpoch] = useState(0);
   const tid = useRef(0);
   const autoRejoinTried = useRef(false);
 
@@ -115,6 +116,7 @@ export default function App() {
     setMyHand([]);
     setMyInfo(null);
     setSettlementData(null);
+    setReconnectEpoch(0);
     autoRejoinTried.current = false;
   }, []);
 
@@ -123,7 +125,11 @@ export default function App() {
       case 'room_joined':
         savePlayerSession(msg);
         setMyInfo({ playerId: msg.playerId, playerToken: msg.playerToken, roomId: msg.roomId, playerIndex: msg.playerIndex });
-        if (msg.reconnect) toast('已回到房间', 'success');
+        if (msg.reconnect) {
+          setToasts([]);
+          setReconnectEpoch(epoch => epoch + 1);
+          toast('已回到房间，操作状态已刷新', 'success');
+        }
         break;
       case 'room_left':
         clearSavedSession(msg.roomId);
@@ -276,7 +282,7 @@ export default function App() {
 
       {page === 'lobby' && <Lobby send={send} gameState={gameState} myInfo={myInfo} onContinueLastRoom={continueLastRoom} onExitRoom={exitRoom} />}
       <Suspense fallback={<ScreenLoader />}>
-        {page === 'game' && <Game send={send} gameState={gameState} myHand={myHand} setMyHand={setMyHand} myInfo={myInfo} toast={toast} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
+        {page === 'game' && <Game key={`game-${reconnectEpoch}`} send={send} gameState={gameState} myHand={myHand} setMyHand={setMyHand} myInfo={myInfo} toast={toast} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
         {page === 'settlement' && <Settlement data={settlementData} send={send} myInfo={myInfo} gameState={gameState} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
       </Suspense>
     </div>
