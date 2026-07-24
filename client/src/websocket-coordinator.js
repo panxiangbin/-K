@@ -11,6 +11,7 @@ export function createWebSocketCoordinator({
   timeoutMs,
   initialDelay = 1000,
   maxDelay = 15000,
+  maxBufferedAmount = 256 * 1024,
   onOpen = () => {},
   onClose = () => {},
   onMessage = () => {},
@@ -24,6 +25,9 @@ export function createWebSocketCoordinator({
   if (typeof createSocket !== 'function') throw new TypeError('createSocket must be a function');
   if (typeof isOnline !== 'function') throw new TypeError('isOnline must be a function');
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new TypeError('timeoutMs must be positive');
+  if (!Number.isFinite(maxBufferedAmount) || maxBufferedAmount < 0) {
+    throw new TypeError('maxBufferedAmount must be non-negative');
+  }
   for (const [name, handler] of Object.entries({ onOpen, onClose, onMessage, onConnecting, onDisposeSocket })) {
     if (typeof handler !== 'function') throw new TypeError(`${name} must be a function`);
   }
@@ -113,6 +117,27 @@ export function createWebSocketCoordinator({
     return reconnectController.reconnectNow();
   }
 
+  function ensureCurrent(reason = 'health-check') {
+    if (stopped || !isOnline()) return false;
+    const socket = current;
+    if (!socket || socket.readyState === closedState) {
+      reconnectController.reconnectNow();
+      return false;
+    }
+    if (socket.readyState === connectingState) return true;
+    if (socket.readyState !== openState) {
+      failCurrent(`${reason}-invalid-state`);
+      return false;
+    }
+
+    const bufferedAmount = Number(socket.bufferedAmount) || 0;
+    if (bufferedAmount > maxBufferedAmount) {
+      failCurrent(`${reason}-backpressure`);
+      return false;
+    }
+    return true;
+  }
+
   function goOffline() {
     reconnectController.cancel();
     closeCurrent('offline');
@@ -133,6 +158,7 @@ export function createWebSocketCoordinator({
     connect,
     reconnectNow,
     failCurrent,
+    ensureCurrent,
     goOffline,
     goOnline,
     stop,
