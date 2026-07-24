@@ -3,7 +3,7 @@ services:
     name: henan-50k
     runtime: node
     plan: free
-    buildCommand: cd client && npm ci --include=dev --no-audit --no-fund && npm run build && cd ../server && npm ci --omit=dev --no-audit --no-fund
+    buildCommand: cd client && npm ci --include=dev --no-audit --no-fund && npm run build && cd ../server && npm ci --omit=dev --no-audit --no-fund && npm test
     startCommand: node -r ./server/bot-ai-hook.js server/index.js
     healthCheckPath: /healthz
     autoDeployTrigger: commit
