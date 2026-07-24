@@ -9,19 +9,7 @@ const preloadSettlement = () => import('./pages/Settlement');
 const Game = lazy(preloadGame);
 const Settlement = lazy(preloadSettlement);
 const VOICE_VERSION = 'V2';
-let recordedBombAudioSrcPromise = null;
-
-function loadRecordedBombAudioSrc() {
-  if (!recordedBombAudioSrcPromise) {
-    recordedBombAudioSrcPromise = import('./assets/langaishouBase64')
-      .then(module => `data:audio/mpeg;base64,${module.default}`)
-      .catch(error => {
-        recordedBombAudioSrcPromise = null;
-        throw error;
-      });
-  }
-  return recordedBombAudioSrcPromise;
-}
+const RECORDED_BOMB_AUDIO_SRC = '/audio/langaishou-v2.mp3';
 
 function savePlayerSession(msg) {
   if (!msg?.roomId || !msg?.playerId || !msg?.playerToken) return;
@@ -51,9 +39,8 @@ function clearSavedSession(roomId) {
 async function playRecordedBombVoice() {
   try {
     if (typeof window === 'undefined') return false;
-    const audioSrc = await loadRecordedBombAudioSrc();
     return await new Promise((resolve) => {
-      const audio = new Audio(audioSrc);
+      const audio = new Audio(RECORDED_BOMB_AUDIO_SRC);
       audio.volume = 1;
       audio.preload = 'auto';
       let done = false;
@@ -212,7 +199,6 @@ export default function App() {
   useEffect(() => {
     if (page !== 'lobby') return undefined;
 
-    // 正常网络空闲时预热牌桌；慢速网络延后，省流量或2G不主动下载。
     const task = scheduleAdaptivePreload({
       windowObject: window,
       navigatorObject: navigator,
@@ -224,7 +210,6 @@ export default function App() {
   useEffect(() => {
     if (page !== 'game') return undefined;
 
-    // 正常网络空闲预热结算页；慢网延后，省流量或2G等待残局再加载。
     const task = scheduleSettlementPreload({
       windowObject: window,
       navigatorObject: navigator,
