@@ -1,5 +1,5 @@
-import { createReconnectController } from './reconnect-controller';
-import { createWebSocketAttempt } from './websocket-attempt';
+import { createReconnectController } from './reconnect-controller.js';
+import { createWebSocketAttempt } from './websocket-attempt.js';
 
 export function createWebSocketCoordinator({
   url,
