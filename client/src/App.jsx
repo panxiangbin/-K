@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
+import { scheduleAdaptivePreload } from './adaptive-preload';
 import Lobby from './pages/Lobby';
 
 const preloadGame = () => import('./pages/Game');
@@ -208,21 +209,13 @@ export default function App() {
   useEffect(() => {
     if (page !== 'lobby') return undefined;
 
-    // 首屏渲染完成后再利用浏览器空闲时间下载牌桌代码：
-    // 不增加大厅首屏阻塞，但用户创建/加入房间时通常已准备好牌桌。
-    let cancelled = false;
-    const warmGame = () => {
-      if (!cancelled) preloadGame().catch(() => {});
-    };
-    const idleId = typeof window.requestIdleCallback === 'function'
-      ? window.requestIdleCallback(warmGame, { timeout: 1800 })
-      : window.setTimeout(warmGame, 900);
-
-    return () => {
-      cancelled = true;
-      if (typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleId);
-      else window.clearTimeout(idleId);
-    };
+    // 正常网络空闲时预热牌桌；慢速网络延后，省流量或2G不主动下载。
+    const task = scheduleAdaptivePreload({
+      windowObject: window,
+      navigatorObject: navigator,
+      preload: preloadGame,
+    });
+    return () => task.cancel();
   }, [page]);
 
   useEffect(() => {
