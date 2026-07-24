@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "node reconnect-ui-reset.test.js && node join-request-guard.test.js",
+    "test": "node reconnect-ui-reset.test.js && node join-request-guard.test.js && node stale-websocket-events.test.js",
     "build": "vite build",
     "preview": "vite preview"
   },
