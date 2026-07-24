@@ -32,6 +32,14 @@ assert.ok(
   transformed.includes("require('./http-delivery').configureHttpDelivery(app, express, path, __dirname);"),
   '转换后应接入独立HTTP交付模块',
 );
+assert.ok(
+  transformed.includes("require('./solo-room-reconnect').handleSoloDisconnect(room, rooms, manual)"),
+  '转换后应给单机断线安排重连宽限期',
+);
+assert.ok(
+  transformed.includes("require('./solo-room-reconnect').cancelSoloRoomCleanup(roomId)"),
+  '单机玩家成功重连时应取消房间清理',
+);
 
 assert.throws(
   () => transformServerSource(source.replace(replacements[0].oldCode, '// marker removed')),
@@ -43,6 +51,18 @@ assert.throws(
   () => transformServerSource(`${source}\n${replacements[1].oldCode}`),
   /HTTP静态交付与健康检查（匹配2处）/,
   '接入点重复时必须拒绝不确定替换',
+);
+
+assert.throws(
+  () => transformServerSource(source.replace(replacements[3].oldCode, '// solo disconnect marker removed')),
+  /单机断线宽限期（匹配0处）/,
+  '单机断线接入点漂移时必须阻止部署',
+);
+
+assert.throws(
+  () => transformServerSource(source.replace(replacements[4].oldCode, '// solo reconnect marker removed')),
+  /单机重连取消清理（匹配0处）/,
+  '单机重连接入点漂移时必须阻止部署',
 );
 
 console.log('runtime-hook-contract tests passed');
