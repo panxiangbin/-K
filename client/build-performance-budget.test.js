@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFile, readdir, stat } from 'node:fs/promises';
-import path from 'node:path';
 
 const DIST_DIR = new URL('./dist/', import.meta.url);
 const MANIFEST_PATH = new URL('./dist/.vite/manifest.json', import.meta.url);
+const RECORDED_AUDIO_PATH = new URL('./dist/audio/langaishou-v2.mp3', import.meta.url);
 const INITIAL_JS_BUDGET = 350 * 1024;
 const SINGLE_INITIAL_CHUNK_BUDGET = 220 * 1024;
+const MAX_RECORDED_AUDIO_BYTES = 512 * 1024;
 
 async function fileSize(relativePath) {
   const fileUrl = new URL(relativePath, DIST_DIR);
@@ -55,12 +56,16 @@ assert.equal(assetFiles.some(file => file.endsWith('.map')), false, 'production 
 
 const gameChunk = Object.values(manifest).find(chunk => chunk.src === 'src/pages/Game.jsx');
 const settlementChunk = Object.values(manifest).find(chunk => chunk.src === 'src/pages/Settlement.jsx');
-const audioChunk = Object.values(manifest).find(chunk => chunk.src === 'src/assets/langaishouBase64.js');
+const base64AudioChunk = Object.values(manifest).find(chunk => chunk.src === 'src/assets/langaishouBase64.js');
 assert.ok(gameChunk?.isDynamicEntry, 'game screen must remain a dynamic entry');
 assert.ok(settlementChunk?.isDynamicEntry, 'settlement screen must remain a dynamic entry');
-assert.ok(audioChunk?.isDynamicEntry, 'recorded bomb audio must remain outside the initial bundle');
+assert.equal(base64AudioChunk, undefined, 'Base64 recorded audio must not be shipped as JavaScript');
 assert.equal(initialFiles.includes(gameChunk.file), false, 'game screen must not be in the initial JavaScript closure');
 assert.equal(initialFiles.includes(settlementChunk.file), false, 'settlement screen must not be in the initial JavaScript closure');
-assert.equal(initialFiles.includes(audioChunk.file), false, 'recorded audio must not be in the initial JavaScript closure');
 
-console.log(`build performance budget passed: ${(initialBytes / 1024).toFixed(1)} KiB initial JS across ${initialFiles.length} chunks`);
+const recordedAudio = await readFile(RECORDED_AUDIO_PATH);
+assert.ok(recordedAudio.length > 1024, 'standalone recorded voice must contain real audio data');
+assert.ok(recordedAudio.length <= MAX_RECORDED_AUDIO_BYTES, `recorded voice is ${(recordedAudio.length / 1024).toFixed(1)} KiB; budget is ${MAX_RECORDED_AUDIO_BYTES / 1024} KiB`);
+assert.ok(recordedAudio.subarray(0, 3).toString('ascii') === 'ID3' || recordedAudio[0] === 0xff, 'standalone recorded voice must be an MP3');
+
+console.log(`build performance budget passed: ${(initialBytes / 1024).toFixed(1)} KiB initial JS across ${initialFiles.length} chunks; ${(recordedAudio.length / 1024).toFixed(1)} KiB audio outside JavaScript`);
