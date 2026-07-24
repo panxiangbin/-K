@@ -40,12 +40,31 @@ wss.on('connection', (ws) => {`,
   }`,
   },
   {
-    name: '单机重连取消清理',
+    name: '重连状态快照与回合去重',
     oldCode: `      if (reconnecting) {
-        reconnecting.isOnline = true;`,
+        reconnecting.isOnline = true;
+        clients.set(ws, { playerId: reconnecting.id, roomId, playerName: reconnecting.name });
+        send(ws, { type: 'room_joined', playerId: reconnecting.id, playerToken: reconnecting.token, roomId, playerIndex: room.players.indexOf(reconnecting), reconnect: true });
+        sendHand(room, reconnecting.id);
+        broadcast(room, { type: 'room_update', state: getRoomPublicState(room) });
+        if (room.status === 'playing') setTurn(room, room.currentPlayer);
+        return;
+      }`,
     newCode: `      if (reconnecting) {
         require('./solo-room-reconnect').cancelSoloRoomCleanup(roomId);
-        reconnecting.isOnline = true;`,
+        require('./reconnect-state-sync').syncReconnectingPlayer({
+          ws,
+          room,
+          roomId,
+          reconnecting,
+          clients,
+          send,
+          sendHand,
+          broadcast,
+          getRoomPublicState,
+        });
+        return;
+      }`,
   },
 ];
 
