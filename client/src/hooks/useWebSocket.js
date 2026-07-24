@@ -94,7 +94,11 @@ export function useWebSocket(onMessage) {
       onClose: (_, __, state) => {
         if (!state.isCurrent) return;
         setConnected(false);
-        if (navigator.onLine) scheduleWakeHint();
+        if (!navigator.onLine) return;
+        if (state.reason === 'send-failed') {
+          showConnectionStatus('消息发送失败，正在重新连接游戏服务器…');
+        }
+        scheduleWakeHint();
       },
       onDisposeSocket: (socket) => joinRequestGuard.current.clear(socket),
       onMessage: (event, socket) => {
@@ -152,7 +156,7 @@ export function useWebSocket(onMessage) {
         return true;
       } catch {
         joinRequestGuard.current.clear(socket);
-        socket.close();
+        coordinatorRef.current?.failCurrent('send-failed');
         return false;
       }
     }
