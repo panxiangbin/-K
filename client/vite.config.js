@@ -8,5 +8,19 @@ export default defineConfig({
       '/ws': { target: 'ws://localhost:3002', ws: true },
     },
   },
-  build: { outDir: 'dist' },
+  build: {
+    outDir: 'dist',
+    manifest: true,
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react-vendor';
+          }
+          return undefined;
+        },
+      },
+    },
+  },
 });
