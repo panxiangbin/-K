@@ -153,6 +153,7 @@ function createFakeTimers() {
   assert.equal(first.closeCount, 1, 'manual reconnect must replace a stuck connecting socket');
   assert.equal(sockets.length, 2);
   assert.equal(coordinator.getCurrent(), sockets[1]);
+  coordinator.stop();
 }
 
 assert.throws(() => createWebSocketCoordinator(), /url is required/);
