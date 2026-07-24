@@ -1,6 +1,11 @@
 const assert = require('assert');
 const path = require('path');
-const { createStaticOptions, configureHttpDelivery, isMediaFile } = require('./http-delivery');
+const {
+  createStaticOptions,
+  configureHttpDelivery,
+  isMediaFile,
+  isStaticAssetRequest,
+} = require('./http-delivery');
 
 function createResponse() {
   const headers = {};
@@ -38,6 +43,12 @@ assert.strictEqual(mediaResponse.headers['Cross-Origin-Resource-Policy'], 'same-
 assert.strictEqual(isMediaFile('/tmp/audio/voice.MP3'), true);
 assert.strictEqual(isMediaFile('/tmp/assets/app.js'), false);
 
+assert.strictEqual(isStaticAssetRequest('/assets/app.missing.js'), true);
+assert.strictEqual(isStaticAssetRequest('/audio/missing.mp3?cache=1'), true);
+assert.strictEqual(isStaticAssetRequest('/icons/card.svg#symbol'), true);
+assert.strictEqual(isStaticAssetRequest('/room/ABC123'), false);
+assert.strictEqual(isStaticAssetRequest('/rules'), false);
+
 const routes = new Map();
 const middleware = [];
 const app = {
@@ -62,9 +73,23 @@ assert.strictEqual(healthResponse.body, 'ok');
 assert.strictEqual(healthResponse.headers['Cache-Control'], 'no-store');
 
 const fallbackResponse = createResponse();
-routes.get('*')({}, fallbackResponse);
+routes.get('*')({ path: '/room/ABC123' }, fallbackResponse);
 assert.strictEqual(fallbackResponse.headers['Cache-Control'], 'no-cache');
 assert.strictEqual(fallbackResponse.file, path.join(__dirname, '../client/dist/index.html'));
+
+const missingAssetResponse = createResponse();
+routes.get('*')({ path: '/assets/missing.abc123.js' }, missingAssetResponse);
+assert.strictEqual(missingAssetResponse.statusCode, 404);
+assert.strictEqual(missingAssetResponse.contentType, 'text/plain');
+assert.strictEqual(missingAssetResponse.body, '资源不存在');
+assert.strictEqual(missingAssetResponse.file, null);
+assert.strictEqual(missingAssetResponse.headers['Cache-Control'], 'no-store');
+assert.strictEqual(missingAssetResponse.headers['X-Content-Type-Options'], 'nosniff');
+
+const missingMediaResponse = createResponse();
+routes.get('*')({ originalUrl: '/audio/missing.mp3?cache=1' }, missingMediaResponse);
+assert.strictEqual(missingMediaResponse.statusCode, 404);
+assert.strictEqual(missingMediaResponse.file, null);
 
 assert.throws(
   () => configureHttpDelivery(null, express, path, __dirname),
