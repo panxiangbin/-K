@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { scheduleAdaptivePreload } from './adaptive-preload';
+import { scheduleSettlementPreload, isSettlementImminent } from './settlement-preload';
 import Lobby from './pages/Lobby';
 
 const preloadGame = () => import('./pages/Game');
@@ -97,6 +98,7 @@ export default function App() {
   const [reconnectEpoch, setReconnectEpoch] = useState(0);
   const tid = useRef(0);
   const autoRejoinTried = useRef(false);
+  const settlementPreloadTask = useRef(null);
 
   const toast = useCallback((text, type = 'info') => {
     const id = tid.current++;
@@ -180,6 +182,7 @@ export default function App() {
         if (msg.score > 0) toast('🪙 ' + msg.winnerName + ' +' + msg.score + '分', 'gold');
         break;
       case 'round_end':
+        settlementPreloadTask.current?.preloadNow();
         setSettlementData(msg.result);
         setGameState(msg.state);
         setTimeout(() => setPage('settlement'), 600);
@@ -221,12 +224,24 @@ export default function App() {
   useEffect(() => {
     if (page !== 'game') return undefined;
 
-    // 游戏进行时后台预热结算页，避免回合结束后再等待第二个代码块。
-    const timer = window.setTimeout(() => {
-      preloadSettlement().catch(() => {});
-    }, 1200);
-    return () => window.clearTimeout(timer);
+    // 正常网络空闲预热结算页；慢网延后，省流量或2G等待残局再加载。
+    const task = scheduleSettlementPreload({
+      windowObject: window,
+      navigatorObject: navigator,
+      preload: preloadSettlement,
+    });
+    settlementPreloadTask.current = task;
+    return () => {
+      if (settlementPreloadTask.current === task) settlementPreloadTask.current = null;
+      task.cancel();
+    };
   }, [page]);
+
+  useEffect(() => {
+    if (page === 'game' && isSettlementImminent(gameState)) {
+      settlementPreloadTask.current?.preloadNow();
+    }
+  }, [page, gameState]);
 
   const continueLastRoom = useCallback(() => {
     const saved = loadLastSession();
