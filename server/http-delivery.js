@@ -1,13 +1,27 @@
 const MEDIA_EXTENSIONS = new Set(['.mp3', '.ogg', '.wav', '.m4a', '.aac', '.webm']);
+const STATIC_ASSET_EXTENSIONS = new Set([
+  '.js', '.mjs', '.css', '.map', '.json',
+  '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico',
+  '.woff', '.woff2', '.ttf', '.otf',
+  ...MEDIA_EXTENSIONS,
+]);
 
 function getExtension(filePath) {
-  const normalized = String(filePath || '').toLowerCase();
+  const normalized = String(filePath || '').toLowerCase().split(/[?#]/, 1)[0];
   const lastDot = normalized.lastIndexOf('.');
-  return lastDot >= 0 ? normalized.slice(lastDot) : '';
+  const lastSlash = normalized.lastIndexOf('/');
+  return lastDot > lastSlash ? normalized.slice(lastDot) : '';
 }
 
 function isMediaFile(filePath) {
   return MEDIA_EXTENSIONS.has(getExtension(filePath));
+}
+
+function isStaticAssetRequest(requestPath) {
+  const normalized = String(requestPath || '').toLowerCase().split(/[?#]/, 1)[0];
+  return normalized.startsWith('/assets/')
+    || normalized.startsWith('/audio/')
+    || STATIC_ASSET_EXTENSIONS.has(getExtension(normalized));
 }
 
 function createStaticOptions() {
@@ -52,9 +66,22 @@ function configureHttpDelivery(app, express, path, dirname) {
   });
 
   app.get('*', (req, res) => {
+    const requestPath = req.path || req.originalUrl || req.url || '';
+    if (isStaticAssetRequest(requestPath)) {
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.status(404).type('text/plain').send('资源不存在');
+      return;
+    }
+
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(indexFile);
   });
 }
 
-module.exports = { createStaticOptions, configureHttpDelivery, isMediaFile };
+module.exports = {
+  createStaticOptions,
+  configureHttpDelivery,
+  isMediaFile,
+  isStaticAssetRequest,
+};
