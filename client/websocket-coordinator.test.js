@@ -79,7 +79,7 @@ function createFakeTimers() {
     initialDelay: 1000,
     maxDelay: 15000,
     onMessage: (event, socket) => messages.push([event.data, socket]),
-    onClose: (_, socket, state) => closes.push([socket, state.isCurrent]),
+    onClose: (_, socket, state) => closes.push([socket, state.isCurrent, state.synthetic === true]),
     onDisposeSocket: (socket, reason) => disposals.push([socket, reason]),
     reconnectOptions: {
       setTimer: timers.setTimer,
@@ -98,7 +98,7 @@ function createFakeTimers() {
   assert.deepEqual(messages.map(([data]) => data), ['first']);
 
   first.close();
-  assert.deepEqual(closes, [[first, true]]);
+  assert.deepEqual(closes, [[first, true, false]]);
   assert.equal(timers.count(), 1, 'current connection close must schedule one retry');
   assert.equal(timers.runNext(), 1000);
   assert.equal(sockets.length, 2);
@@ -153,6 +153,48 @@ function createFakeTimers() {
   assert.equal(first.closeCount, 1, 'manual reconnect must replace a stuck connecting socket');
   assert.equal(sockets.length, 2);
   assert.equal(coordinator.getCurrent(), sockets[1]);
+  coordinator.stop();
+}
+
+{
+  const sockets = [];
+  const closes = [];
+  const disposals = [];
+  const timers = createFakeTimers();
+  const coordinator = createWebSocketCoordinator({
+    url: 'wss://example.test',
+    createSocket: (url) => {
+      const socket = new FakeSocket(url);
+      sockets.push(socket);
+      return socket;
+    },
+    isOnline: () => true,
+    openState: 1,
+    connectingState: 0,
+    closedState: 3,
+    timeoutMs: 12000,
+    onClose: (event, socket, state) => closes.push([event.reason, socket, state.synthetic, state.isCurrent]),
+    onDisposeSocket: (socket, reason) => disposals.push([socket, reason]),
+    reconnectOptions: {
+      setTimer: timers.setTimer,
+      clearTimer: timers.clearTimer,
+    },
+  });
+
+  coordinator.connect();
+  const failed = sockets[0];
+  failed.open();
+  assert.equal(coordinator.failCurrent('send-failed'), true);
+  assert.equal(failed.closeCount, 1, 'failed current socket must close immediately');
+  assert.equal(sockets.length, 2, 'send failure must immediately create a replacement connection');
+  assert.equal(coordinator.getCurrent(), sockets[1]);
+  assert.deepEqual(closes, [['send-failed', failed, true, true]]);
+  assert.ok(disposals.some(([socket, reason]) => socket === failed && reason === 'send-failed'));
+  assert.equal(timers.count(), 0, 'immediate recovery must not leave a delayed retry');
+
+  failed.message('stale-after-send-failure');
+  failed.error();
+  assert.equal(coordinator.getCurrent(), sockets[1], 'failed socket events must not replace the recovery socket');
   coordinator.stop();
 }
 
