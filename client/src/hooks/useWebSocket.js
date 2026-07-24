@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { createJoinRequestGuard } from '../join-request-guard';
+import { armConnectionTimeout } from '../connection-timeout';
 
 const RENDER_URL = 'wss://henan-50k.onrender.com';
 const INITIAL_RECONNECT_DELAY = 1000;
@@ -49,7 +50,7 @@ function hideConnectionStatus() {
 export function useWebSocket(onMessage) {
   const ws = useRef(null);
   const reconnectTimer = useRef(null);
-  const connectTimer = useRef(null);
+  const cancelConnectTimeout = useRef(null);
   const wakeHintTimer = useRef(null);
   const reconnectDelay = useRef(INITIAL_RECONNECT_DELAY);
   const lastSendHintAt = useRef(0);
@@ -69,9 +70,9 @@ export function useWebSocket(onMessage) {
     }
 
     function clearConnectTimer() {
-      if (!connectTimer.current) return;
-      clearTimeout(connectTimer.current);
-      connectTimer.current = null;
+      if (!cancelConnectTimeout.current) return;
+      cancelConnectTimeout.current();
+      cancelConnectTimeout.current = null;
     }
 
     function clearWakeHintTimer() {
@@ -107,11 +108,11 @@ export function useWebSocket(onMessage) {
       ws.current = socket;
       clearConnectTimer();
       scheduleWakeHint();
-
-      connectTimer.current = setTimeout(() => {
-        if (stopped || ws.current !== socket || socket.readyState !== WebSocket.CONNECTING) return;
-        socket.close();
-      }, CONNECT_TIMEOUT);
+      cancelConnectTimeout.current = armConnectionTimeout(socket, {
+        timeoutMs: CONNECT_TIMEOUT,
+        connectingState: WebSocket.CONNECTING,
+        isCurrent: (target) => !stopped && ws.current === target,
+      });
 
       socket.onopen = () => {
         if (stopped || ws.current !== socket) return;
