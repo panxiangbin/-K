@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node -r ./bot-ai-hook.js index.js",
-    "test": "node bot-ai.test.js && node bot-ai-opponent-shape.test.js && node bot-context.test.js && node ws-heartbeat.test.js && node http-delivery.test.js && node runtime-hook-contract.test.js && node server-startup-smoke.test.js",
+    "test": "node bot-ai.test.js && node bot-ai-opponent-shape.test.js && node bot-context.test.js && node ws-heartbeat.test.js && node http-delivery.test.js && node runtime-hook-contract.test.js && node server-startup-smoke.test.js && node server-websocket-smoke.test.js",
     "dev": "nodemon --exec \"node -r ./bot-ai-hook.js\" index.js"
   },
   "dependencies": {
