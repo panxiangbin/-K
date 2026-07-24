@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { createJoinRequestGuard } from '../join-request-guard';
 import { armConnectionTimeout } from '../connection-timeout';
+import { createReconnectController } from '../reconnect-controller';
 
 const RENDER_URL = 'wss://henan-50k.onrender.com';
 const INITIAL_RECONNECT_DELAY = 1000;
@@ -49,10 +50,8 @@ function hideConnectionStatus() {
 
 export function useWebSocket(onMessage) {
   const ws = useRef(null);
-  const reconnectTimer = useRef(null);
   const cancelConnectTimeout = useRef(null);
   const wakeHintTimer = useRef(null);
-  const reconnectDelay = useRef(INITIAL_RECONNECT_DELAY);
   const lastSendHintAt = useRef(0);
   const joinRequestGuard = useRef(createJoinRequestGuard());
   const [connected, setConnected] = useState(false);
@@ -62,12 +61,7 @@ export function useWebSocket(onMessage) {
   useEffect(() => {
     const url = getWsUrl();
     let stopped = false;
-
-    function clearReconnectTimer() {
-      if (!reconnectTimer.current) return;
-      clearTimeout(reconnectTimer.current);
-      reconnectTimer.current = null;
-    }
+    let reconnectController;
 
     function clearConnectTimer() {
       if (!cancelConnectTimeout.current) return;
@@ -90,16 +84,6 @@ export function useWebSocket(onMessage) {
       }, WAKE_HINT_DELAY);
     }
 
-    function scheduleReconnect() {
-      if (stopped || reconnectTimer.current || !navigator.onLine) return;
-      const delay = reconnectDelay.current;
-      reconnectTimer.current = setTimeout(() => {
-        reconnectTimer.current = null;
-        connect();
-      }, delay);
-      reconnectDelay.current = Math.min(MAX_RECONNECT_DELAY, Math.round(delay * 1.8));
-    }
-
     function connect() {
       if (stopped || !navigator.onLine) return;
       if (ws.current && (ws.current.readyState === WebSocket.OPEN || ws.current.readyState === WebSocket.CONNECTING)) return;
@@ -117,10 +101,9 @@ export function useWebSocket(onMessage) {
       socket.onopen = () => {
         if (stopped || ws.current !== socket) return;
         clearConnectTimer();
-        clearReconnectTimer();
+        reconnectController.reset();
         clearWakeHintTimer();
         hideConnectionStatus();
-        reconnectDelay.current = INITIAL_RECONNECT_DELAY;
         setConnected(true);
       };
 
@@ -131,7 +114,7 @@ export function useWebSocket(onMessage) {
         ws.current = null;
         setConnected(false);
         if (navigator.onLine) scheduleWakeHint();
-        scheduleReconnect();
+        reconnectController.schedule();
       };
 
       socket.onerror = () => {
@@ -150,10 +133,15 @@ export function useWebSocket(onMessage) {
       };
     }
 
+    reconnectController = createReconnectController({
+      connect,
+      isOnline: () => navigator.onLine,
+      initialDelay: INITIAL_RECONNECT_DELAY,
+      maxDelay: MAX_RECONNECT_DELAY,
+    });
+
     function reconnectNow() {
       if (stopped || !navigator.onLine) return;
-      clearReconnectTimer();
-      reconnectDelay.current = INITIAL_RECONNECT_DELAY;
       if (ws.current?.readyState === WebSocket.CONNECTING) {
         const staleSocket = ws.current;
         ws.current = null;
@@ -161,11 +149,12 @@ export function useWebSocket(onMessage) {
         joinRequestGuard.current.clear(staleSocket);
         staleSocket.close();
       }
-      if (!ws.current || ws.current.readyState === WebSocket.CLOSED) connect();
+      if (!ws.current || ws.current.readyState === WebSocket.CLOSED) reconnectController.reconnectNow();
+      else reconnectController.reset();
     }
 
     function handleOffline() {
-      clearReconnectTimer();
+      reconnectController.cancel();
       clearConnectTimer();
       clearWakeHintTimer();
       setConnected(false);
@@ -195,8 +184,8 @@ export function useWebSocket(onMessage) {
 
     return () => {
       stopped = true;
+      reconnectController.stop();
       clearConnectTimer();
-      clearReconnectTimer();
       clearWakeHintTimer();
       hideConnectionStatus();
       window.removeEventListener('online', handleOnline);
