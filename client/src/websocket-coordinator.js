@@ -97,6 +97,22 @@ export function createWebSocketCoordinator({
     return false;
   }
 
+  function failCurrent(reason = 'connection-failed') {
+    if (stopped) return false;
+    const socket = current;
+    if (!socket) return reconnectController.reconnectNow();
+
+    current = null;
+    disposeSocket(socket, reason);
+    if (socket.readyState !== closedState) socket.close();
+    onClose({ type: 'synthetic-close', reason }, socket, {
+      isCurrent: true,
+      synthetic: true,
+      reason,
+    });
+    return reconnectController.reconnectNow();
+  }
+
   function goOffline() {
     reconnectController.cancel();
     closeCurrent('offline');
@@ -116,6 +132,7 @@ export function createWebSocketCoordinator({
   return {
     connect,
     reconnectNow,
+    failCurrent,
     goOffline,
     goOnline,
     stop,
