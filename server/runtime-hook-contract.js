@@ -6,32 +6,12 @@ const replacements = [
     const move = require('./bot-ai').chooseBotMove(player.hand, room.lastPlay, botContext);`,
   },
   {
-    name: '静态资源缓存',
-    oldCode: "app.use(express.static(path.join(__dirname, '../client/dist')));",
-    newCode: `app.use(express.static(path.join(__dirname, '../client/dist'), {
-  etag: true,
-  lastModified: true,
-  setHeaders(res, filePath) {
-    if (filePath.endsWith('.html')) {
-      // HTML 每次校验，确保自动部署后用户及时拿到新入口文件。
-      res.setHeader('Cache-Control', 'no-cache');
-      return;
-    }
-
-    // Vite 构建资源带内容哈希，可安全长期缓存，减少重复打开时的下载量。
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  },
-}));`,
-  },
-  {
-    name: '轻量健康检查',
-    oldCode: "app.get('*', (req, res) => {",
-    newCode: `app.get('/healthz', (req, res) => {
-  res.setHeader('Cache-Control', 'no-store');
-  res.status(200).type('text/plain').send('ok');
-});
-
-app.get('*', (req, res) => {`,
+    name: 'HTTP静态交付与健康检查',
+    oldCode: `app.use(express.static(path.join(__dirname, '../client/dist')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+});`,
+    newCode: `require('./http-delivery').configureHttpDelivery(app, express, path, __dirname);`,
   },
   {
     name: 'WebSocket心跳清理',
