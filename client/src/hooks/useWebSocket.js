@@ -6,6 +6,7 @@ const RENDER_URL = 'wss://henan-50k.onrender.com';
 const INITIAL_RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 15000;
 const CONNECT_TIMEOUT = 12000;
+const MAX_BUFFERED_AMOUNT = 256 * 1024;
 const WAKE_HINT_DELAY = 6000;
 const SEND_HINT_COOLDOWN = 1500;
 const STATUS_BANNER_ID = 'henan50k-connection-status';
@@ -83,6 +84,7 @@ export function useWebSocket(onMessage) {
       connectingState: WebSocket.CONNECTING,
       closedState: WebSocket.CLOSED,
       timeoutMs: CONNECT_TIMEOUT,
+      maxBufferedAmount: MAX_BUFFERED_AMOUNT,
       initialDelay: INITIAL_RECONNECT_DELAY,
       maxDelay: MAX_RECONNECT_DELAY,
       onConnecting: scheduleWakeHint,
@@ -97,6 +99,8 @@ export function useWebSocket(onMessage) {
         if (!navigator.onLine) return;
         if (state.reason === 'send-failed') {
           showConnectionStatus('消息发送失败，正在重新连接游戏服务器…');
+        } else if (state.reason?.endsWith('-backpressure')) {
+          showConnectionStatus('连接响应过慢，正在重新建立连接…');
         }
         scheduleWakeHint();
       },
@@ -126,7 +130,8 @@ export function useWebSocket(onMessage) {
     }
 
     function handleVisibilityChange() {
-      if (document.visibilityState === 'visible') coordinator.reconnectNow();
+      if (document.visibilityState !== 'visible') return;
+      if (!coordinator.ensureCurrent('visibility')) setConnected(false);
     }
 
     window.addEventListener('online', handleOnline);
@@ -148,15 +153,32 @@ export function useWebSocket(onMessage) {
   }, []);
 
   const send = useCallback((msg) => {
-    const socket = coordinatorRef.current?.getCurrent();
+    const coordinator = coordinatorRef.current;
+    if (!coordinator?.ensureCurrent('send')) {
+      setConnected(false);
+      const now = Date.now();
+      if (now - lastSendHintAt.current >= SEND_HINT_COOLDOWN) {
+        lastSendHintAt.current = now;
+        if (navigator.onLine) showConnectionStatus('连接状态异常，正在重新连接游戏服务器…');
+        else showConnectionStatus('当前网络已断开，网络恢复后会自动重新连接。', 'offline');
+      }
+      return false;
+    }
+
+    const socket = coordinator.getCurrent();
     if (socket?.readyState === WebSocket.OPEN) {
       if (!joinRequestGuard.current.tryStart(socket, msg)) return true;
       try {
         socket.send(JSON.stringify(msg));
+        if (socket.bufferedAmount > MAX_BUFFERED_AMOUNT) {
+          joinRequestGuard.current.clear(socket);
+          coordinator.failCurrent('send-backpressure');
+          return false;
+        }
         return true;
       } catch {
         joinRequestGuard.current.clear(socket);
-        coordinatorRef.current?.failCurrent('send-failed');
+        coordinator.failCurrent('send-failed');
         return false;
       }
     }
