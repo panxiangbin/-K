@@ -24,6 +24,29 @@ app.get('*', (req, res) => {
 
 wss.on('connection', (ws) => {`,
   },
+  {
+    name: '单机断线宽限期',
+    oldCode: `  if (room.mode === 'solo') {
+    rooms.delete(room.id);
+    clients.set(ws, { playerId: null, roomId: null, playerName: null });
+    return;
+  }`,
+    newCode: `  if (room.mode === 'solo') {
+    const handledImmediately = require('./solo-room-reconnect').handleSoloDisconnect(room, rooms, manual);
+    if (handledImmediately) {
+      clients.set(ws, { playerId: null, roomId: null, playerName: null });
+      return;
+    }
+  }`,
+  },
+  {
+    name: '单机重连取消清理',
+    oldCode: `      if (reconnecting) {
+        reconnecting.isOnline = true;`,
+    newCode: `      if (reconnecting) {
+        require('./solo-room-reconnect').cancelSoloRoomCleanup(roomId);
+        reconnecting.isOnline = true;`,
+  },
 ];
 
 function transformServerSource(source) {
