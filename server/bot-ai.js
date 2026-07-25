@@ -31,10 +31,16 @@ function groupByRank(hand) {
 function find50KBombs(hand) {
   const results = [];
   for (const suit of ['♠', '♥', '♣', '♦']) {
-    const five = hand.find(card => card.rank === '5' && card.suit === suit);
-    const ten = hand.find(card => card.rank === '10' && card.suit === suit);
-    const king = hand.find(card => card.rank === 'K' && card.suit === suit);
-    if (five && ten && king) results.push([five, ten, king]);
+    const fives = hand.filter(card => card.rank === '5' && card.suit === suit);
+    const tens = hand.filter(card => card.rank === '10' && card.suit === suit);
+    const kings = hand.filter(card => card.rank === 'K' && card.suit === suit);
+    const bombCount = Math.min(fives.length, tens.length, kings.length);
+
+    // 双副牌可能同时拥有两套完全相同花色的五十K。逐套配对，
+    // 让候选生成和炸弹保护都覆盖每一套，而不是只识别第一套。
+    for (let index = 0; index < bombCount; index++) {
+      results.push([fives[index], tens[index], kings[index]]);
+    }
   }
   return results;
 }
