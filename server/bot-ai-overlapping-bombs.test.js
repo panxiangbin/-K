@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { chooseWithBase, damageProfile, findBombs } = require('./bot-ai-bomb-preservation');
+const { chooseWithBase, damageProfile, findBombs, bombStrength } = require('./bot-ai-bomb-preservation');
 const { detectPattern } = require('./game-logic');
 
 let nextId = 1;
@@ -92,6 +92,57 @@ run('红四与方块五十K重叠时，优先使用不碰五十K的红牌', () =
   assert.equal(move.length, 1);
   assert.notEqual(move[0].id, five.id);
   assert.equal(move[0].rank, '5');
+});
+
+run('拆八张同点对子时，破坏套数相同也应保留更强的黑四', () => {
+  const redCards = [card('9', '♥'), card('9', '♥'), card('9', '♦'), card('9', '♦')];
+  const blackCards = [card('9', '♠'), card('9', '♠'), card('9', '♣'), card('9', '♣')];
+  const hand = [...redCards, ...blackCards];
+  const bombs = findBombs(hand);
+  const redBomb = bombs.find(bomb => detectPattern(bomb)?.bombType === 'color4'
+    && detectPattern(bomb)?.color === 'red');
+  const blackBomb = bombs.find(bomb => detectPattern(bomb)?.bombType === 'color4'
+    && detectPattern(bomb)?.color === 'black');
+
+  assert.ok(redBomb);
+  assert.ok(blackBomb);
+  assert.ok(bombStrength(blackBomb) > bombStrength(redBomb));
+
+  const originalBlackPair = blackCards.slice(0, 2);
+  const redPair = redCards.slice(0, 2);
+  const originalDamage = damageProfile(originalBlackPair, bombs);
+  const saferDamage = damageProfile(redPair, bombs);
+  assert.equal(originalDamage.bombsBroken, saferDamage.bombsBroken);
+  assert.equal(originalDamage.protectedCardsUsed, saferDamage.protectedCardsUsed);
+  assert.ok(saferDamage.preservedBombStrength > originalDamage.preservedBombStrength);
+
+  const move = chooseWithBase(
+    () => originalBlackPair,
+    hand,
+    { type: 'pair', rank: '8' },
+    {},
+  );
+
+  assert.equal(move.length, 2);
+  assert.ok(move.every(item => item.suit === '♥' || item.suit === '♦'));
+  assert.equal(detectPattern(move).type, 'pair');
+});
+
+run('拆八张同点三张时，也应保留更强的黑四', () => {
+  const redCards = [card('Q', '♥'), card('Q', '♥'), card('Q', '♦'), card('Q', '♦')];
+  const blackCards = [card('Q', '♠'), card('Q', '♠'), card('Q', '♣'), card('Q', '♣')];
+  const hand = [...redCards, ...blackCards];
+
+  const move = chooseWithBase(
+    () => blackCards.slice(0, 3),
+    hand,
+    { type: 'triple', rank: 'J' },
+    {},
+  );
+
+  assert.equal(move.length, 3);
+  assert.ok(move.every(item => item.suit === '♥' || item.suit === '♦'));
+  assert.equal(detectPattern(move).type, 'triple');
 });
 
 console.log('重叠炸弹保护测试全部通过。');
