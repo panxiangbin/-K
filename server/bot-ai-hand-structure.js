@@ -31,6 +31,10 @@ function getCombinations(cards, count) {
   return results;
 }
 
+function rankStrength(rank) {
+  return Math.max(0, CARD_ORDER.indexOf(rank));
+}
+
 function remainingStructure(hand, playedCards) {
   const playedIds = new Set(playedCards.map(card => card.id));
   const originalGroups = groupByRank(hand);
@@ -39,16 +43,23 @@ function remainingStructure(hand, playedCards) {
   const groups = [...remainingGroups.entries()];
   let singletons = 0;
   let scoreSingletons = 0;
+  let scoreGroups = 0;
   let estimatedHands = 0;
   let groupedCards = 0;
   let splitGroups = 0;
   let largestGroup = 0;
+  let controlStrength = 0;
+  let controlFloor = CARD_ORDER.length;
 
   for (const [rank, cards] of groups) {
     const count = cards.length;
     const originalCount = originalGroups.get(rank)?.length || count;
     if (count < originalCount) splitGroups += 1;
     largestGroup = Math.max(largestGroup, count);
+    const strength = rankStrength(rank);
+    controlStrength = Math.max(controlStrength, strength);
+    controlFloor = Math.min(controlFloor, strength);
+    if (SCORE_RANKS.has(rank)) scoreGroups += 1;
 
     if (count === 1) {
       singletons += 1;
@@ -62,10 +73,14 @@ function remainingStructure(hand, playedCards) {
   return {
     scoreSingletons,
     singletons,
+    scoreGroups,
+    endgameScoreGroups: estimatedHands <= 3 ? scoreGroups : 0,
     estimatedHands,
     splitGroups,
     largestGroup,
     groupedCards,
+    controlStrength,
+    controlFloor: groups.length ? controlFloor : 0,
   };
 }
 
@@ -76,23 +91,31 @@ function compareDamage(a, b) {
     || a.protectedCardsUsed - b.protectedCardsUsed;
 }
 
-function compareStructure(a, b) {
+function isImmediateThreat(context) {
+  return Number(context?.nextOpponentCards) <= 3
+    || Number(context?.minOpponentCards) <= 3;
+}
+
+function compareStructure(a, b, context = {}) {
+  const threatComparison = isImmediateThreat(context)
+    ? b.controlFloor - a.controlFloor || b.controlStrength - a.controlStrength
+    : 0;
+
   return a.scoreSingletons - b.scoreSingletons
     || a.singletons - b.singletons
     || a.estimatedHands - b.estimatedHands
+    || a.endgameScoreGroups - b.endgameScoreGroups
     || a.splitGroups - b.splitGroups
     || b.largestGroup - a.largestGroup
-    || b.groupedCards - a.groupedCards;
-}
-
-function rankStrength(rank) {
-  return Math.max(0, CARD_ORDER.indexOf(rank));
+    || b.groupedCards - a.groupedCards
+    || threatComparison;
 }
 
 function optimizeNormalFollowStructure({
   hand,
   lastPlay,
   chosenCards,
+  context = {},
   detectPattern,
   comparePatterns,
   findBombs,
@@ -120,6 +143,7 @@ function optimizeNormalFollowStructure({
         pattern,
         damage: damageProfile(cards, bombs),
         structure: remainingStructure(hand, cards),
+        order: candidates.length,
       });
     }
   }
@@ -127,9 +151,9 @@ function optimizeNormalFollowStructure({
   if (!candidates.length) return chosenCards;
 
   candidates.sort((a, b) => compareDamage(a.damage, b.damage)
-    || compareStructure(a.structure, b.structure)
+    || compareStructure(a.structure, b.structure, context)
     || rankStrength(a.pattern.rank) - rankStrength(b.pattern.rank)
-    || a.cards.map(card => card.id).sort().join('|').localeCompare(b.cards.map(card => card.id).sort().join('|')));
+    || a.order - b.order);
 
   const best = candidates[0];
   const chosenDamage = damageProfile(chosenCards, bombs);
@@ -138,7 +162,7 @@ function optimizeNormalFollowStructure({
   if (damageComparison < 0) return best.cards;
 
   const chosenStructure = remainingStructure(hand, chosenCards);
-  return compareStructure(best.structure, chosenStructure) < 0 ? best.cards : chosenCards;
+  return compareStructure(best.structure, chosenStructure, context) < 0 ? best.cards : chosenCards;
 }
 
 function chooseBotMove(hand, lastPlay, context) {
@@ -149,6 +173,7 @@ function chooseBotMove(hand, lastPlay, context) {
     hand,
     lastPlay,
     chosenCards,
+    context,
     detectPattern,
     comparePatterns,
     findBombs: preservation.findBombs,
@@ -161,4 +186,5 @@ module.exports = {
   optimizeNormalFollowStructure,
   remainingStructure,
   compareStructure,
+  isImmediateThreat,
 };
