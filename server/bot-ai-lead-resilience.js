@@ -23,9 +23,18 @@ function knownRankCounts(cards, publicRankCounts = {}) {
   return counts;
 }
 
+function boundedShapeCount(count) {
+  return Math.min(4, Math.max(0, Number(count) || 0));
+}
+
 function recentShapePressure(requiredCards, context = {}) {
-  const count = Number(context.recentPlayCounts?.[requiredCards] || 0);
-  return Math.min(4, Math.max(0, count)) * 15;
+  const hasDistanceAwareHistory = context.nextOpponentPlayCounts || context.tableOpponentPlayCounts;
+  if (hasDistanceAwareHistory) {
+    const nextCount = boundedShapeCount(context.nextOpponentPlayCounts?.[requiredCards]);
+    const tableCount = boundedShapeCount(context.tableOpponentPlayCounts?.[requiredCards]);
+    return Math.min(80, nextCount * 20 + tableCount * 5);
+  }
+  return boundedShapeCount(context.recentPlayCounts?.[requiredCards]) * 15;
 }
 
 function controlReliability(move, pattern, context = {}, routeCards = []) {
