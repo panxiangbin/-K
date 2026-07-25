@@ -20,6 +20,9 @@ const scorePile = cards => cards.length * 5;
   const context = getBotTurnContext(room, 0, 'bot', scorePile);
   assert.strictEqual(context.pileScore, 10);
   assert.strictEqual(context.nextOpponentCards, 2);
+  assert.strictEqual(context.nextOpponentId, 'next');
+  assert.strictEqual(context.nextOpponentSeatDistance, 1);
+  assert.strictEqual(context.activeOpponentCount, 3);
   assert.strictEqual(context.minOpponentCards, 2, '下家已进入收尾区时，应优先判断马上行动的人');
   assert.strictEqual(context.globalMinOpponentCards, 1);
   assert.strictEqual(context.threatSource, 'next');
@@ -52,20 +55,41 @@ const scorePile = cards => cards.length * 5;
 
 {
   const room = {
-    players: [player('far', 1), player('bot', 6), player('left', 3, { left: true }), player('next', 2)],
+    players: [player('far', 1), player('bot', 6), player('left', 3, { left: true }), player('finished', 0), player('next', 2)],
     pile: [],
   };
   const context = getBotTurnContext(room, 1, 'bot', scorePile);
-  assert.strictEqual(context.nextOpponentCards, 2, '应跳过已离场玩家并按座位循环寻找下家');
+  assert.strictEqual(context.nextOpponentCards, 2, '应跳过已离场和已出完玩家寻找真正下家');
+  assert.strictEqual(context.nextOpponentId, 'next');
+  assert.strictEqual(context.nextOpponentSeatDistance, 3);
+  assert.strictEqual(context.activeOpponentCount, 2);
   assert.strictEqual(context.minOpponentCards, 2);
   assert.strictEqual(context.threatSource, 'next');
 }
 
 {
-  const room = { players: [player('bot', 4)], pile: [] };
+  const room = {
+    players: [player('next', 3), player('left', 2, { left: true }), player('bot', 6), player('finished', 0)],
+    pile: [],
+  };
+  const context = getBotTurnContext(room, 2, 'bot', scorePile);
+  assert.strictEqual(context.nextOpponentId, 'next', '座位末端应环形回到第一位有效对手');
+  assert.strictEqual(context.nextOpponentCards, 3);
+  assert.strictEqual(context.nextOpponentSeatDistance, 2);
+  assert.strictEqual(context.threatSource, 'next');
+}
+
+{
+  const room = {
+    players: [player('bot', 4), player('left', 3, { left: true }), player('finished', 0)],
+    pile: [],
+  };
   const context = getBotTurnContext(room, 0, 'bot', scorePile);
   assert.strictEqual(context.minOpponentCards, Infinity);
   assert.strictEqual(context.nextOpponentCards, Infinity);
+  assert.strictEqual(context.nextOpponentId, null);
+  assert.strictEqual(context.nextOpponentSeatDistance, Infinity);
+  assert.strictEqual(context.activeOpponentCount, 0);
   assert.strictEqual(context.threatSource, 'none');
 }
 
