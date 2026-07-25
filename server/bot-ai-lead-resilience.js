@@ -3,6 +3,7 @@ const leadStrategy = require('./bot-ai-lead-strategy');
 const preservation = require('./bot-ai-bomb-preservation');
 
 const EXACT_ROUTE_CARD_LIMIT = 10;
+const TOTAL_RANK_COPIES = Object.fromEntries(CARD_ORDER.map(rank => [rank, rank === '小王' || rank === '大王' ? 2 : 8]));
 
 function rankStrength(rank) {
   return Math.max(0, CARD_ORDER.indexOf(rank));
@@ -16,7 +17,38 @@ function cardsFromMask(cards, mask) {
   return selected;
 }
 
-function exactRouteResilience(cards) {
+function knownRankCounts(cards, publicRankCounts = {}) {
+  const counts = { ...publicRankCounts };
+  for (const card of cards) {
+    counts[card.rank] = (counts[card.rank] || 0) + 1;
+  }
+  return counts;
+}
+
+function controlReliability(move, pattern, context = {}, routeCards = []) {
+  if (!pattern || !move.length) return 0;
+  if (pattern.type === 'bomb') {
+    const bombLevel = { '50K': 1, color4: 2, same8: 3, joker4: 4 }[pattern.bombType] || 0;
+    return 10000 + bombLevel * 100 + rankStrength(pattern.rank || move[0].rank);
+  }
+
+  const requiredCards = move.length;
+  const knownCounts = knownRankCounts(routeCards, context.publicRankCounts || {});
+  const moveRankIndex = rankStrength(pattern.rank || move[0].rank);
+  let liveHigherGroups = 0;
+
+  for (let index = moveRankIndex + 1; index < CARD_ORDER.length; index++) {
+    const rank = CARD_ORDER[index];
+    const totalCopies = TOTAL_RANK_COPIES[rank] || 0;
+    const unavailableCopies = Math.min(totalCopies, knownCounts[rank] || 0);
+    if (totalCopies - unavailableCopies >= requiredCards) liveHigherGroups++;
+  }
+
+  // 公开牌越充分、仍可能组成同型更大牌的点数越少，这手牌的实际控制力越高。
+  return (CARD_ORDER.length - liveHigherGroups) * 100 + moveRankIndex;
+}
+
+function exactRouteResilience(cards, context = {}) {
   if (!Array.isArray(cards) || cards.length === 0) return 0;
   if (cards.length > EXACT_ROUTE_CARD_LIMIT) return null;
 
@@ -28,7 +60,7 @@ function exactRouteResilience(cards) {
     if (!pattern) continue;
     legalMoves.push({
       mask,
-      control: rankStrength(pattern.rank || move[0].rank),
+      control: controlReliability(move, pattern, context, cards),
     });
   }
 
@@ -45,7 +77,7 @@ function exactRouteResilience(cards) {
     return best;
   }
 
-  const resilienceMemo = new Map([[0, CARD_ORDER.length]]);
+  const resilienceMemo = new Map([[0, Number.MAX_SAFE_INTEGER]]);
   function resilience(mask) {
     if (resilienceMemo.has(mask)) return resilienceMemo.get(mask);
     const turns = minimumTurns(mask);
@@ -118,11 +150,11 @@ function optimizeResilientLead({ hand, chosenCards, context = {} }) {
   if (context.threatSource === 'none') return chosenCards;
 
   const chosenRemaining = leadStrategy.remainingProfile(hand, chosenCards);
-  if (chosenRemaining.turns < 2 || chosenRemaining.turns > 2) return chosenCards;
+  if (chosenRemaining.turns !== 2) return chosenCards;
 
   const bombs = preservation.findBombs(hand);
   const chosenDamage = preservation.damageProfile(chosenCards, bombs);
-  const chosenResilience = exactRouteResilience(chosenRemaining.remaining);
+  const chosenResilience = exactRouteResilience(chosenRemaining.remaining, context);
   if (chosenResilience === null) return chosenCards;
 
   const candidates = enumerateNormalLeads(hand)
@@ -135,7 +167,7 @@ function optimizeResilientLead({ hand, chosenCards, context = {} }) {
     .filter(candidate => compareDamage(candidate.damage, chosenDamage) <= 0)
     .map(candidate => ({
       ...candidate,
-      resilience: exactRouteResilience(candidate.remaining.remaining),
+      resilience: exactRouteResilience(candidate.remaining.remaining, context),
     }))
     .filter(candidate => candidate.resilience !== null);
 
@@ -163,4 +195,5 @@ module.exports = {
   chooseBotMove,
   optimizeResilientLead,
   exactRouteResilience,
+  controlReliability,
 };
