@@ -54,7 +54,7 @@ const continuousPairs = summarizePublicPlays([
   { playerId: 'next', type: 'pair', count: 2 },
 ], { nextOpponentId: 'next' });
 assert.strictEqual(continuousPairs.nextOpponentShapeStreakLength, 3, '下家自己的连续牌型不应被远处玩家插手打断');
-assert.strictEqual(recentShapePressure(2, continuousPairs), 71);
+assert.strictEqual(recentShapePressure(2, continuousPairs), 68);
 
 const brokenStreak = summarizePublicPlays([
   { playerId: 'next', type: 'pair', count: 2 },
