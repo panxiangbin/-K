@@ -93,6 +93,7 @@ wss.on('connection', (ws) => {`,
   room.playedCards.push(...selectedCards);
   room.publicPlays = room.publicPlays || [];
   room.publicPlays.push({
+    playerId: player.id,
     type: pattern.type,
     bombType: pattern.bombType || null,
     rank: pattern.rank || (selectedCards[0] && selectedCards[0].rank) || null,
