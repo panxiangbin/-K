@@ -33,15 +33,23 @@ function getCombinations(cards, count) {
 
 function remainingStructure(hand, playedCards) {
   const playedIds = new Set(playedCards.map(card => card.id));
+  const originalGroups = groupByRank(hand);
   const remaining = hand.filter(card => !playedIds.has(card.id));
-  const groups = [...groupByRank(remaining).entries()];
+  const remainingGroups = groupByRank(remaining);
+  const groups = [...remainingGroups.entries()];
   let singletons = 0;
   let scoreSingletons = 0;
   let estimatedHands = 0;
   let groupedCards = 0;
+  let splitGroups = 0;
+  let largestGroup = 0;
 
   for (const [rank, cards] of groups) {
     const count = cards.length;
+    const originalCount = originalGroups.get(rank)?.length || count;
+    if (count < originalCount) splitGroups += 1;
+    largestGroup = Math.max(largestGroup, count);
+
     if (count === 1) {
       singletons += 1;
       if (SCORE_RANKS.has(rank)) scoreSingletons += 1;
@@ -51,7 +59,14 @@ function remainingStructure(hand, playedCards) {
     estimatedHands += count === 8 ? 1 : Math.ceil(count / 7);
   }
 
-  return { scoreSingletons, singletons, estimatedHands, groupedCards };
+  return {
+    scoreSingletons,
+    singletons,
+    estimatedHands,
+    splitGroups,
+    largestGroup,
+    groupedCards,
+  };
 }
 
 function compareDamage(a, b) {
@@ -65,6 +80,8 @@ function compareStructure(a, b) {
   return a.scoreSingletons - b.scoreSingletons
     || a.singletons - b.singletons
     || a.estimatedHands - b.estimatedHands
+    || a.splitGroups - b.splitGroups
+    || b.largestGroup - a.largestGroup
     || b.groupedCards - a.groupedCards;
 }
 
