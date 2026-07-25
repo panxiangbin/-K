@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { optimizeLeadMove, leadThreatLevel, leadShapeRisk } = require('./bot-ai-lead-strategy');
+const { optimizeLeadMove, leadThreatLevel, leadShapeRisk, restrictToSafeFinishRoute } = require('./bot-ai-lead-strategy');
 const { detectPattern } = require('./game-logic');
 
 let nextId = 1;
@@ -132,6 +132,31 @@ run('两手残局优先先处理5分孤张，不把分牌留作最后一手', ()
   assert.equal(move[0].id, scoreSingle.id);
 });
 
+run('同等炸弹安全时，两三手收尾路线不能被牌型封锁拖长', () => {
+  const safeDamage = { bombsBroken: 0, preservedBombStrength: 0, preservedBombs: 0, protectedCardsUsed: 0 };
+  const candidates = [
+    { cards: [card('4')], damage: safeDamage, remaining: { turns: 3 } },
+    { cards: [card('9'), card('9')], damage: safeDamage, remaining: { turns: 2 } },
+    { cards: [card('A'), card('A'), card('A')], damage: safeDamage, remaining: { turns: 1 } },
+  ];
+  const restricted = restrictToSafeFinishRoute(candidates);
+  assert.equal(restricted.length, 1);
+  assert.equal(restricted[0].remaining.turns, 1);
+});
+
+run('短残局路线筛选仍以炸弹安全为先，不能为少一手增加炸弹损伤', () => {
+  const safe = { bombsBroken: 0, preservedBombStrength: 0, preservedBombs: 1, protectedCardsUsed: 0 };
+  const damaged = { bombsBroken: 1, preservedBombStrength: 0, preservedBombs: 0, protectedCardsUsed: 1 };
+  const candidates = [
+    { cards: [card('4')], damage: safe, remaining: { turns: 2 } },
+    { cards: [card('A'), card('A')], damage: damaged, remaining: { turns: 0 } },
+  ];
+  const restricted = restrictToSafeFinishRoute(candidates);
+  assert.equal(restricted.length, 1);
+  assert.equal(restricted[0].damage.bombsBroken, 0);
+  assert.equal(restricted[0].remaining.turns, 2);
+});
+
 run('先手优化不能为了封牌破坏五十K炸弹', () => {
   const safeSingle = card('3', '♦');
   const hand = [safeSingle, card('5', '♠'), card('10', '♠'), card('K', '♠')];
@@ -155,4 +180,4 @@ run('整手可一手出完时保持直接出完', () => {
   assert.deepEqual(move.map(item => item.id), hand.map(item => item.id));
 });
 
-console.log('先手残局、牌型封锁、对手距离与分数牌处理测试全部通过。');
+console.log('先手残局、收尾路线、牌型封锁、对手距离与分数牌处理测试全部通过。');
