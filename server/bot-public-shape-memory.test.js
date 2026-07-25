@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { summarizePublicPlays, getBotTurnContext } = require('./bot-context');
+const { summarizePublicPlays, getBotTurnContext, alignPublicShapeThreat } = require('./bot-context');
 const { recentShapePressure, controlReliability } = require('./bot-ai-lead-resilience');
 const { detectPattern } = require('./game-logic');
 
@@ -74,6 +74,33 @@ const oneCardThreat = {
 assert.strictEqual(recentShapePressure(1, oneCardThreat), 100, '下家一张时单张威胁必须覆盖历史趋势');
 assert.strictEqual(recentShapePressure(2, oneCardThreat), 20, '下家一张时对子趋势只能保留次要影响');
 
+const pairFinish = alignPublicShapeThreat({
+  nextOpponentRecentShapeScores: { 1: 85, 2: 12, 3: 70 },
+  nextOpponentShapeStreakCount: 1,
+  nextOpponentShapeStreakLength: 4,
+}, 2, 0);
+assert.strictEqual(pairFinish.currentFinishShapeCount, 2);
+assert.strictEqual(pairFinish.nextOpponentRecentShapeScores[2], 60, '下家两张时对子一手走完应压过陈旧历史');
+assert.strictEqual(pairFinish.nextOpponentRecentShapeScores[1], 30, '与当前余牌冲突的单张趋势应限权');
+assert.strictEqual(pairFinish.nextOpponentRecentShapeScores[3], 30, '下家只剩两张时三张趋势不应继续主导');
+assert.strictEqual(pairFinish.nextOpponentShapeStreakLength, 1, '与当前余牌冲突的连续趋势必须取消加成');
+
+const highScorePairFinish = alignPublicShapeThreat({
+  nextOpponentRecentShapeScores: {},
+  nextOpponentShapeStreakCount: 0,
+  nextOpponentShapeStreakLength: 0,
+}, 2, 40);
+assert.strictEqual(highScorePairFinish.nextOpponentRecentShapeScores[2], 80, '高分牌堆应提高下家对子收尾紧迫度');
+
+const tripleFinish = alignPublicShapeThreat({
+  nextOpponentRecentShapeScores: { 2: 90, 3: 10 },
+  nextOpponentShapeStreakCount: 2,
+  nextOpponentShapeStreakLength: 3,
+}, 3, 20);
+assert.strictEqual(tripleFinish.nextOpponentRecentShapeScores[3], 70);
+assert.strictEqual(tripleFinish.nextOpponentRecentShapeScores[2], 35);
+assert.strictEqual(tripleFinish.nextOpponentShapeStreakLength, 1);
+
 const room = {
   pile: [],
   playedCards: [],
@@ -96,7 +123,8 @@ assert.deepStrictEqual(context.tableOpponentPlayCounts, { 2: 1 });
 assert.strictEqual(context.nextOpponentRecentCount, 3);
 assert.strictEqual(context.nextOpponentShapeStreakCount, 3);
 assert.strictEqual(context.nextOpponentShapeStreakLength, 2);
-assert.strictEqual(recentShapePressure(3, context), 47);
+assert.strictEqual(context.currentFinishShapeCount, 3);
+assert.strictEqual(recentShapePressure(3, context), 70, '当前三张收尾威胁必须高于原始衰减趋势');
 
 const pair9 = [card('9', '♠', '9a'), card('9', '♥', '9b')];
 const pattern = detectPattern(pair9);
@@ -126,4 +154,4 @@ const bounded = summarizePublicPlays(longHistory);
 assert.strictEqual(bounded.recentPlayCounts[1] || 0, 0, '只统计最近12手');
 assert.strictEqual(bounded.recentPlayCounts[2], 12);
 
-console.log('recency, streak and one-card public shape tests passed');
+console.log('recency, streak, current hand shape and pile urgency tests passed');
