@@ -25,12 +25,16 @@ assert.doesNotThrow(
 );
 
 assert.ok(
-  transformed.includes("require('./bot-ai-bomb-preservation').chooseBotMove"),
-  '电脑回合必须经过重叠炸弹保护层',
+  transformed.includes("require('./bot-ai-hand-structure').chooseBotMove"),
+  '电脑回合必须经过剩余手牌结构优化层',
+);
+assert.ok(
+  !transformed.includes("require('./bot-ai-bomb-preservation').chooseBotMove(player.hand, room.lastPlay, botContext)"),
+  '服务器入口不得绕过手牌结构优化层直接调用炸弹保护层',
 );
 assert.ok(
   !transformed.includes("require('./bot-ai').chooseBotMove(player.hand, room.lastPlay, botContext)"),
-  '服务器入口不得绕过重叠炸弹保护层直接调用基础AI',
+  '服务器入口不得绕过保护层直接调用基础AI',
 );
 assert.ok(
   !transformed.includes("app.use(express.static(path.join(__dirname, '../client/dist')));"),
