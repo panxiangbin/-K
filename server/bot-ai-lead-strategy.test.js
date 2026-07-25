@@ -64,10 +64,9 @@ run('远处玩家只剩一张但低分牌堆时不按紧邻下家过度封锁', 
   assert.equal(leadThreatLevel({ pileScore: 5, nextOpponentCards: 8, globalMinOpponentCards: 1, threatSource: 'table-watch' }), 0);
 });
 
-run('远处玩家只剩一张且高分牌堆时升级威胁，避免送出单张', () => {
+run('远处玩家只剩一张且高分牌堆时升级为全桌威胁，但不按紧邻下家强制封单张', () => {
   const single = card('3', '♦');
-  const pair = [card('9', '♠'), card('9', '♥')];
-  const hand = [single, ...pair, card('A', '♣'), card('A', '♦'), card('2', '♠'), card('2', '♥'), card('2', '♣')];
+  const hand = [single, card('9', '♠'), card('9', '♥'), card('A', '♣'), card('A', '♦'), card('2', '♠'), card('2', '♥'), card('2', '♣')];
   const context = {
     pileScore: 30,
     nextOpponentCards: 8,
@@ -76,8 +75,7 @@ run('远处玩家只剩一张且高分牌堆时升级威胁，避免送出单张
     threatSource: 'table',
   };
   const move = optimizeLeadMove({ hand, chosenCards: [single], context });
-  assert.equal(move.length, 2);
-  assert.equal(detectPattern(move).type, 'pair');
+  assert.equal(move[0].id, single.id);
   assert.equal(leadThreatLevel(context), 2);
 });
 
