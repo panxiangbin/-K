@@ -189,7 +189,10 @@ function describeCandidate(candidate, hand, groups, protectedIds) {
   const sameRank = cards.every(card => card.rank === cards[0].rank);
   const sourceGroupSize = sameRank ? (groups[cards[0].rank]?.length || cards.length) : cards.length;
   const splitCount = !isBomb && sameRank ? Math.max(0, sourceGroupSize - cards.length) : 0;
-  const breaksBomb = !isBomb && cards.some(card => protectedIds.has(card.id));
+  const protectedCardCount = !isBomb
+    ? cards.filter(card => protectedIds.has(card.id)).length
+    : 0;
+  const breaksBomb = protectedCardCount > 0;
   const remaining = hand.length - cards.length;
   const points = calcPileScore(cards);
   const structure = estimateRemainingStructure(hand, cards);
@@ -199,6 +202,7 @@ function describeCandidate(candidate, hand, groups, protectedIds) {
     isBomb,
     splitCount,
     breaksBomb,
+    protectedCardCount,
     remaining,
     points,
     rankValue: cardValue(pattern.rank || cards[0]?.rank),
@@ -235,7 +239,7 @@ function scoreLead(candidate, handLength, context) {
   score += candidate.points * (scoreCardUrgency ? -8 : 10);
 
   if (candidate.splitCount > 0) score += 850 + candidate.splitCount * 180;
-  if (candidate.breaksBomb) score += 3200;
+  if (candidate.breaksBomb) score += 1700 + candidate.protectedCardCount * 1500;
 
   score += candidate.estimatedTurns * 210;
   score += candidate.singletonCount * 95;
@@ -270,7 +274,7 @@ function scoreFollow(candidate, context) {
 
   let score = candidate.rankValue * 20 + candidate.points * 8;
   if (candidate.splitCount > 0) score += 700 + candidate.splitCount * 160;
-  if (candidate.breaksBomb) score += 3000;
+  if (candidate.breaksBomb) score += 1500 + candidate.protectedCardCount * 1500;
 
   // 跟牌不只看“刚好压住”，还看出完后手牌是否更整齐。
   // 少孤张、保留更多对子或三张，通常比留下散牌更容易连续收尾。
