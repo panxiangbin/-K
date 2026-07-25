@@ -27,8 +27,13 @@ function boundedShapeCount(count) {
   return Math.min(4, Math.max(0, Number(count) || 0));
 }
 
+function hasOwnScores(scores) {
+  return Boolean(scores && Object.keys(scores).length);
+}
+
 function recentShapePressure(requiredCards, context = {}) {
-  const hasRecencyScores = context.nextOpponentRecentShapeScores || context.tableOpponentRecentShapeScores;
+  const hasRecencyScores = hasOwnScores(context.nextOpponentRecentShapeScores)
+    || hasOwnScores(context.tableOpponentRecentShapeScores);
   let pressure;
   if (hasRecencyScores) {
     const nextScore = Math.max(0, Number(context.nextOpponentRecentShapeScores?.[requiredCards]) || 0);
