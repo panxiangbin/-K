@@ -28,13 +28,31 @@ function boundedShapeCount(count) {
 }
 
 function recentShapePressure(requiredCards, context = {}) {
-  const hasDistanceAwareHistory = context.nextOpponentPlayCounts || context.tableOpponentPlayCounts;
-  if (hasDistanceAwareHistory) {
-    const nextCount = boundedShapeCount(context.nextOpponentPlayCounts?.[requiredCards]);
-    const tableCount = boundedShapeCount(context.tableOpponentPlayCounts?.[requiredCards]);
-    return Math.min(80, nextCount * 20 + tableCount * 5);
+  const hasRecencyScores = context.nextOpponentRecentShapeScores || context.tableOpponentRecentShapeScores;
+  let pressure;
+  if (hasRecencyScores) {
+    const nextScore = Math.max(0, Number(context.nextOpponentRecentShapeScores?.[requiredCards]) || 0);
+    const tableScore = Math.max(0, Number(context.tableOpponentRecentShapeScores?.[requiredCards]) || 0);
+    const streakLength = context.nextOpponentShapeStreakCount === requiredCards
+      ? Math.max(0, Number(context.nextOpponentShapeStreakLength) || 0)
+      : 0;
+    const streakBonus = Math.min(30, Math.max(0, streakLength - 1) * 10);
+    pressure = Math.min(100, nextScore + tableScore + streakBonus);
+  } else {
+    const hasDistanceAwareHistory = context.nextOpponentPlayCounts || context.tableOpponentPlayCounts;
+    if (hasDistanceAwareHistory) {
+      const nextCount = boundedShapeCount(context.nextOpponentPlayCounts?.[requiredCards]);
+      const tableCount = boundedShapeCount(context.tableOpponentPlayCounts?.[requiredCards]);
+      pressure = Math.min(80, nextCount * 20 + tableCount * 5);
+    } else {
+      pressure = boundedShapeCount(context.recentPlayCounts?.[requiredCards]) * 15;
+    }
   }
-  return boundedShapeCount(context.recentPlayCounts?.[requiredCards]) * 15;
+
+  if (context.nextOpponentCards === 1) {
+    return requiredCards === 1 ? Math.max(100, pressure) : Math.min(20, pressure);
+  }
+  return pressure;
 }
 
 function controlReliability(move, pattern, context = {}, routeCards = []) {
