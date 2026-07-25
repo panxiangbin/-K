@@ -120,6 +120,30 @@ run('跟对子时兼顾剩余结构，避免留下孤张', () => {
   assert.deepEqual(ranks(move), ['6', '6']);
 });
 
+run('同点牌含红四炸时，跟对子使用额外黑牌并完整保留炸弹', () => {
+  const hand = [
+    card('6', '♥'), card('6', '♦'), card('6', '♥'), card('6', '♦'),
+    card('6', '♠'), card('6', '♣'),
+    card('9', '♠'),
+  ];
+  const move = chooseBotMove(hand, { type: 'pair', rank: '5' });
+  assert.equal(move.length, 2);
+  assert.deepEqual(new Set(move.map(item => item.suit)), new Set(['♠', '♣']));
+  assert.equal(detectPattern(move).type, 'pair');
+});
+
+run('同点牌含红四炸时，跟三张使用额外黑牌而不拆炸弹', () => {
+  const hand = [
+    card('7', '♥'), card('7', '♦'), card('7', '♥'), card('7', '♦'),
+    card('7', '♠'), card('7', '♣'), card('7', '♠'),
+    card('9', '♦'),
+  ];
+  const move = chooseBotMove(hand, { type: 'triple', rank: '6' });
+  assert.equal(move.length, 3);
+  assert.ok(move.every(item => item.suit === '♠' || item.suit === '♣'));
+  assert.equal(detectPattern(move).type, 'triple');
+});
+
 run('有普通小牌时不拆同花五十K炸弹', () => {
   const hand = [card('5', '♠'), card('10', '♠'), card('K', '♠'), card('3', '♦')];
   const move = chooseBotMove(hand, null);
