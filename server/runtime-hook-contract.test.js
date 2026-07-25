@@ -25,8 +25,12 @@ assert.doesNotThrow(
 );
 
 assert.ok(
-  transformed.includes("require('./bot-ai-hand-structure').chooseBotMove"),
-  '电脑回合必须经过剩余手牌结构优化层',
+  transformed.includes("require('./bot-ai-lead-strategy').chooseBotMove"),
+  '电脑回合必须经过先手残局和对手距离优化层',
+);
+assert.ok(
+  !transformed.includes("require('./bot-ai-hand-structure').chooseBotMove(player.hand, room.lastPlay, botContext)"),
+  '服务器入口不得绕过先手策略层直接调用手牌结构优化层',
 );
 assert.ok(
   !transformed.includes("require('./bot-ai-bomb-preservation').chooseBotMove(player.hand, room.lastPlay, botContext)"),
