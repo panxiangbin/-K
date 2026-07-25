@@ -91,24 +91,48 @@ function compareDamage(a, b) {
     || a.protectedCardsUsed - b.protectedCardsUsed;
 }
 
+function threatLevel(context = {}) {
+  const pileScore = Number(context.pileScore) || 0;
+  const nextCards = Number(context.nextOpponentCards);
+  const tableCards = Number(context.minOpponentCards);
+  const threatSource = context.threatSource || 'next';
+
+  if (Number.isFinite(nextCards) && nextCards <= 1) return 2;
+  if (Number.isFinite(nextCards) && nextCards <= 3) {
+    if (pileScore >= 20) return 2;
+    if (pileScore >= 10) return 1;
+  }
+
+  if (threatSource === 'table' && Number.isFinite(tableCards) && tableCards <= 2) {
+    if (pileScore >= 30 && tableCards <= 1) return 2;
+    if (pileScore >= 20) return 1;
+  }
+
+  return 0;
+}
+
 function isImmediateThreat(context) {
-  return Number(context?.nextOpponentCards) <= 3
-    || Number(context?.minOpponentCards) <= 3;
+  return threatLevel(context) > 0;
+}
+
+function compareControl(a, b) {
+  return b.controlFloor - a.controlFloor || b.controlStrength - a.controlStrength;
 }
 
 function compareStructure(a, b, context = {}) {
-  const threatComparison = isImmediateThreat(context)
-    ? b.controlFloor - a.controlFloor || b.controlStrength - a.controlStrength
-    : 0;
+  const urgency = threatLevel(context);
+  const criticalControl = urgency >= 2 ? compareControl(a, b) : 0;
+  const moderateControl = urgency === 1 ? compareControl(a, b) : 0;
 
   return a.scoreSingletons - b.scoreSingletons
     || a.singletons - b.singletons
+    || criticalControl
     || a.estimatedHands - b.estimatedHands
     || a.endgameScoreGroups - b.endgameScoreGroups
+    || moderateControl
     || a.splitGroups - b.splitGroups
     || b.largestGroup - a.largestGroup
-    || b.groupedCards - a.groupedCards
-    || threatComparison;
+    || b.groupedCards - a.groupedCards;
 }
 
 function optimizeNormalFollowStructure({
@@ -186,5 +210,6 @@ module.exports = {
   optimizeNormalFollowStructure,
   remainingStructure,
   compareStructure,
+  threatLevel,
   isImmediateThreat,
 };
