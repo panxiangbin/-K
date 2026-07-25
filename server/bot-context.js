@@ -101,6 +101,33 @@ function summarizePublicPlays(plays, { botPlayerId = null, nextOpponentId = null
   };
 }
 
+function alignPublicShapeThreat(playSummary, nextOpponentCards, pileScore) {
+  if (!Number.isInteger(nextOpponentCards) || nextOpponentCards < 1 || nextOpponentCards > 3) {
+    return playSummary;
+  }
+
+  const nextScores = { ...(playSummary.nextOpponentRecentShapeScores || {}) };
+  const matchingFloor = Math.min(90, 60 + Math.floor(Math.max(0, Number(pileScore) || 0) / 2));
+  nextScores[nextOpponentCards] = Math.max(nextScores[nextOpponentCards] || 0, matchingFloor);
+
+  const conflictingCap = nextOpponentCards === 1 ? 20 : nextOpponentCards === 2 ? 30 : 35;
+  for (const count of Object.keys(nextScores)) {
+    if (Number(count) !== nextOpponentCards) {
+      nextScores[count] = Math.min(conflictingCap, nextScores[count]);
+    }
+  }
+
+  const aligned = {
+    ...playSummary,
+    nextOpponentRecentShapeScores: nextScores,
+    currentFinishShapeCount: nextOpponentCards,
+  };
+  if (aligned.nextOpponentShapeStreakCount !== nextOpponentCards) {
+    aligned.nextOpponentShapeStreakLength = Math.min(1, aligned.nextOpponentShapeStreakLength || 0);
+  }
+  return aligned;
+}
+
 function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
   const players = Array.isArray(room?.players) ? room.players : [];
   const activeOpponents = players.filter(player => isActiveOpponent(player, botPlayerId));
@@ -122,11 +149,12 @@ function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
     }
   }
 
-  const playSummary = summarizePublicPlays(room?.publicPlays || [], {
+  const nextOpponentCards = nextOpponent ? nextOpponent.hand.length : Infinity;
+  const rawPlaySummary = summarizePublicPlays(room?.publicPlays || [], {
     botPlayerId,
     nextOpponentId: nextOpponent ? nextOpponent.id : null,
   });
-  const nextOpponentCards = nextOpponent ? nextOpponent.hand.length : Infinity;
+  const playSummary = alignPublicShapeThreat(rawPlaySummary, nextOpponentCards, pileScore);
   let minOpponentCards = nextOpponentCards;
   let threatSource = nextOpponent ? 'next' : 'none';
   if (!Number.isFinite(nextOpponentCards)) {
@@ -156,4 +184,10 @@ function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
   };
 }
 
-module.exports = { getBotTurnContext, isActiveOpponent, summarizePlayedCards, summarizePublicPlays };
+module.exports = {
+  getBotTurnContext,
+  isActiveOpponent,
+  summarizePlayedCards,
+  summarizePublicPlays,
+  alignPublicShapeThreat,
+};
