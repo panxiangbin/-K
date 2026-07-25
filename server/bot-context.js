@@ -29,24 +29,49 @@ function summarizePlayedCards(cards) {
   };
 }
 
-function summarizePublicPlays(plays) {
+function incrementCount(target, count) {
+  target[count] = (target[count] || 0) + 1;
+}
+
+function summarizePublicPlays(plays, { botPlayerId = null, nextOpponentId = null } = {}) {
   const recentPlayCounts = {};
+  const opponentPlayCounts = {};
+  const nextOpponentPlayCounts = {};
+  const tableOpponentPlayCounts = {};
   const publicBombCounts = {};
   const recentPlays = Array.isArray(plays) ? plays.slice(-12) : [];
+  let nextOpponentRecentType = null;
+  let nextOpponentRecentCount = 0;
 
   for (const play of recentPlays) {
     if (!play || !Number.isInteger(play.count) || play.count < 1) continue;
-    recentPlayCounts[play.count] = (recentPlayCounts[play.count] || 0) + 1;
+    incrementCount(recentPlayCounts, play.count);
     if (play.type === 'bomb' && play.bombType) {
       publicBombCounts[play.bombType] = (publicBombCounts[play.bombType] || 0) + 1;
+    }
+
+    const isBotPlay = botPlayerId && play.playerId === botPlayerId;
+    if (isBotPlay) continue;
+    incrementCount(opponentPlayCounts, play.count);
+    if (nextOpponentId && play.playerId === nextOpponentId) {
+      incrementCount(nextOpponentPlayCounts, play.count);
+      nextOpponentRecentType = play.type || null;
+      nextOpponentRecentCount = play.count;
+    } else {
+      incrementCount(tableOpponentPlayCounts, play.count);
     }
   }
 
   return {
     recentPlayCounts,
+    opponentPlayCounts,
+    nextOpponentPlayCounts,
+    tableOpponentPlayCounts,
     publicBombCounts,
     recentPlayType: recentPlays.length ? recentPlays[recentPlays.length - 1].type || null : null,
     recentPlayCount: recentPlays.length ? recentPlays[recentPlays.length - 1].count || 0 : 0,
+    nextOpponentRecentType,
+    nextOpponentRecentCount,
     publicBombTotal: Object.values(publicBombCounts).reduce((sum, count) => sum + count, 0),
   };
 }
@@ -60,7 +85,6 @@ function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
     : Infinity;
   const pileScore = calcPileScore(room?.pile || []);
   const playedSummary = summarizePlayedCards(room?.playedCards || room?.pile || []);
-  const playSummary = summarizePublicPlays(room?.publicPlays || []);
 
   let nextOpponent = null;
   let nextOpponentSeatDistance = Infinity;
@@ -73,6 +97,10 @@ function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
     }
   }
 
+  const playSummary = summarizePublicPlays(room?.publicPlays || [], {
+    botPlayerId,
+    nextOpponentId: nextOpponent ? nextOpponent.id : null,
+  });
   const nextOpponentCards = nextOpponent ? nextOpponent.hand.length : Infinity;
   let minOpponentCards = nextOpponentCards;
   let threatSource = nextOpponent ? 'next' : 'none';
