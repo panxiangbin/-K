@@ -114,6 +114,20 @@ function enumerateNormalLeads(hand) {
   return candidates;
 }
 
+function restrictToSafeFinishRoute(candidates) {
+  if (!Array.isArray(candidates) || candidates.length < 2) return candidates;
+
+  const safest = [...candidates].sort((a, b) => compareDamage(a.damage, b.damage))[0];
+  const equallySafe = candidates.filter(candidate => compareDamage(candidate.damage, safest.damage) === 0);
+  const minimumRemainingTurns = Math.min(...equallySafe.map(candidate => candidate.remaining.turns));
+
+  // The current play plus at most two remaining groups is a concrete 2–3 move finish route.
+  // Once such a route exists, shape blocking may choose among those routes but may not
+  // stretch the hand into extra turns.
+  if (minimumRemainingTurns > 2) return candidates;
+  return equallySafe.filter(candidate => candidate.remaining.turns === minimumRemainingTurns);
+}
+
 function scoreLeadCandidate(candidate, context, threat) {
   const { cards, pattern, remaining } = candidate;
   let score = 0;
@@ -155,14 +169,14 @@ function optimizeLeadMove({ hand, chosenCards, context = {} }) {
 
   const bombs = preservation.findBombs(hand);
   const chosenDamage = preservation.damageProfile(chosenCards, bombs);
-  const candidates = enumerateNormalLeads(hand)
+  const candidates = restrictToSafeFinishRoute(enumerateNormalLeads(hand)
     .map(cards => ({
       cards,
       pattern: detectPattern(cards),
       damage: preservation.damageProfile(cards, bombs),
       remaining: remainingProfile(hand, cards),
     }))
-    .filter(candidate => compareDamage(candidate.damage, chosenDamage) <= 0);
+    .filter(candidate => compareDamage(candidate.damage, chosenDamage) <= 0));
 
   if (!candidates.length) return chosenCards;
 
@@ -181,6 +195,10 @@ function optimizeLeadMove({ hand, chosenCards, context = {} }) {
   const damageDifference = compareDamage(best.damage, chosen.damage);
   if (damageDifference < 0) return best.cards;
   if (damageDifference > 0) return chosenCards;
+
+  if (best.remaining.turns < chosen.remaining.turns && best.remaining.turns <= 2) return best.cards;
+  if (chosen.remaining.turns < best.remaining.turns && chosen.remaining.turns <= 2) return chosenCards;
+
   return scoreLeadCandidate(best, context, threat) < scoreLeadCandidate(chosen, context, threat)
     ? best.cards
     : chosenCards;
@@ -198,4 +216,5 @@ module.exports = {
   leadThreatLevel,
   leadShapeRisk,
   remainingProfile,
+  restrictToSafeFinishRoute,
 };
