@@ -8,6 +8,27 @@ function isActiveOpponent(player, botPlayerId) {
   );
 }
 
+function summarizePlayedCards(cards) {
+  const publicRankCounts = {};
+  let playedJokers = 0;
+  let publicScoreCards = 0;
+
+  for (const card of Array.isArray(cards) ? cards : []) {
+    if (!card || typeof card.rank !== 'string') continue;
+    publicRankCounts[card.rank] = (publicRankCounts[card.rank] || 0) + 1;
+    if (card.rank === '小王' || card.rank === '大王') playedJokers++;
+    if (card.rank === '5') publicScoreCards += 5;
+    else if (card.rank === '10' || card.rank === 'K') publicScoreCards += 10;
+  }
+
+  return {
+    publicRankCounts,
+    publicPlayedCount: Object.values(publicRankCounts).reduce((sum, count) => sum + count, 0),
+    playedJokers,
+    publicScoreCards,
+  };
+}
+
 function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
   const players = Array.isArray(room?.players) ? room.players : [];
   const activeOpponents = players.filter(player => isActiveOpponent(player, botPlayerId));
@@ -16,6 +37,7 @@ function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
     ? Math.min(...activeOpponents.map(player => player.hand.length))
     : Infinity;
   const pileScore = calcPileScore(room?.pile || []);
+  const playedSummary = summarizePlayedCards(room?.playedCards || room?.pile || []);
 
   let nextOpponent = null;
   let nextOpponentSeatDistance = Infinity;
@@ -59,7 +81,8 @@ function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
     globalMinOpponentCards,
     activeOpponentCount,
     threatSource,
+    ...playedSummary,
   };
 }
 
-module.exports = { getBotTurnContext, isActiveOpponent };
+module.exports = { getBotTurnContext, isActiveOpponent, summarizePlayedCards };
