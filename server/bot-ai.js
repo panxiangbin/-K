@@ -218,6 +218,12 @@ function normalizeContext(context) {
   return { pileScore, minOpponentCards };
 }
 
+function keepLeastProtectedDamage(candidates) {
+  if (!candidates.length) return candidates;
+  const minimumProtectedCards = Math.min(...candidates.map(candidate => candidate.protectedCardCount));
+  return candidates.filter(candidate => candidate.protectedCardCount === minimumProtectedCards);
+}
+
 function scoreLead(candidate, handLength, context) {
   if (candidate.remaining === 0) return -1000000;
 
@@ -318,7 +324,11 @@ function chooseBotMove(hand, lastPlay, rawContext = {}) {
 
   if (!lastPlay) {
     const nonBombs = candidates.filter(candidate => !candidate.isBomb);
-    const pool = nonBombs.length ? nonBombs : candidates;
+    const basePool = nonBombs.length ? nonBombs : candidates;
+    // 先手时先按“动用受保护炸弹牌的数量”硬筛一次，再比较手数和结构。
+    // 有安全牌可出就绝不拆炸弹；若所有普通牌都来自炸弹，也只动最少张数，
+    // 避免为了少一手而一次拆掉对子或三张，破坏多套五十K/同色四炸。
+    const pool = nonBombs.length ? keepLeastProtectedDamage(basePool) : basePool;
     return pool.sort((a, b) => scoreLead(a, hand.length, context) - scoreLead(b, hand.length, context))[0].cards;
   }
 
