@@ -49,6 +49,17 @@ function leadThreatLevel(context = {}) {
   return 0;
 }
 
+function leadShapeRisk(cardCount, context = {}, threat = leadThreatLevel(context)) {
+  const nextCards = Number(context.nextOpponentCards);
+  const source = context.threatSource || 'next';
+  if (source !== 'next' || !Number.isFinite(nextCards)) return 0;
+
+  if (nextCards <= 1 && cardCount === 1) return 3600;
+  if (nextCards === 2 && cardCount === 2) return threat >= 2 ? 2800 : 1500;
+  if (nextCards === 3 && cardCount === 3) return threat >= 2 ? 2400 : 1250;
+  return 0;
+}
+
 function remainingProfile(hand, playedCards) {
   const playedIds = new Set(playedCards.map(card => card.id));
   const remaining = hand.filter(card => !playedIds.has(card.id));
@@ -113,18 +124,15 @@ function scoreLeadCandidate(candidate, context, threat) {
   score += remaining.remainingPoints * (remaining.turns <= 3 ? 20 : 3);
   score += rankStrength(pattern.rank || cards[0].rank) * 8;
   score -= cards.length * 85;
+  score += leadShapeRisk(cards.length, context, threat);
 
-  const nextCards = Number(context.nextOpponentCards);
   if (threat >= 3) {
-    if (cards.length === 1) score += 3200;
-    else score -= Math.min(cards.length, 4) * 260;
+    if (cards.length !== 1) score -= Math.min(cards.length, 4) * 260;
     score -= remaining.controlFloor * 45;
     score -= remaining.controlCeiling * 12;
   } else if (threat >= 2) {
-    if (Number.isFinite(nextCards) && cards.length === nextCards) score += 1600;
     score -= remaining.controlFloor * 24;
   } else if (threat === 1) {
-    if (Number.isFinite(nextCards) && cards.length === nextCards) score += 700;
     score -= remaining.controlFloor * 8;
   }
 
@@ -188,5 +196,6 @@ module.exports = {
   chooseBotMove,
   optimizeLeadMove,
   leadThreatLevel,
+  leadShapeRisk,
   remainingProfile,
 };
