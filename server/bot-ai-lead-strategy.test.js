@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { optimizeLeadMove, leadThreatLevel } = require('./bot-ai-lead-strategy');
+const { optimizeLeadMove, leadThreatLevel, leadShapeRisk } = require('./bot-ai-lead-strategy');
 const { detectPattern } = require('./game-logic');
 
 let nextId = 1;
@@ -33,6 +33,46 @@ run('下家只剩一张时不机械领最小单张，改出完整对子封牌', 
   });
   assert.deepEqual(ranks(move), ['A', 'A']);
   assert.equal(detectPattern(move).type, 'pair');
+});
+
+run('下家只剩两张时避免领对子，改领完整三张', () => {
+  const pair = [card('4', '♠'), card('4', '♥')];
+  const triple = [card('9', '♠'), card('9', '♥'), card('9', '♣')];
+  const hand = [...pair, ...triple];
+  const context = { pileScore: 0, nextOpponentCards: 2, minOpponentCards: 2, threatSource: 'next' };
+  const move = optimizeLeadMove({ hand, chosenCards: pair, context });
+  assert.deepEqual(ranks(move), ['9', '9', '9']);
+  assert.equal(detectPattern(move).type, 'triple');
+  assert.ok(leadShapeRisk(2, context) > leadShapeRisk(3, context));
+});
+
+run('下家只剩三张时避免领三张，改领完整对子', () => {
+  const triple = [card('4', '♠'), card('4', '♥'), card('4', '♣')];
+  const pair = [card('9', '♠'), card('9', '♥')];
+  const hand = [...triple, ...pair];
+  const context = { pileScore: 0, nextOpponentCards: 3, minOpponentCards: 3, threatSource: 'next' };
+  const move = optimizeLeadMove({ hand, chosenCards: triple, context });
+  assert.deepEqual(ranks(move), ['9', '9']);
+  assert.equal(detectPattern(move).type, 'pair');
+  assert.ok(leadShapeRisk(3, context) > leadShapeRisk(2, context));
+});
+
+run('高分牌堆时下家两张的对子封锁惩罚进一步提高', () => {
+  const low = { pileScore: 0, nextOpponentCards: 2, threatSource: 'next' };
+  const high = { pileScore: 25, nextOpponentCards: 2, threatSource: 'next' };
+  assert.equal(leadThreatLevel(low), 1);
+  assert.equal(leadThreatLevel(high), 2);
+  assert.ok(leadShapeRisk(2, high) > leadShapeRisk(2, low));
+});
+
+run('远处玩家剩两张时不把对子当作紧邻下家的直接送牌风险', () => {
+  const context = {
+    pileScore: 30,
+    nextOpponentCards: 8,
+    globalMinOpponentCards: 2,
+    threatSource: 'table',
+  };
+  assert.equal(leadShapeRisk(2, context), 0);
 });
 
 run('无有效对手时保持基础先手选择', () => {
@@ -115,4 +155,4 @@ run('整手可一手出完时保持直接出完', () => {
   assert.deepEqual(move.map(item => item.id), hand.map(item => item.id));
 });
 
-console.log('先手残局、对手距离与分数牌处理测试全部通过。');
+console.log('先手残局、牌型封锁、对手距离与分数牌处理测试全部通过。');
