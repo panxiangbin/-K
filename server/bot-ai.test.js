@@ -151,6 +151,25 @@ run('有普通小牌时不拆同花五十K炸弹', () => {
   assert.equal(move[0].rank, '3');
 });
 
+run('双副牌两套同花五十K都受保护，跟单张使用额外重复牌', () => {
+  for (const scenario of [
+    { rank: '5', lastRank: '4' },
+    { rank: '10', lastRank: '9' },
+    { rank: 'K', lastRank: 'Q' },
+  ]) {
+    const extra = card(scenario.rank, '♥');
+    const hand = [
+      card('5', '♠'), card('5', '♠'),
+      card('10', '♠'), card('10', '♠'),
+      card('K', '♠'), card('K', '♠'),
+      extra,
+    ];
+    const move = chooseBotMove(hand, { type: 'single', rank: scenario.lastRank });
+    assert.equal(move.length, 1);
+    assert.equal(move[0].id, extra.id);
+  }
+});
+
 run('只剩一个合法牌组时一手出完', () => {
   const hand = [card('7', '♠'), card('7', '♥')];
   const move = chooseBotMove(hand, null);
