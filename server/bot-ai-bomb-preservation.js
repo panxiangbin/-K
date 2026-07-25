@@ -1,6 +1,10 @@
 const { detectPattern, comparePatterns } = require('./game-logic');
 const baseBotAi = require('./bot-ai');
 
+const CARD_ORDER = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2', '小王', '大王'];
+const BOMB_LEVEL = { '50K': 1, color4: 2, same8: 3, joker4: 4 };
+const SUIT_ORDER = { '♠': 4, '♥': 3, '♣': 2, '♦': 1 };
+
 function isBlack(suit) {
   return suit === '♠' || suit === '♣';
 }
@@ -72,16 +76,43 @@ function findBombs(hand) {
   return bombs;
 }
 
+function rankStrength(rank) {
+  return Math.max(0, CARD_ORDER.indexOf(rank));
+}
+
+function bombStrength(bomb) {
+  const pattern = detectPattern(bomb);
+  if (!pattern || pattern.type !== 'bomb') return 0;
+
+  const level = BOMB_LEVEL[pattern.bombType] || 0;
+  if (pattern.bombType === 'joker4') return level * 10000;
+  if (pattern.bombType === 'same8') return level * 10000 + rankStrength(pattern.rank) * 10;
+  if (pattern.bombType === 'color4') {
+    const colorStrength = pattern.color === 'black' ? 2 : 1;
+    return level * 10000 + rankStrength(pattern.rank) * 10 + colorStrength;
+  }
+  if (pattern.bombType === '50K') {
+    return level * 10000 + (SUIT_ORDER[pattern.suit] || 0);
+  }
+  return level * 10000;
+}
+
 function damageProfile(cards, bombs) {
   const playedIds = new Set(cards.map(card => card.id));
   let bombsBroken = 0;
   let protectedCardsUsed = 0;
+  let preservedBombStrength = 0;
+  let preservedBombs = 0;
   const protectedIds = new Set();
 
   for (const bomb of bombs) {
     const bombIds = bomb.map(card => card.id);
     const hitCount = bombIds.filter(id => playedIds.has(id)).length;
     if (hitCount > 0 && hitCount < bombIds.length) bombsBroken += 1;
+    if (hitCount === 0) {
+      preservedBombs += 1;
+      preservedBombStrength += bombStrength(bomb);
+    }
     for (const id of bombIds) protectedIds.add(id);
   }
 
@@ -89,7 +120,20 @@ function damageProfile(cards, bombs) {
     if (protectedIds.has(card.id)) protectedCardsUsed += 1;
   }
 
-  return { bombsBroken, protectedCardsUsed };
+  return { bombsBroken, protectedCardsUsed, preservedBombStrength, preservedBombs };
+}
+
+function isLessDamaging(candidate, original) {
+  if (candidate.bombsBroken !== original.bombsBroken) {
+    return candidate.bombsBroken < original.bombsBroken;
+  }
+  if (candidate.preservedBombStrength !== original.preservedBombStrength) {
+    return candidate.preservedBombStrength > original.preservedBombStrength;
+  }
+  if (candidate.preservedBombs !== original.preservedBombs) {
+    return candidate.preservedBombs > original.preservedBombs;
+  }
+  return candidate.protectedCardsUsed < original.protectedCardsUsed;
 }
 
 function optimizeWithinChosenGroup(hand, lastPlay, chosenCards) {
@@ -115,16 +159,15 @@ function optimizeWithinChosenGroup(hand, lastPlay, chosenCards) {
 
   alternatives.sort((a, b) => {
     return a.damage.bombsBroken - b.damage.bombsBroken
+      || b.damage.preservedBombStrength - a.damage.preservedBombStrength
+      || b.damage.preservedBombs - a.damage.preservedBombs
       || a.damage.protectedCardsUsed - b.damage.protectedCardsUsed
       || a.cards.map(card => card.id).sort().join('|').localeCompare(b.cards.map(card => card.id).sort().join('|'));
   });
 
   const best = alternatives[0];
   const originalDamage = damageProfile(chosenCards, bombs);
-  if (best.damage.bombsBroken < originalDamage.bombsBroken) return best.cards;
-  if (best.damage.bombsBroken === originalDamage.bombsBroken
-      && best.damage.protectedCardsUsed < originalDamage.protectedCardsUsed) return best.cards;
-  return chosenCards;
+  return isLessDamaging(best.damage, originalDamage) ? best.cards : chosenCards;
 }
 
 function chooseWithBase(baseChoose, hand, lastPlay, context) {
@@ -141,5 +184,7 @@ module.exports = {
   chooseWithBase,
   optimizeWithinChosenGroup,
   findBombs,
+  bombStrength,
   damageProfile,
+  isLessDamaging,
 };
