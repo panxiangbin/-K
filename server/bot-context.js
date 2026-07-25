@@ -11,22 +11,26 @@ function isActiveOpponent(player, botPlayerId) {
 function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
   const players = Array.isArray(room?.players) ? room.players : [];
   const activeOpponents = players.filter(player => isActiveOpponent(player, botPlayerId));
-  const globalMinOpponentCards = activeOpponents.length
+  const activeOpponentCount = activeOpponents.length;
+  const globalMinOpponentCards = activeOpponentCount
     ? Math.min(...activeOpponents.map(player => player.hand.length))
     : Infinity;
   const pileScore = calcPileScore(room?.pile || []);
 
   let nextOpponent = null;
+  let nextOpponentSeatDistance = Infinity;
   for (let offset = 1; offset < players.length; offset++) {
     const candidate = players[(currentIndex + offset) % players.length];
     if (isActiveOpponent(candidate, botPlayerId)) {
       nextOpponent = candidate;
+      nextOpponentSeatDistance = offset;
       break;
     }
   }
 
   const nextOpponentCards = nextOpponent ? nextOpponent.hand.length : Infinity;
 
+  // “下家”指按当前出牌方向下一位仍在局且还有手牌的玩家；离场或已出完者必须跳过。
   // 下家已进入1～3张的直接收尾区时，优先封锁马上行动的人。
   // 若下家暂时安全，但远处玩家只剩1～2张，则按牌堆价值分级处理：
   // 低分牌堆只保持观察，避免电脑过早改变正常牌型；20分及以上时才升级为全桌紧急威胁，
@@ -50,9 +54,12 @@ function getBotTurnContext(room, currentIndex, botPlayerId, calcPileScore) {
     pileScore,
     minOpponentCards,
     nextOpponentCards,
+    nextOpponentId: nextOpponent ? nextOpponent.id : null,
+    nextOpponentSeatDistance,
     globalMinOpponentCards,
+    activeOpponentCount,
     threatSource,
   };
 }
 
-module.exports = { getBotTurnContext };
+module.exports = { getBotTurnContext, isActiveOpponent };
