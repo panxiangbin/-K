@@ -66,6 +66,31 @@ wss.on('connection', (ws) => {`,
         return;
       }`,
   },
+  {
+    name: '公开已出牌记录初始化',
+    oldCode: `        pile: [],
+        passCount: 0,`,
+    newCode: `        pile: [],
+        playedCards: [],
+        passCount: 0,`,
+  },
+  {
+    name: '新局公开已出牌记录重置',
+    oldCode: `  room.pile = [];
+  room.passCount = 0;`,
+    newCode: `  room.pile = [];
+  room.playedCards = [];
+  room.passCount = 0;`,
+  },
+  {
+    name: '每次出牌写入公开记牌',
+    oldCode: `  room.pile.push(...selectedCards);
+  room.lastPlay = pattern;`,
+    newCode: `  room.pile.push(...selectedCards);
+  room.playedCards = room.playedCards || [];
+  room.playedCards.push(...selectedCards);
+  room.lastPlay = pattern;`,
+  },
 ];
 
 function transformServerSource(source) {
