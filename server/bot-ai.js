@@ -43,6 +43,28 @@ function comboKey(cards) {
   return cards.map(card => card.id).sort().join('|');
 }
 
+function getCombinations(cards, count) {
+  const results = [];
+  const picked = [];
+
+  function visit(start) {
+    if (picked.length === count) {
+      results.push([...picked]);
+      return;
+    }
+
+    const needed = count - picked.length;
+    for (let index = start; index <= cards.length - needed; index++) {
+      picked.push(cards[index]);
+      visit(index + 1);
+      picked.pop();
+    }
+  }
+
+  visit(0);
+  return results;
+}
+
 function getCandidateCombos(hand) {
   const sorted = sortCards(hand);
   const groups = groupByRank(sorted);
@@ -61,7 +83,9 @@ function getCandidateCombos(hand) {
 
   for (const group of Object.values(groups)) {
     for (let count = 2; count <= Math.min(8, group.length); count++) {
-      add(group.slice(0, count));
+      // 同一点数可能同时包含受保护炸弹牌和普通牌。枚举实际子集，
+      // 让评分器能选择不拆炸弹的对子/三张，而不是只看数组前几张。
+      for (const combination of getCombinations(group, count)) add(combination);
     }
 
     const blacks = group.filter(card => isBlack(card.suit));
