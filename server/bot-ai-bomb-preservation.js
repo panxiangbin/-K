@@ -136,6 +136,54 @@ function isLessDamaging(candidate, original) {
   return candidate.protectedCardsUsed < original.protectedCardsUsed;
 }
 
+function sortByDamage(a, b) {
+  return a.damage.bombsBroken - b.damage.bombsBroken
+    || b.damage.preservedBombStrength - a.damage.preservedBombStrength
+    || b.damage.preservedBombs - a.damage.preservedBombs
+    || a.damage.protectedCardsUsed - b.damage.protectedCardsUsed
+    || rankStrength(a.pattern.rank) - rankStrength(b.pattern.rank)
+    || a.cards.map(card => card.id).sort().join('|').localeCompare(b.cards.map(card => card.id).sort().join('|'));
+}
+
+function getComparableAlternatives(hand, chosenPattern, cardCount, lastPlay, bombs) {
+  const alternatives = [];
+  for (const group of groupByRank(hand).values()) {
+    if (group.length < cardCount) continue;
+    for (const cards of getCombinations(group, cardCount)) {
+      const pattern = detectPattern(cards);
+      if (!pattern || pattern.type !== chosenPattern.type) continue;
+      if (!comparePatterns(pattern, lastPlay)) continue;
+      alternatives.push({ cards, pattern, damage: damageProfile(cards, bombs) });
+    }
+  }
+  return alternatives;
+}
+
+function optimizeAcrossChosenPattern(hand, lastPlay, chosenCards) {
+  if (!Array.isArray(chosenCards) || chosenCards.length === 0) return chosenCards;
+
+  const chosenPattern = detectPattern(chosenCards);
+  if (!chosenPattern || chosenPattern.type === 'bomb') return chosenCards;
+  if (!chosenCards.every(card => card.rank === chosenCards[0].rank)) return chosenCards;
+
+  const bombs = findBombs(hand);
+  if (!bombs.length) return chosenCards;
+
+  const alternatives = getComparableAlternatives(
+    hand,
+    chosenPattern,
+    chosenCards.length,
+    lastPlay,
+    bombs,
+  );
+  if (!alternatives.length) return chosenCards;
+
+  alternatives.sort(sortByDamage);
+  const best = alternatives[0];
+  const originalDamage = damageProfile(chosenCards, bombs);
+  return isLessDamaging(best.damage, originalDamage) ? best.cards : chosenCards;
+}
+
 function optimizeWithinChosenGroup(hand, lastPlay, chosenCards) {
   if (!Array.isArray(chosenCards) || chosenCards.length === 0) return chosenCards;
 
@@ -157,13 +205,7 @@ function optimizeWithinChosenGroup(hand, lastPlay, chosenCards) {
 
   if (!alternatives.length) return chosenCards;
 
-  alternatives.sort((a, b) => {
-    return a.damage.bombsBroken - b.damage.bombsBroken
-      || b.damage.preservedBombStrength - a.damage.preservedBombStrength
-      || b.damage.preservedBombs - a.damage.preservedBombs
-      || a.damage.protectedCardsUsed - b.damage.protectedCardsUsed
-      || a.cards.map(card => card.id).sort().join('|').localeCompare(b.cards.map(card => card.id).sort().join('|'));
-  });
+  alternatives.sort(sortByDamage);
 
   const best = alternatives[0];
   const originalDamage = damageProfile(chosenCards, bombs);
@@ -172,7 +214,8 @@ function optimizeWithinChosenGroup(hand, lastPlay, chosenCards) {
 
 function chooseWithBase(baseChoose, hand, lastPlay, context) {
   const chosenCards = baseChoose(hand, lastPlay, context);
-  return optimizeWithinChosenGroup(hand, lastPlay, chosenCards);
+  const sameRankOptimized = optimizeWithinChosenGroup(hand, lastPlay, chosenCards);
+  return optimizeAcrossChosenPattern(hand, lastPlay, sameRankOptimized);
 }
 
 function chooseBotMove(hand, lastPlay, context) {
@@ -183,6 +226,8 @@ module.exports = {
   chooseBotMove,
   chooseWithBase,
   optimizeWithinChosenGroup,
+  optimizeAcrossChosenPattern,
+  getComparableAlternatives,
   findBombs,
   bombStrength,
   damageProfile,
