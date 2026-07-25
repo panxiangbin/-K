@@ -19,10 +19,13 @@ function cardsFromMask(cards, mask) {
 
 function knownRankCounts(cards, publicRankCounts = {}) {
   const counts = { ...publicRankCounts };
-  for (const card of cards) {
-    counts[card.rank] = (counts[card.rank] || 0) + 1;
-  }
+  for (const card of cards) counts[card.rank] = (counts[card.rank] || 0) + 1;
   return counts;
+}
+
+function recentShapePressure(requiredCards, context = {}) {
+  const count = Number(context.recentPlayCounts?.[requiredCards] || 0);
+  return Math.min(4, Math.max(0, count)) * 15;
 }
 
 function controlReliability(move, pattern, context = {}, routeCards = []) {
@@ -36,34 +39,26 @@ function controlReliability(move, pattern, context = {}, routeCards = []) {
   const knownCounts = knownRankCounts(routeCards, context.publicRankCounts || {});
   const moveRankIndex = rankStrength(pattern.rank || move[0].rank);
   let liveHigherGroups = 0;
-
   for (let index = moveRankIndex + 1; index < CARD_ORDER.length; index++) {
     const rank = CARD_ORDER[index];
     const totalCopies = TOTAL_RANK_COPIES[rank] || 0;
     const unavailableCopies = Math.min(totalCopies, knownCounts[rank] || 0);
     if (totalCopies - unavailableCopies >= requiredCards) liveHigherGroups++;
   }
-
-  // 公开牌越充分、仍可能组成同型更大牌的点数越少，这手牌的实际控制力越高。
-  return (CARD_ORDER.length - liveHigherGroups) * 100 + moveRankIndex;
+  return (CARD_ORDER.length - liveHigherGroups) * 100 + moveRankIndex + recentShapePressure(requiredCards, context);
 }
 
 function exactRouteResilience(cards, context = {}) {
   if (!Array.isArray(cards) || cards.length === 0) return 0;
   if (cards.length > EXACT_ROUTE_CARD_LIMIT) return null;
-
   const fullMask = (1 << cards.length) - 1;
   const legalMoves = [];
   for (let mask = 1; mask <= fullMask; mask++) {
     const move = cardsFromMask(cards, mask);
     const pattern = detectPattern(move);
     if (!pattern) continue;
-    legalMoves.push({
-      mask,
-      control: controlReliability(move, pattern, context, cards),
-    });
+    legalMoves.push({ mask, control: controlReliability(move, pattern, context, cards) });
   }
-
   const turnMemo = new Map([[0, 0]]);
   function minimumTurns(mask) {
     if (turnMemo.has(mask)) return turnMemo.get(mask);
@@ -76,7 +71,6 @@ function exactRouteResilience(cards, context = {}) {
     turnMemo.set(mask, best);
     return best;
   }
-
   const resilienceMemo = new Map([[0, Number.MAX_SAFE_INTEGER]]);
   function resilience(mask) {
     if (resilienceMemo.has(mask)) return resilienceMemo.get(mask);
@@ -91,7 +85,6 @@ function exactRouteResilience(cards, context = {}) {
     resilienceMemo.set(mask, Math.max(0, best));
     return resilienceMemo.get(mask);
   }
-
   return resilience(fullMask);
 }
 
@@ -108,15 +101,10 @@ function combinations(cards, count) {
   const results = [];
   const picked = [];
   function visit(start) {
-    if (picked.length === count) {
-      results.push([...picked]);
-      return;
-    }
+    if (picked.length === count) { results.push([...picked]); return; }
     const needed = count - picked.length;
     for (let index = start; index <= cards.length - needed; index++) {
-      picked.push(cards[index]);
-      visit(index + 1);
-      picked.pop();
+      picked.push(cards[index]); visit(index + 1); picked.pop();
     }
   }
   visit(0);
@@ -138,50 +126,28 @@ function enumerateNormalLeads(hand) {
 }
 
 function compareDamage(a, b) {
-  return a.bombsBroken - b.bombsBroken
-    || b.preservedBombStrength - a.preservedBombStrength
-    || b.preservedBombs - a.preservedBombs
-    || a.protectedCardsUsed - b.protectedCardsUsed;
+  return a.bombsBroken - b.bombsBroken || b.preservedBombStrength - a.preservedBombStrength || b.preservedBombs - a.preservedBombs || a.protectedCardsUsed - b.protectedCardsUsed;
 }
 
 function optimizeResilientLead({ hand, chosenCards, context = {} }) {
   if (!Array.isArray(hand) || !Array.isArray(chosenCards) || chosenCards.length === 0) return chosenCards;
-  if (chosenCards.length === hand.length) return chosenCards;
-  if (context.threatSource === 'none') return chosenCards;
-
+  if (chosenCards.length === hand.length || context.threatSource === 'none') return chosenCards;
   const chosenRemaining = leadStrategy.remainingProfile(hand, chosenCards);
   if (chosenRemaining.turns !== 2) return chosenCards;
-
   const bombs = preservation.findBombs(hand);
   const chosenDamage = preservation.damageProfile(chosenCards, bombs);
   const chosenResilience = exactRouteResilience(chosenRemaining.remaining, context);
   if (chosenResilience === null) return chosenCards;
-
   const candidates = enumerateNormalLeads(hand)
-    .map(cards => ({
-      cards,
-      remaining: leadStrategy.remainingProfile(hand, cards),
-      damage: preservation.damageProfile(cards, bombs),
-    }))
+    .map(cards => ({ cards, remaining: leadStrategy.remainingProfile(hand, cards), damage: preservation.damageProfile(cards, bombs) }))
     .filter(candidate => candidate.remaining.turns === chosenRemaining.turns)
     .filter(candidate => compareDamage(candidate.damage, chosenDamage) <= 0)
-    .map(candidate => ({
-      ...candidate,
-      resilience: exactRouteResilience(candidate.remaining.remaining, context),
-    }))
+    .map(candidate => ({ ...candidate, resilience: exactRouteResilience(candidate.remaining.remaining, context) }))
     .filter(candidate => candidate.resilience !== null);
-
   if (!candidates.length) return chosenCards;
-
-  candidates.sort((a, b) => compareDamage(a.damage, b.damage)
-    || b.resilience - a.resilience
-    || a.remaining.finalPoints - b.remaining.finalPoints
-    || b.remaining.finalControl - a.remaining.finalControl
-    || a.remaining.remainingPoints - b.remaining.remainingPoints);
-
+  candidates.sort((a, b) => compareDamage(a.damage, b.damage) || b.resilience - a.resilience || a.remaining.finalPoints - b.remaining.finalPoints || b.remaining.finalControl - a.remaining.finalControl || a.remaining.remainingPoints - b.remaining.remainingPoints);
   const best = candidates[0];
-  if (compareDamage(best.damage, chosenDamage) < 0) return best.cards;
-  if (best.resilience > chosenResilience) return best.cards;
+  if (compareDamage(best.damage, chosenDamage) < 0 || best.resilience > chosenResilience) return best.cards;
   return chosenCards;
 }
 
@@ -191,9 +157,4 @@ function chooseBotMove(hand, lastPlay, context = {}) {
   return optimizeResilientLead({ hand, chosenCards, context });
 }
 
-module.exports = {
-  chooseBotMove,
-  optimizeResilientLead,
-  exactRouteResilience,
-  controlReliability,
-};
+module.exports = { chooseBotMove, optimizeResilientLead, exactRouteResilience, controlReliability, recentShapePressure };
