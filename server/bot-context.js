@@ -33,17 +33,25 @@ function incrementCount(target, count) {
   target[count] = (target[count] || 0) + 1;
 }
 
+function incrementScore(target, count, score) {
+  target[count] = (target[count] || 0) + score;
+}
+
 function summarizePublicPlays(plays, { botPlayerId = null, nextOpponentId = null } = {}) {
   const recentPlayCounts = {};
   const opponentPlayCounts = {};
   const nextOpponentPlayCounts = {};
   const tableOpponentPlayCounts = {};
+  const nextOpponentRecentShapeScores = {};
+  const tableOpponentRecentShapeScores = {};
   const publicBombCounts = {};
   const recentPlays = Array.isArray(plays) ? plays.slice(-12) : [];
+  const nextOpponentPlays = [];
   let nextOpponentRecentType = null;
   let nextOpponentRecentCount = 0;
 
-  for (const play of recentPlays) {
+  for (let index = 0; index < recentPlays.length; index++) {
+    const play = recentPlays[index];
     if (!play || !Number.isInteger(play.count) || play.count < 1) continue;
     incrementCount(recentPlayCounts, play.count);
     if (play.type === 'bomb' && play.bombType) {
@@ -53,13 +61,26 @@ function summarizePublicPlays(plays, { botPlayerId = null, nextOpponentId = null
     const isBotPlay = botPlayerId && play.playerId === botPlayerId;
     if (isBotPlay) continue;
     incrementCount(opponentPlayCounts, play.count);
+    const age = recentPlays.length - 1 - index;
     if (nextOpponentId && play.playerId === nextOpponentId) {
       incrementCount(nextOpponentPlayCounts, play.count);
+      incrementScore(nextOpponentRecentShapeScores, play.count, Math.max(4, 20 - age * 3));
       nextOpponentRecentType = play.type || null;
       nextOpponentRecentCount = play.count;
+      nextOpponentPlays.push(play);
     } else {
       incrementCount(tableOpponentPlayCounts, play.count);
+      incrementScore(tableOpponentRecentShapeScores, play.count, Math.max(1, 5 - age));
     }
+  }
+
+  let nextOpponentShapeStreakCount = 0;
+  let nextOpponentShapeStreakLength = 0;
+  for (let index = nextOpponentPlays.length - 1; index >= 0; index--) {
+    const play = nextOpponentPlays[index];
+    if (!nextOpponentShapeStreakCount) nextOpponentShapeStreakCount = play.count;
+    if (play.count !== nextOpponentShapeStreakCount) break;
+    nextOpponentShapeStreakLength++;
   }
 
   return {
@@ -67,6 +88,10 @@ function summarizePublicPlays(plays, { botPlayerId = null, nextOpponentId = null
     opponentPlayCounts,
     nextOpponentPlayCounts,
     tableOpponentPlayCounts,
+    nextOpponentRecentShapeScores,
+    tableOpponentRecentShapeScores,
+    nextOpponentShapeStreakCount,
+    nextOpponentShapeStreakLength,
     publicBombCounts,
     recentPlayType: recentPlays.length ? recentPlays[recentPlays.length - 1].type || null : null,
     recentPlayCount: recentPlays.length ? recentPlays[recentPlays.length - 1].count || 0 : 0,
