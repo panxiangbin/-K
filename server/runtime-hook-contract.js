@@ -3,7 +3,7 @@ const replacements = [
     name: '智能电脑出牌',
     oldCode: 'const move = chooseBotMove(player.hand, room.lastPlay);',
     newCode: `const botContext = require('./bot-context').getBotTurnContext(room, idx, player.id, calcPileScore);
-    const move = require('./bot-ai').chooseBotMove(player.hand, room.lastPlay, botContext);`,
+    const move = require('./bot-ai-bomb-preservation').chooseBotMove(player.hand, room.lastPlay, botContext);`,
   },
   {
     name: 'HTTP静态交付与健康检查',
