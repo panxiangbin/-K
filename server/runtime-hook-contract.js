@@ -72,6 +72,7 @@ wss.on('connection', (ws) => {`,
         passCount: 0,`,
     newCode: `        pile: [],
         playedCards: [],
+        publicPlays: [],
         passCount: 0,`,
   },
   {
@@ -80,6 +81,7 @@ wss.on('connection', (ws) => {`,
   room.passCount = 0;`,
     newCode: `  room.pile = [];
   room.playedCards = [];
+  room.publicPlays = [];
   room.passCount = 0;`,
   },
   {
@@ -89,6 +91,14 @@ wss.on('connection', (ws) => {`,
     newCode: `  room.pile.push(...selectedCards);
   room.playedCards = room.playedCards || [];
   room.playedCards.push(...selectedCards);
+  room.publicPlays = room.publicPlays || [];
+  room.publicPlays.push({
+    type: pattern.type,
+    bombType: pattern.bombType || null,
+    rank: pattern.rank || (selectedCards[0] && selectedCards[0].rank) || null,
+    count: selectedCards.length,
+  });
+  if (room.publicPlays.length > 12) room.publicPlays.splice(0, room.publicPlays.length - 12);
   room.lastPlay = pattern;`,
   },
 ];
