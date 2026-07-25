@@ -135,6 +135,11 @@ function optimizeLeadMove({ hand, chosenCards, context = {} }) {
   if (!Array.isArray(hand) || !Array.isArray(chosenCards) || chosenCards.length === 0) return chosenCards;
   if (chosenCards.length === hand.length) return chosenCards;
 
+  const hasOpponent = Number.isFinite(Number(context.nextOpponentCards))
+    || Number.isFinite(Number(context.globalMinOpponentCards))
+    || Number.isFinite(Number(context.minOpponentCards));
+  if (!hasOpponent || context.threatSource === 'none') return chosenCards;
+
   const threat = leadThreatLevel(context);
   const chosenProfile = remainingProfile(hand, chosenCards);
   const shortEndgame = chosenProfile.turns <= 3 || hand.length <= 7;
