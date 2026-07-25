@@ -4,6 +4,15 @@ const baseBotAi = require('./bot-ai');
 const CARD_ORDER = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2', '小王', '大王'];
 const BOMB_LEVEL = { '50K': 1, color4: 2, same8: 3, joker4: 4 };
 const SUIT_ORDER = { '♠': 4, '♥': 3, '♣': 2, '♦': 1 };
+const NORMAL_PATTERN_LENGTH = {
+  single: 1,
+  pair: 2,
+  triple: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+};
 
 function isBlack(suit) {
   return suit === '♠' || suit === '♣';
@@ -159,6 +168,57 @@ function getComparableAlternatives(hand, chosenPattern, cardCount, lastPlay, bom
   return alternatives;
 }
 
+function getLegalNormalAlternatives(hand, lastPlay, bombs = findBombs(hand)) {
+  if (!lastPlay || lastPlay.type === 'bomb') return [];
+  const cardCount = NORMAL_PATTERN_LENGTH[lastPlay.type];
+  if (!cardCount) return [];
+
+  const alternatives = [];
+  for (const group of groupByRank(hand).values()) {
+    if (group.length < cardCount) continue;
+    for (const cards of getCombinations(group, cardCount)) {
+      const pattern = detectPattern(cards);
+      if (!pattern || pattern.type !== lastPlay.type) continue;
+      if (!comparePatterns(pattern, lastPlay)) continue;
+      alternatives.push({ cards, pattern, damage: damageProfile(cards, bombs) });
+    }
+  }
+  return alternatives;
+}
+
+function getLegalBombAlternatives(hand, lastPlay, bombs = findBombs(hand)) {
+  return bombs
+    .map(cards => ({ cards, pattern: detectPattern(cards) }))
+    .filter(candidate => candidate.pattern?.type === 'bomb')
+    .filter(candidate => comparePatterns(candidate.pattern, lastPlay))
+    .map(candidate => ({ ...candidate, damage: damageProfile(candidate.cards, bombs) }));
+}
+
+function sortBombsByMinimumStrength(a, b) {
+  return bombStrength(a.cards) - bombStrength(b.cards)
+    || sortByDamage(a, b);
+}
+
+function chooseRequiredFollowMove(hand, lastPlay, chosenCards) {
+  if (!lastPlay || !Array.isArray(chosenCards) || chosenCards.length === hand.length) {
+    return chosenCards;
+  }
+
+  const bombs = findBombs(hand);
+  if (lastPlay.type !== 'bomb') {
+    const normalAlternatives = getLegalNormalAlternatives(hand, lastPlay, bombs);
+    if (normalAlternatives.length) {
+      normalAlternatives.sort(sortByDamage);
+      return normalAlternatives[0].cards;
+    }
+  }
+
+  const bombAlternatives = getLegalBombAlternatives(hand, lastPlay, bombs);
+  if (!bombAlternatives.length) return chosenCards;
+  bombAlternatives.sort(sortBombsByMinimumStrength);
+  return bombAlternatives[0].cards;
+}
+
 function optimizeAcrossChosenPattern(hand, lastPlay, chosenCards) {
   if (!Array.isArray(chosenCards) || chosenCards.length === 0) return chosenCards;
 
@@ -214,7 +274,8 @@ function optimizeWithinChosenGroup(hand, lastPlay, chosenCards) {
 
 function chooseWithBase(baseChoose, hand, lastPlay, context) {
   const chosenCards = baseChoose(hand, lastPlay, context);
-  const sameRankOptimized = optimizeWithinChosenGroup(hand, lastPlay, chosenCards);
+  const requiredFollowMove = chooseRequiredFollowMove(hand, lastPlay, chosenCards);
+  const sameRankOptimized = optimizeWithinChosenGroup(hand, lastPlay, requiredFollowMove);
   return optimizeAcrossChosenPattern(hand, lastPlay, sameRankOptimized);
 }
 
@@ -225,9 +286,12 @@ function chooseBotMove(hand, lastPlay, context) {
 module.exports = {
   chooseBotMove,
   chooseWithBase,
+  chooseRequiredFollowMove,
   optimizeWithinChosenGroup,
   optimizeAcrossChosenPattern,
   getComparableAlternatives,
+  getLegalNormalAlternatives,
+  getLegalBombAlternatives,
   findBombs,
   bombStrength,
   damageProfile,
