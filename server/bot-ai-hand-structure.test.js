@@ -72,6 +72,30 @@ run('避免把三张10拆成对子后留下10分孤张', () => {
   assert.equal(structure.singletons, 0);
 });
 
+run('跟对子时优先保留六张完整同点组', () => {
+  const sixSeven = [card('7'), card('7', '♥'), card('7', '♣'), card('7', '♦'), card('7'), card('7', '♥')];
+  const fourTen = [card('10'), card('10', '♥'), card('10', '♣'), card('10', '♦')];
+  const hand = [...sixSeven, ...fourTen];
+
+  const move = optimize(hand, { type: 'pair', rank: '6' }, sixSeven.slice(0, 2));
+  assert.deepEqual(new Set(move.map(item => item.id)), new Set(fourTen.slice(0, 2).map(item => item.id)));
+  const structure = remainingStructure(hand, move);
+  assert.equal(structure.largestGroup, 6);
+  assert.equal(structure.estimatedHands, 2);
+});
+
+run('跟三张时优先保留七张完整同点组', () => {
+  const sevenEight = [card('8'), card('8', '♥'), card('8', '♣'), card('8', '♦'), card('8'), card('8', '♥'), card('8', '♣')];
+  const fiveQueen = [card('Q'), card('Q', '♥'), card('Q', '♣'), card('Q', '♦'), card('Q')];
+  const hand = [...sevenEight, ...fiveQueen];
+
+  const move = optimize(hand, { type: 'triple', rank: '7' }, sevenEight.slice(0, 3));
+  assert.deepEqual(new Set(move.map(item => item.id)), new Set(fiveQueen.slice(0, 3).map(item => item.id)));
+  const structure = remainingStructure(hand, move);
+  assert.equal(structure.largestGroup, 7);
+  assert.equal(structure.singletons, 0);
+});
+
 run('炸弹损伤更差的候选不会为了整理手牌而被采用', () => {
   const pairSeven = [card('7'), card('7', '♥')];
   const pairEight = [card('8'), card('8', '♥')];
