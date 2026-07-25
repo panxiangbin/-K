@@ -4,6 +4,8 @@ const preservation = require('./bot-ai-bomb-preservation');
 
 const EXACT_ROUTE_CARD_LIMIT = 10;
 const TOTAL_RANK_COPIES = Object.fromEntries(CARD_ORDER.map(rank => [rank, rank === '小王' || rank === '大王' ? 2 : 8]));
+const BOMB_LEVELS = { '50K': 1, color4: 2, same8: 3, joker4: 4 };
+const MAX_PUBLIC_BOMB_BONUS = 80;
 
 function rankStrength(rank) {
   return Math.max(0, CARD_ORDER.indexOf(rank));
@@ -60,11 +62,28 @@ function recentShapePressure(requiredCards, context = {}) {
   return pressure;
 }
 
+function publicBombReliabilityBonus(bombType, context = {}) {
+  const level = BOMB_LEVELS[bombType] || 0;
+  if (!level) return 0;
+  const counts = context.publicBombCounts || {};
+  let bonus = 0;
+  for (const [publicType, publicLevel] of Object.entries(BOMB_LEVELS)) {
+    if (publicLevel <= level) continue;
+    const exposed = Math.max(0, Number(counts[publicType]) || 0);
+    const distance = publicLevel - level;
+    bonus += exposed * (10 + distance * 5);
+  }
+  return Math.min(MAX_PUBLIC_BOMB_BONUS, bonus);
+}
+
 function controlReliability(move, pattern, context = {}, routeCards = []) {
   if (!pattern || !move.length) return 0;
   if (pattern.type === 'bomb') {
-    const bombLevel = { '50K': 1, color4: 2, same8: 3, joker4: 4 }[pattern.bombType] || 0;
-    return 10000 + bombLevel * 100 + rankStrength(pattern.rank || move[0].rank);
+    const bombLevel = BOMB_LEVELS[pattern.bombType] || 0;
+    return 10000
+      + bombLevel * 100
+      + rankStrength(pattern.rank || move[0].rank)
+      + publicBombReliabilityBonus(pattern.bombType, context);
   }
 
   const requiredCards = move.length;
@@ -189,4 +208,11 @@ function chooseBotMove(hand, lastPlay, context = {}) {
   return optimizeResilientLead({ hand, chosenCards, context });
 }
 
-module.exports = { chooseBotMove, optimizeResilientLead, exactRouteResilience, controlReliability, recentShapePressure };
+module.exports = {
+  chooseBotMove,
+  optimizeResilientLead,
+  exactRouteResilience,
+  controlReliability,
+  recentShapePressure,
+  publicBombReliabilityBonus,
+};
