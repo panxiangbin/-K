@@ -25,6 +25,14 @@ assert.doesNotThrow(
 );
 
 assert.ok(
+  transformed.includes("require('./bot-ai-bomb-preservation').chooseBotMove"),
+  '电脑回合必须经过重叠炸弹保护层',
+);
+assert.ok(
+  !transformed.includes("require('./bot-ai').chooseBotMove(player.hand, room.lastPlay, botContext)"),
+  '服务器入口不得绕过重叠炸弹保护层直接调用基础AI',
+);
+assert.ok(
   !transformed.includes("app.use(express.static(path.join(__dirname, '../client/dist')));"),
   '原始静态资源和兜底路由应由独立HTTP模块整体替换',
 );
