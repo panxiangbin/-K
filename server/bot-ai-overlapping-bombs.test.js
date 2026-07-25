@@ -145,4 +145,58 @@ run('拆八张同点三张时，也应保留更强的黑四', () => {
   assert.equal(detectPattern(move).type, 'triple');
 });
 
+run('不同点数八张炸弹都能跟对子时，应拆较低点数并保留高点控制炸弹', () => {
+  const lowCards = [
+    card('7', '♥'), card('7', '♥'), card('7', '♦'), card('7', '♦'),
+    card('7', '♠'), card('7', '♠'), card('7', '♣'), card('7', '♣'),
+  ];
+  const highCards = [
+    card('A', '♥'), card('A', '♥'), card('A', '♦'), card('A', '♦'),
+    card('A', '♠'), card('A', '♠'), card('A', '♣'), card('A', '♣'),
+  ];
+  const hand = [...lowCards, ...highCards];
+
+  const move = chooseWithBase(
+    () => highCards.slice(0, 2),
+    hand,
+    { type: 'pair', rank: '6' },
+    {},
+  );
+
+  assert.equal(move.length, 2);
+  assert.ok(move.every(item => item.rank === '7'));
+  assert.equal(detectPattern(move).type, 'pair');
+
+  const remainingHigh = hand.filter(item => item.rank === 'A' && !move.some(played => played.id === item.id));
+  assert.equal(remainingHigh.length, 8);
+  assert.equal(detectPattern(remainingHigh).bombType, 'same8');
+});
+
+run('不同点数八张炸弹都能跟三张时，应保留更高点数的完整八张炸弹', () => {
+  const lowCards = [
+    card('9', '♥'), card('9', '♥'), card('9', '♦'), card('9', '♦'),
+    card('9', '♠'), card('9', '♠'), card('9', '♣'), card('9', '♣'),
+  ];
+  const highCards = [
+    card('2', '♥'), card('2', '♥'), card('2', '♦'), card('2', '♦'),
+    card('2', '♠'), card('2', '♠'), card('2', '♣'), card('2', '♣'),
+  ];
+  const hand = [...lowCards, ...highCards];
+
+  const move = chooseWithBase(
+    () => highCards.slice(0, 3),
+    hand,
+    { type: 'triple', rank: '8' },
+    {},
+  );
+
+  assert.equal(move.length, 3);
+  assert.ok(move.every(item => item.rank === '9'));
+  assert.equal(detectPattern(move).type, 'triple');
+
+  const remainingHigh = hand.filter(item => item.rank === '2' && !move.some(played => played.id === item.id));
+  assert.equal(remainingHigh.length, 8);
+  assert.equal(detectPattern(remainingHigh).bombType, 'same8');
+});
+
 console.log('重叠炸弹保护测试全部通过。');
