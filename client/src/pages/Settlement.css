@@ -197,3 +197,165 @@
     transition: none !important;
   }
 }
+
+/* Keep the top actions usable when the result page scrolls or the viewport is short. */
+.settlement-page > button {
+  min-width: 92px;
+  min-height: 44px !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settlement-page > button:focus-visible,
+.settlement-next-button:focus-visible,
+.settlement-hero button:focus-visible {
+  outline: 3px solid #fde047;
+  outline-offset: 3px;
+}
+
+.settlement-page button:disabled {
+  cursor: not-allowed;
+}
+
+.settlement-history {
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 760px), (orientation: portrait) {
+  .settlement-page > button {
+    position: fixed !important;
+    top: max(8px, env(safe-area-inset-top)) !important;
+    z-index: 80 !important;
+  }
+
+  .settlement-page > button:first-of-type {
+    left: max(8px, env(safe-area-inset-left)) !important;
+  }
+
+  .settlement-page > button:nth-of-type(2) {
+    left: auto !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+  }
+
+  .settlement-content {
+    padding-bottom: max(22px, calc(env(safe-area-inset-bottom) + 12px)) !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .settlement-page > button {
+    min-width: 0;
+    max-width: calc(50vw - 16px);
+    padding-inline: 11px !important;
+    white-space: nowrap;
+  }
+
+  .settlement-history {
+    max-height: min(132px, 22vh);
+  }
+
+  .settlement-score-card {
+    min-height: 50px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  .settlement-page {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    min-height: 100%;
+    padding-top: max(48px, env(safe-area-inset-top)) !important;
+    padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .settlement-page > button {
+    position: fixed !important;
+    top: max(5px, env(safe-area-inset-top)) !important;
+    min-height: 38px !important;
+    padding-inline: 10px !important;
+    z-index: 80 !important;
+  }
+
+  .settlement-page > button:first-of-type {
+    left: max(6px, env(safe-area-inset-left)) !important;
+  }
+
+  .settlement-page > button:nth-of-type(2) {
+    left: auto !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+  }
+
+  .settlement-hero {
+    width: 31% !important;
+    justify-content: flex-start !important;
+    padding: 7px 9px !important;
+  }
+
+  .settlement-hero-icon {
+    font-size: 30px !important;
+  }
+
+  .settlement-leader-name {
+    max-width: 100% !important;
+    font-size: 17px !important;
+  }
+
+  .settlement-leader-meta,
+  .settlement-round-badge {
+    margin-bottom: 4px !important;
+  }
+
+  .settlement-leader-score {
+    font-size: 30px !important;
+  }
+
+  .settlement-content {
+    justify-content: flex-start !important;
+    padding: 5px max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left)) !important;
+    gap: 4px !important;
+  }
+
+  .settlement-section-heading {
+    margin-bottom: 0 !important;
+  }
+
+  .settlement-score-card {
+    padding: 5px 8px !important;
+    gap: 7px !important;
+  }
+
+  .settlement-history {
+    max-height: 58px;
+    overflow-y: auto;
+  }
+
+  .settlement-next-button {
+    position: static;
+    min-height: 40px !important;
+  }
+}
+
+@media (min-width: 1366px) {
+  .settlement-content {
+    max-width: 980px;
+    margin-inline: auto;
+    padding-inline: 28px !important;
+  }
+
+  .settlement-score-card {
+    padding-block: 11px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settlement-page::before,
+  .settlement-score-card,
+  .settlement-score-card:hover,
+  .settlement-next-button,
+  .settlement-next-button:active {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    scroll-behavior: auto !important;
+  }
+}
