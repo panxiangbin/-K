@@ -1,0 +1,42 @@
+[data-hand-interaction='true'] {
+  position: relative;
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+[data-card-id] {
+  min-width: 44px;
+  min-height: 44px;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+  outline: none;
+}
+
+[data-card-id]:focus-visible {
+  z-index: 80;
+  border-radius: 10px;
+  outline: 3px solid #fbbf24;
+  outline-offset: 4px;
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.9));
+}
+
+[data-card-id][aria-pressed='true'] {
+  z-index: 60;
+}
+
+@media (pointer: coarse) {
+  [data-card-id] {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-card-id],
+  [data-card-id] * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
