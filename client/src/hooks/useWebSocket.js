@@ -11,6 +11,12 @@ const MAX_BUFFERED_AMOUNT = 256 * 1024;
 const WAKE_HINT_DELAY = 6000;
 const SEND_HINT_COOLDOWN = 1500;
 const STATUS_BANNER_ID = 'henan50k-connection-status';
+const CONNECTION_EVENT = 'henan50k-connection-change';
+
+function publishConnectionState(connected) {
+  window.__henan50kConnected = Boolean(connected);
+  window.dispatchEvent(new CustomEvent(CONNECTION_EVENT, { detail: { connected: Boolean(connected) } }));
+}
 
 function getWsUrl() {
   const { protocol, hostname, host } = window.location;
@@ -89,6 +95,11 @@ export function useWebSocket(onMessage) {
   useEffect(() => {
     let stopped = false;
 
+    function setConnectionState(nextConnected) {
+      setConnected(nextConnected);
+      publishConnectionState(nextConnected);
+    }
+
     function clearWakeHintTimer() {
       if (!wakeHintTimer.current) return;
       clearTimeout(wakeHintTimer.current);
@@ -120,11 +131,11 @@ export function useWebSocket(onMessage) {
       onOpen: () => {
         clearWakeHintTimer();
         hideConnectionStatus();
-        setConnected(true);
+        setConnectionState(true);
       },
       onClose: (_, __, state) => {
         if (!state.isCurrent) return;
-        setConnected(false);
+        setConnectionState(false);
         if (!navigator.onLine) return;
         if (state.reason === 'send-failed' || state.reason?.endsWith('-backpressure')) {
           showConnectionPhase(CONNECTION_PHASES.FAILED, retryNow);
@@ -146,7 +157,7 @@ export function useWebSocket(onMessage) {
 
     function handleOffline() {
       clearWakeHintTimer();
-      setConnected(false);
+      setConnectionState(false);
       showConnectionPhase(CONNECTION_PHASES.OFFLINE);
       coordinator.goOffline();
     }
@@ -158,12 +169,13 @@ export function useWebSocket(onMessage) {
 
     function handleVisibilityChange() {
       if (document.visibilityState !== 'visible') return;
-      if (!coordinator.ensureCurrent('visibility')) setConnected(false);
+      if (!coordinator.ensureCurrent('visibility')) setConnectionState(false);
     }
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    publishConnectionState(false);
     if (!navigator.onLine) handleOffline();
     else coordinator.connect();
 
@@ -176,6 +188,7 @@ export function useWebSocket(onMessage) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       coordinator.stop();
       coordinatorRef.current = null;
+      publishConnectionState(false);
     };
   }, [retryNow]);
 
@@ -183,6 +196,7 @@ export function useWebSocket(onMessage) {
     const coordinator = coordinatorRef.current;
     if (!coordinator?.ensureCurrent('send')) {
       setConnected(false);
+      publishConnectionState(false);
       const now = Date.now();
       if (now - lastSendHintAt.current >= SEND_HINT_COOLDOWN) {
         lastSendHintAt.current = now;
