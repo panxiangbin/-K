@@ -154,7 +154,7 @@ export function useWebSocket(onMessage) {
       },
       onDisposeSocket: (socket) => {
         joinRequestGuard.current.clear(socket);
-        recoveryTracker.current.complete(socket);
+        recoveryTracker.current.cancel(socket);
       },
       onMessage: (event, socket) => {
         try {
@@ -242,14 +242,14 @@ export function useWebSocket(onMessage) {
         if (recoveryAttempt) recoveryTracker.current.start(socket, recoveryAttempt);
         if (socket.bufferedAmount > MAX_BUFFERED_AMOUNT) {
           joinRequestGuard.current.clear(socket);
-          recoveryTracker.current.complete(socket);
+          recoveryTracker.current.cancel(socket);
           coordinator.failCurrent('send-backpressure');
           return false;
         }
         return true;
       } catch {
         joinRequestGuard.current.clear(socket);
-        recoveryTracker.current.complete(socket);
+        recoveryTracker.current.cancel(socket);
         coordinator.failCurrent('send-failed');
         return false;
       }
