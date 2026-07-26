@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect, lazy, Suspense } from 
 import { useWebSocket } from './hooks/useWebSocket';
 import { scheduleAdaptivePreload } from './adaptive-preload';
 import { scheduleSettlementPreload, isSettlementImminent } from './settlement-preload';
+import { getGameConnectionGuard, getGlobalConnectionLabel } from './game-connection-guard';
 import Lobby from './pages/Lobby';
 
 const preloadGame = () => import('./pages/Game');
@@ -70,6 +71,27 @@ function ScreenLoader() {
   return (
     <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: '#facc15', background: '#052e22', fontWeight: 800 }}>
       正在加载牌桌…
+    </div>
+  );
+}
+
+function GameConnectionGuard({ guard, onReturnLobby }) {
+  if (!guard.active) return null;
+  return (
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="game-connection-title"
+      aria-describedby="game-connection-message"
+      style={{ position:'fixed', inset:0, zIndex:1900, display:'grid', placeItems:'center', padding:20, background:'rgba(2,12,8,.72)', backdropFilter:'blur(5px)' }}
+    >
+      <div style={{ width:'min(390px, 100%)', borderRadius:22, padding:20, background:'#f8fafc', color:'#0f172a', boxShadow:'0 18px 50px rgba(0,0,0,.45)', textAlign:'center' }}>
+        <div aria-hidden="true" style={{ fontSize:34, marginBottom:8 }}>📡</div>
+        <div id="game-connection-title" style={{ fontSize:21, fontWeight:900, marginBottom:8 }}>{guard.title}</div>
+        <div id="game-connection-message" style={{ fontSize:14, lineHeight:1.7, color:'#475569', marginBottom:16 }}>{guard.message}</div>
+        <div role="status" aria-live="assertive" aria-atomic="true" style={{ fontSize:13, color:'#b45309', fontWeight:800, marginBottom:14 }}>正在自动重连，请稍候…</div>
+        {guard.canReturnLobby && <button onClick={onReturnLobby} style={{ width:'100%', minHeight:48, borderRadius:15, border:'none', background:'#f5c518', color:'#102016', fontSize:16, fontWeight:900 }}>返回大厅等待</button>}
+      </div>
     </div>
   );
 }
@@ -183,6 +205,9 @@ export default function App() {
   }, [toast, resetToLobby, soundOn]);
 
   const { send, connected } = useWebSocket(onMessage);
+  const protectedPage = page === 'game' || page === 'settlement';
+  const connectionGuard = getGameConnectionGuard({ connected, page });
+  const connectionLabel = getGlobalConnectionLabel(connected, protectedPage);
 
   useEffect(() => {
     if (!connected) { autoRejoinTried.current = false; return; }
@@ -198,23 +223,13 @@ export default function App() {
 
   useEffect(() => {
     if (page !== 'lobby') return undefined;
-
-    const task = scheduleAdaptivePreload({
-      windowObject: window,
-      navigatorObject: navigator,
-      preload: preloadGame,
-    });
+    const task = scheduleAdaptivePreload({ windowObject: window, navigatorObject: navigator, preload: preloadGame });
     return () => task.cancel();
   }, [page]);
 
   useEffect(() => {
     if (page !== 'game') return undefined;
-
-    const task = scheduleSettlementPreload({
-      windowObject: window,
-      navigatorObject: navigator,
-      preload: preloadSettlement,
-    });
+    const task = scheduleSettlementPreload({ windowObject: window, navigatorObject: navigator, preload: preloadSettlement });
     settlementPreloadTask.current = task;
     return () => {
       if (settlementPreloadTask.current === task) settlementPreloadTask.current = null;
@@ -223,9 +238,7 @@ export default function App() {
   }, [page]);
 
   useEffect(() => {
-    if (page === 'game' && isSettlementImminent(gameState)) {
-      settlementPreloadTask.current?.preloadNow();
-    }
+    if (page === 'game' && isSettlementImminent(gameState)) settlementPreloadTask.current?.preloadNow();
   }, [page, gameState]);
 
   const continueLastRoom = useCallback(() => {
@@ -240,11 +253,18 @@ export default function App() {
   }, [toast]);
 
   const exitRoom = useCallback(() => {
-    const roomId = myInfo?.roomId || gameState?.id;
-    send({ type: 'leave_room' });
-    clearSavedSession(roomId);
-    resetToLobby();
-  }, [send, myInfo, gameState, resetToLobby]);
+    if (!connected) {
+      toast('当前未连接，房间记录仍保留。连接恢复后再退出。', 'error');
+      return false;
+    }
+    const ok = send({ type: 'leave_room' });
+    if (!ok) {
+      toast('退出请求没有发送成功，房间记录仍保留。', 'error');
+      return false;
+    }
+    toast('正在退出房间，请稍候…', 'info');
+    return true;
+  }, [connected, send, toast]);
 
   const TOAST_STYLE = {
     info: { color: '#60a5fa', bg: '#1e3a5f' },
@@ -257,9 +277,9 @@ export default function App() {
 
   return (
     <div style={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'fixed', top: 8, right: 8, zIndex: 1000, fontSize: 11, padding: '3px 8px', borderRadius: 12, background: '#00000088', backdropFilter: 'blur(8px)', color: connected ? '#4ade80' : '#f87171', border: `1px solid ${connected ? '#4ade8033' : '#f8717133'}`, display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div role="status" aria-live="polite" aria-label={`网络状态：${connectionLabel}`} style={{ position: 'fixed', top: 8, right: 8, zIndex: 1000, fontSize: 11, padding: '3px 8px', borderRadius: 12, background: '#00000088', backdropFilter: 'blur(8px)', color: connected ? '#4ade80' : '#f87171', border: `1px solid ${connected ? '#4ade8033' : '#f8717133'}`, display: 'flex', alignItems: 'center', gap: 4 }}>
         <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block', animation: connected ? 'none' : 'pulse 1s infinite' }} />
-        {connected ? '在线' : '连接中...'}
+        {connectionLabel}
       </div>
 
       <button onClick={enableSound} style={{ position:'fixed', top:34, right:8, zIndex:1001, minHeight:30, padding:'0 10px', borderRadius:14, border:'1px solid rgba(251,191,36,.45)', background: soundOn ? 'rgba(20,83,45,.88)' : 'rgba(120,53,15,.88)', color:soundOn ? '#86efac' : '#fbbf24', fontSize:12, fontWeight:900, boxShadow:'0 4px 12px rgba(0,0,0,.25)' }}>
@@ -278,6 +298,7 @@ export default function App() {
         {page === 'game' && <Game key={`game-${reconnectEpoch}`} send={send} gameState={gameState} myHand={myHand} setMyHand={setMyHand} myInfo={myInfo} toast={toast} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
         {page === 'settlement' && <Settlement data={settlementData} send={send} myInfo={myInfo} gameState={gameState} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
       </Suspense>
+      <GameConnectionGuard guard={connectionGuard} onReturnLobby={returnToLobby} />
     </div>
   );
 }
