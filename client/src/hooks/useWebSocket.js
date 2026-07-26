@@ -4,6 +4,7 @@ import { createWebSocketCoordinator } from '../websocket-coordinator';
 import { CONNECTION_PHASES, getConnectionStatusView } from '../connection-status';
 import { publishServerRejection } from '../server-error-feedback';
 import {
+  RECOVERY_STATUS_EVENT,
   createRecoveryRequestTracker,
   getRecoveryAttempt,
   installManualRecoverySourceMarker,
@@ -103,7 +104,36 @@ export function useWebSocket(onMessage) {
 
   useEffect(() => {
     let stopped = false;
+    let recoveryStatusTimer = null;
     const removeRecoveryMarker = installManualRecoverySourceMarker(window);
+
+    function clearRecoveryStatusTimer() {
+      if (!recoveryStatusTimer) return;
+      clearTimeout(recoveryStatusTimer);
+      recoveryStatusTimer = null;
+    }
+
+    function handleRecoveryStatus(event) {
+      const detail = event?.detail;
+      if (!detail?.text) return;
+      clearRecoveryStatusTimer();
+      const banner = getStatusBanner();
+      banner.replaceChildren();
+      const text = document.createElement('span');
+      text.textContent = detail.text;
+      banner.appendChild(text);
+      banner.dataset.recoveryStatus = detail.status || '';
+      banner.style.borderColor = detail.tone === 'success'
+        ? 'rgba(74, 222, 128, 0.48)'
+        : 'rgba(251, 191, 36, 0.48)';
+      banner.style.color = detail.tone === 'success' ? '#bbf7d0' : '#fef3c7';
+      if (detail.status !== 'pending') {
+        recoveryStatusTimer = setTimeout(() => {
+          recoveryStatusTimer = null;
+          if (banner.dataset.recoveryStatus === detail.status) banner.remove();
+        }, detail.status === 'invalidated' || detail.status === 'timeout' ? 6500 : 4200);
+      }
+    }
 
     function setConnectionState(nextConnected) {
       setConnected(nextConnected);
@@ -162,8 +192,9 @@ export function useWebSocket(onMessage) {
           if (msg.type === 'room_joined' || msg.type === 'error') joinRequestGuard.current.clear(socket);
           if (msg.type === 'room_joined') recoveryTracker.current.complete(socket);
           if (msg.type === 'error') {
-            msg = { ...msg, msg: publishServerRejection(msg.msg, window) };
-            const resolution = recoveryTracker.current.reject(socket, msg.msg);
+            const rawMessage = msg.msg;
+            const resolution = recoveryTracker.current.reject(socket, rawMessage);
+            if (!resolution.matched) msg = { ...msg, msg: publishServerRejection(rawMessage, window) };
             if (resolution.shouldClear) {
               invalidateSavedSession({
                 storage: window.localStorage,
@@ -198,6 +229,7 @@ export function useWebSocket(onMessage) {
       if (!coordinator.ensureCurrent('visibility')) setConnectionState(false);
     }
 
+    window.addEventListener(RECOVERY_STATUS_EVENT, handleRecoveryStatus);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -208,8 +240,10 @@ export function useWebSocket(onMessage) {
     return () => {
       stopped = true;
       clearWakeHintTimer();
+      clearRecoveryStatusTimer();
       hideConnectionStatus();
       removeRecoveryMarker();
+      window.removeEventListener(RECOVERY_STATUS_EVENT, handleRecoveryStatus);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
