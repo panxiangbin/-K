@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { createJoinRequestGuard } from '../join-request-guard';
 import { createWebSocketCoordinator } from '../websocket-coordinator';
 import { CONNECTION_PHASES, getConnectionStatusView } from '../connection-status';
+import { publishServerRejection } from '../server-error-feedback';
 
 const RENDER_URL = 'wss://henan-50k.onrender.com';
 const INITIAL_RECONNECT_DELAY = 1000;
@@ -145,8 +146,9 @@ export function useWebSocket(onMessage) {
       onDisposeSocket: (socket) => joinRequestGuard.current.clear(socket),
       onMessage: (event, socket) => {
         try {
-          const msg = JSON.parse(event.data);
+          let msg = JSON.parse(event.data);
           if (msg.type === 'room_joined' || msg.type === 'error') joinRequestGuard.current.clear(socket);
+          if (msg.type === 'error') msg = { ...msg, msg: publishServerRejection(msg.msg, window) };
           onMsg.current(msg);
         } catch {
           // 忽略无法解析的非协议消息，保持连接继续工作。
