@@ -1,5 +1,4 @@
 const CARD_SELECTOR = '[data-card-id]';
-const HAND_SELECTOR = '[data-hand-interaction]';
 
 export function cardAccessibleLabel(cardNode, index = 0) {
   const text = String(cardNode?.textContent || '').replace(/\s+/g, ' ').trim();
@@ -8,8 +7,10 @@ export function cardAccessibleLabel(cardNode, index = 0) {
 
 export function syncCardAccessibility(cardNode, index = 0) {
   if (!(cardNode instanceof HTMLElement)) return;
-  const selected = Boolean(cardNode.querySelector('[style*="translateY(var(--card-selected-offset"]')) ||
-    String(cardNode.style.filter || '').includes('drop-shadow'));
+  const selected = Boolean(
+    cardNode.querySelector('[style*="translateY(var(--card-selected-offset"]') ||
+    String(cardNode.style.filter || '').includes('drop-shadow')
+  );
   cardNode.setAttribute('role', 'button');
   cardNode.setAttribute('tabindex', '0');
   cardNode.setAttribute('aria-pressed', selected ? 'true' : 'false');
