@@ -18,9 +18,88 @@
   z-index: 1;
 }
 
+.settlement-background-pattern {
+  z-index: 0 !important;
+}
+
+.settlement-sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.settlement-top-actions {
+  position: static !important;
+  z-index: 80 !important;
+}
+
+.settlement-top-action {
+  min-width: 92px;
+  min-height: 44px !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .settlement-hero,
 .settlement-content {
   min-width: 0;
+}
+
+.settlement-room-copy {
+  margin-top: 12px;
+  width: 100%;
+  text-align: center;
+}
+
+.settlement-room-id {
+  margin-bottom: 5px;
+  color: #94a3b8;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.settlement-room-id strong {
+  color: #f8fafc;
+  letter-spacing: 1px;
+}
+
+.settlement-room-copy-button {
+  min-width: 120px;
+  min-height: 44px;
+  border: 1px solid rgba(251,191,36,.42);
+  border-radius: 12px;
+  background: rgba(120,53,15,.38);
+  color: #fbbf24;
+  font-weight: 900;
+  touch-action: manipulation;
+}
+
+.settlement-room-copy-button:disabled {
+  opacity: .55;
+}
+
+.settlement-heading-text,
+.settlement-history-heading h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.settlement-target-summary {
+  color: #a1a8b5;
+  font-size: 12px;
+  text-align: right;
+}
+
+.settlement-score-list {
+  display: contents;
 }
 
 .settlement-score-card {
@@ -29,6 +108,20 @@
 
 .settlement-score-card:hover {
   transform: translateY(-1px);
+}
+
+.settlement-next-round {
+  margin-top: 4px;
+}
+
+.settlement-next-waiting {
+  padding: 10px 0;
+  border: 1px dashed rgba(255,255,255,.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,.03);
+  color: #a1a8b5;
+  font-size: 13px;
+  text-align: center;
 }
 
 .settlement-next-button {
@@ -45,6 +138,62 @@
 .settlement-history {
   scrollbar-width: thin;
   scrollbar-color: rgba(245, 200, 66, .35) transparent;
+  overscroll-behavior: contain;
+}
+
+.settlement-history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.settlement-history-heading h2 {
+  color: #f1f5f9;
+  font-size: 12px;
+}
+
+.settlement-history-heading > div,
+.settlement-history-empty {
+  color: #8b93a7;
+  font-size: 10px;
+}
+
+.settlement-history-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  color: #c0c5cf;
+  font-size: 10px;
+}
+
+.settlement-history-round {
+  width: 34px;
+  flex-shrink: 0;
+  color: #f5c842;
+  font-weight: 900;
+}
+
+.settlement-history-summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settlement-top-action:focus-visible,
+.settlement-next-button:focus-visible,
+.settlement-room-copy-button:focus-visible {
+  outline: 3px solid #fde047;
+  outline-offset: 3px;
+}
+
+.settlement-page button:disabled {
+  cursor: not-allowed;
 }
 
 @media (max-width: 760px), (orientation: portrait) {
@@ -54,6 +203,21 @@
     flex-direction: column !important;
     padding-top: max(56px, env(safe-area-inset-top)) !important;
     padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .settlement-top-action {
+    position: fixed !important;
+    top: max(8px, env(safe-area-inset-top)) !important;
+    z-index: 80 !important;
+  }
+
+  .settlement-top-action--start {
+    left: max(8px, env(safe-area-inset-left)) !important;
+  }
+
+  .settlement-top-action--end {
+    left: auto !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
   }
 
   .settlement-hero {
@@ -91,7 +255,7 @@
     width: 100% !important;
     flex: 0 0 auto !important;
     justify-content: flex-start !important;
-    padding: 12px max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left)) !important;
+    padding: 12px max(12px, env(safe-area-inset-right)) max(22px, calc(env(safe-area-inset-bottom) + 12px)) max(12px, env(safe-area-inset-left)) !important;
     gap: 7px !important;
   }
 
@@ -109,6 +273,23 @@
     position: sticky;
     bottom: max(8px, env(safe-area-inset-bottom));
     z-index: 4;
+  }
+}
+
+@media (max-width: 430px) {
+  .settlement-top-action {
+    min-width: 0;
+    max-width: calc(50vw - 16px);
+    padding-inline: 11px !important;
+    white-space: nowrap;
+  }
+
+  .settlement-history {
+    max-height: min(132px, 22vh);
+  }
+
+  .settlement-score-card {
+    min-height: 50px;
   }
 }
 
@@ -137,6 +318,15 @@
   .settlement-section-heading {
     align-items: flex-start !important;
     gap: 4px !important;
+  }
+
+  .settlement-heading-text {
+    font-size: 13px;
+  }
+
+  .settlement-target-summary {
+    max-width: 55%;
+    font-size: 10px;
   }
 
   .settlement-score-card {
@@ -190,75 +380,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .settlement-score-card,
-  .settlement-next-button {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
-/* Keep the top actions usable when the result page scrolls or the viewport is short. */
-.settlement-page > button {
-  min-width: 92px;
-  min-height: 44px !important;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.settlement-page > button:focus-visible,
-.settlement-next-button:focus-visible,
-.settlement-hero button:focus-visible {
-  outline: 3px solid #fde047;
-  outline-offset: 3px;
-}
-
-.settlement-page button:disabled {
-  cursor: not-allowed;
-}
-
-.settlement-history {
-  overscroll-behavior: contain;
-}
-
-@media (max-width: 760px), (orientation: portrait) {
-  .settlement-page > button {
-    position: fixed !important;
-    top: max(8px, env(safe-area-inset-top)) !important;
-    z-index: 80 !important;
-  }
-
-  .settlement-page > button:first-of-type {
-    left: max(8px, env(safe-area-inset-left)) !important;
-  }
-
-  .settlement-page > button:nth-of-type(2) {
-    left: auto !important;
-    right: max(8px, env(safe-area-inset-right)) !important;
-  }
-
-  .settlement-content {
-    padding-bottom: max(22px, calc(env(safe-area-inset-bottom) + 12px)) !important;
-  }
-}
-
-@media (max-width: 430px) {
-  .settlement-page > button {
-    min-width: 0;
-    max-width: calc(50vw - 16px);
-    padding-inline: 11px !important;
-    white-space: nowrap;
-  }
-
-  .settlement-history {
-    max-height: min(132px, 22vh);
-  }
-
-  .settlement-score-card {
-    min-height: 50px;
-  }
-}
-
 @media (orientation: landscape) and (max-height: 430px) {
   .settlement-page {
     overflow-y: auto !important;
@@ -268,7 +389,7 @@
     padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
   }
 
-  .settlement-page > button {
+  .settlement-top-action {
     position: fixed !important;
     top: max(5px, env(safe-area-inset-top)) !important;
     min-height: 38px !important;
@@ -276,11 +397,11 @@
     z-index: 80 !important;
   }
 
-  .settlement-page > button:first-of-type {
+  .settlement-top-action--start {
     left: max(6px, env(safe-area-inset-left)) !important;
   }
 
-  .settlement-page > button:nth-of-type(2) {
+  .settlement-top-action--end {
     left: auto !important;
     right: max(6px, env(safe-area-inset-right)) !important;
   }
@@ -307,6 +428,14 @@
 
   .settlement-leader-score {
     font-size: 30px !important;
+  }
+
+  .settlement-room-copy {
+    margin-top: 6px;
+  }
+
+  .settlement-room-copy-button {
+    min-height: 38px;
   }
 
   .settlement-content {
