@@ -1,0 +1,90 @@
+/* 牌桌顶部栏与低高度横屏适配。使用现有结构选择器，避免改动游戏规则组件。 */
+
+/* Game 根节点的顶部栏是唯一含 44px 固定高度的直接子元素。 */
+#root > div > div > div[style*="height: 44px"] {
+  min-height: 44px;
+  height: auto !important;
+  padding-left: max(10px, env(safe-area-inset-left)) !important;
+  padding-right: max(10px, env(safe-area-inset-right)) !important;
+}
+
+#root > div > div > div[style*="height: 44px"] > div:nth-child(2) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#root > div > div > div[style*="height: 44px"] > div:nth-child(3) {
+  min-width: 0 !important;
+  max-width: min(38vw, 260px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 玩家名称在顶部、左右及自己区域均允许收缩，并保留完整 title/读屏文本。 */
+#root > div > div [style*="text-overflow: ellipsis"] {
+  min-width: 0;
+}
+
+@media (max-width: 520px) and (orientation: portrait) {
+  #root > div > div > div[style*="height: 44px"] {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "actions turn"
+      "room room";
+    row-gap: 3px !important;
+    min-height: 66px;
+    padding-top: max(4px, env(safe-area-inset-top)) !important;
+    padding-bottom: 5px !important;
+  }
+
+  #root > div > div > div[style*="height: 44px"] > div:nth-child(1) { grid-area: actions; }
+  #root > div > div > div[style*="height: 44px"] > div:nth-child(2) {
+    grid-area: room;
+    width: 100%;
+    text-align: center;
+  }
+  #root > div > div > div[style*="height: 44px"] > div:nth-child(3) {
+    grid-area: turn;
+    justify-self: end;
+    max-width: 48vw;
+  }
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  #root > div > div > div[style*="height: 44px"] {
+    min-height: 38px;
+    padding-top: max(2px, env(safe-area-inset-top)) !important;
+    padding-bottom: 2px !important;
+    gap: 5px !important;
+  }
+
+  #root > div > div > div[style*="height: 44px"] > div:nth-child(2) {
+    max-width: 34vw;
+    font-size: 11px !important;
+  }
+
+  #root > div > div > div[style*="height: 44px"] > div:nth-child(3) {
+    max-width: 31vw;
+    min-width: 0 !important;
+    font-size: 11px !important;
+  }
+
+  .top-action {
+    min-width: 44px;
+    min-height: 32px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+}
+
+@media (min-width: 1200px) {
+  #root > div > div > div[style*="height: 44px"] > div:nth-child(2) {
+    font-size: 13px !important;
+  }
+  #root > div > div > div[style*="height: 44px"] > div:nth-child(3) {
+    max-width: 340px;
+    font-size: 13px !important;
+  }
+}
