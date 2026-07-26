@@ -75,6 +75,10 @@ function ensureFeedbackNode(actionRow, root = document) {
   return node;
 }
 
+function setAttributeIfChanged(node, name, value) {
+  if (node.getAttribute(name) !== value) node.setAttribute(name, value);
+}
+
 function refresh(root = document) {
   const play = root.querySelector(PLAY_SELECTOR);
   const pass = root.querySelector(PASS_SELECTOR);
@@ -87,13 +91,13 @@ function refresh(root = document) {
   const state = readState(root);
   const node = ensureFeedbackNode(actionRow, root);
   const feedback = getGameActionFeedback(state);
-  node.textContent = feedback;
+  if (node.textContent !== feedback) node.textContent = feedback;
 
   for (const [action, button] of [['play', play], ['pass', pass], ['hint', hint]]) {
     const description = getActionButtonDescription(action, state);
-    button.setAttribute('aria-describedby', node.id);
-    button.setAttribute('title', description);
-    button.setAttribute('data-disabled-reason', button.disabled ? description : '');
+    setAttributeIfChanged(button, 'aria-describedby', node.id);
+    setAttributeIfChanged(button, 'title', description);
+    setAttributeIfChanged(button, 'data-disabled-reason', button.disabled ? description : '');
   }
 }
 
