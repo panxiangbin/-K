@@ -1,4 +1,6 @@
 export const SERVER_REJECTION_EVENT = 'henan50k-server-rejection';
+export const SERVER_ERROR_BANNER_ID = 'henan50k-server-error-feedback';
+export const SERVER_ERROR_DEDUPE_MS = 1800;
 
 const LEGACY_MESSAGES = new Map([
   ['房间不存在', '房间不存在或已经关闭，请检查房间号后重新加入。'],
@@ -21,6 +23,19 @@ const TABLE_REJECTION_MARKERS = [
   '对局尚未开始',
 ];
 
+const LONG_ERROR_MARKERS = [
+  '牌型不合法',
+  '压不过上一手',
+  '必须压牌',
+  '房间不存在',
+  '房间人数已满',
+  '连接',
+  '对局',
+];
+
+let lastPublished = { key: '', at: 0 };
+let bannerTimer = null;
+
 export function normalizeServerError(message) {
   const raw = String(message || '').trim();
   if (!raw) return '操作没有成功，请等待状态更新后重试。';
@@ -32,12 +47,85 @@ export function isTableActionRejection(message) {
   return TABLE_REJECTION_MARKERS.some((marker) => text.includes(marker));
 }
 
-export function publishServerRejection(message, target = globalThis) {
+export function getServerErrorDuration(message) {
   const text = normalizeServerError(message);
-  if (typeof target?.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
-    target.dispatchEvent(new CustomEvent(SERVER_REJECTION_EVENT, {
-      detail: { text, tableAction: isTableActionRejection(text) },
-    }));
+  if (LONG_ERROR_MARKERS.some((marker) => text.includes(marker))) return 6500;
+  return text.length >= 28 ? 5200 : 3800;
+}
+
+export function getServerErrorKey(message) {
+  return normalizeServerError(message).replace(/^[⚠️\s]+/u, '').replace(/\s+/g, ' ').trim();
+}
+
+export function shouldPublishServerError(message, now = Date.now()) {
+  const key = getServerErrorKey(message);
+  if (key === lastPublished.key && now - lastPublished.at < SERVER_ERROR_DEDUPE_MS) return false;
+  lastPublished = { key, at: now };
+  return true;
+}
+
+export function resetServerErrorDedupe() {
+  lastPublished = { key: '', at: 0 };
+}
+
+function showPersistentServerError(text, duration, target) {
+  const doc = target?.document;
+  if (!doc?.body || typeof doc.createElement !== 'function') return;
+
+  let banner = doc.getElementById(SERVER_ERROR_BANNER_ID);
+  if (!banner) {
+    banner = doc.createElement('div');
+    banner.id = SERVER_ERROR_BANNER_ID;
+    banner.setAttribute('role', 'alert');
+    banner.setAttribute('aria-live', 'assertive');
+    banner.setAttribute('aria-atomic', 'true');
+    Object.assign(banner.style, {
+      position: 'fixed',
+      left: '50%',
+      top: 'max(64px, env(safe-area-inset-top))',
+      transform: 'translateX(-50%)',
+      zIndex: '2100',
+      width: 'min(560px, calc(100vw - 24px))',
+      boxSizing: 'border-box',
+      padding: '11px 16px',
+      borderRadius: '16px',
+      border: '1px solid rgba(248, 113, 113, .58)',
+      background: 'rgba(127, 29, 29, .97)',
+      color: '#fee2e2',
+      boxShadow: '0 12px 32px rgba(0, 0, 0, .38)',
+      fontSize: '14px',
+      fontWeight: '750',
+      lineHeight: '1.55',
+      textAlign: 'center',
+      whiteSpace: 'normal',
+      overflowWrap: 'anywhere',
+      pointerEvents: 'none',
+    });
+    doc.body.appendChild(banner);
   }
+
+  banner.textContent = text;
+  if (bannerTimer) clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => {
+    banner.remove();
+    bannerTimer = null;
+  }, duration);
+}
+
+export function publishServerRejection(message, target = globalThis, now = Date.now()) {
+  const text = normalizeServerError(message);
+  const duration = getServerErrorDuration(text);
+  const tableAction = isTableActionRejection(text);
+  const publish = shouldPublishServerError(text, now);
+
+  if (publish) {
+    showPersistentServerError(text, duration, target);
+    if (typeof target?.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+      target.dispatchEvent(new CustomEvent(SERVER_REJECTION_EVENT, {
+        detail: { text, tableAction, duration, dedupeKey: getServerErrorKey(text) },
+      }));
+    }
+  }
+
   return text;
 }
