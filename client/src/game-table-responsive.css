@@ -6,6 +6,11 @@
   height: auto !important;
   padding-left: max(10px, env(safe-area-inset-left)) !important;
   padding-right: max(10px, env(safe-area-inset-right)) !important;
+  isolation: isolate;
+}
+
+#root > div > div > div[style*="height: 44px"] > div:nth-child(1) {
+  min-width: max-content;
 }
 
 #root > div > div > div[style*="height: 44px"] > div:nth-child(2) {
@@ -19,6 +24,23 @@
   max-width: min(38vw, 260px);
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 顶部按钮兼顾键盘、触控和减弱动态设置。 */
+.top-action {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.top-action:focus-visible {
+  outline: 3px solid #fbbf24;
+  outline-offset: 2px;
+  position: relative;
+  z-index: 2;
+}
+
+.top-action:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 /* 玩家名称在顶部、左右及自己区域均允许收缩，并保留完整 title/读屏文本。 */
@@ -43,12 +65,32 @@
   #root > div > div > div[style*="height: 44px"] > div:nth-child(2) {
     grid-area: room;
     width: 100%;
+    max-width: 100%;
     text-align: center;
   }
   #root > div > div > div[style*="height: 44px"] > div:nth-child(3) {
     grid-area: turn;
     justify-self: end;
     max-width: 48vw;
+  }
+}
+
+@media (max-width: 390px) and (orientation: portrait) {
+  #root > div > div > div[style*="height: 44px"] {
+    grid-template-columns: minmax(96px, auto) minmax(0, 1fr);
+    column-gap: 5px !important;
+    padding-left: max(6px, env(safe-area-inset-left)) !important;
+    padding-right: max(6px, env(safe-area-inset-right)) !important;
+  }
+
+  #root > div > div > div[style*="height: 44px"] > div:nth-child(3) {
+    max-width: 46vw;
+  }
+
+  .top-action {
+    min-width: 44px;
+    padding-left: 7px !important;
+    padding-right: 7px !important;
   }
 }
 
@@ -79,6 +121,16 @@
   }
 }
 
+@media (max-height: 390px) and (orientation: landscape) {
+  #root > div > div > div[style*="height: 44px"] > div:nth-child(2) {
+    max-width: 30vw;
+  }
+
+  #root > div > div > div[style*="height: 44px"] > div:nth-child(3) {
+    max-width: 28vw;
+  }
+}
+
 @media (min-width: 1200px) {
   #root > div > div > div[style*="height: 44px"] > div:nth-child(2) {
     font-size: 13px !important;
@@ -86,5 +138,11 @@
   #root > div > div > div[style*="height: 44px"] > div:nth-child(3) {
     max-width: 340px;
     font-size: 13px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top-action:active:not(:disabled) {
+    transform: none;
   }
 }
