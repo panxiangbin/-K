@@ -1,0 +1,50 @@
+body:has([data-card-id]) button[aria-label*="人声"] {
+  top: calc(env(safe-area-inset-top, 0px) + 48px) !important;
+  right: max(8px, env(safe-area-inset-right, 0px)) !important;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 !important;
+  overflow: hidden;
+  font-size: 0 !important;
+  border-radius: 50% !important;
+  opacity: .86;
+}
+
+body:has([data-card-id]) button[aria-label*="人声"]::before {
+  content: "🔇";
+  font-size: 19px;
+  line-height: 1;
+}
+
+body:has([data-card-id]) button[aria-label*="人声"][aria-pressed="true"]::before {
+  content: "🔊";
+}
+
+body:has([data-card-id]) button[aria-label*="人声"]:focus-visible {
+  outline: 3px solid #fde047;
+  outline-offset: 3px;
+  opacity: 1;
+}
+
+body:has([data-card-id]) button[aria-label*="人声"]:active {
+  transform: scale(.96);
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  body:has([data-card-id]) button[aria-label*="人声"] {
+    top: calc(env(safe-area-inset-top, 0px) + 42px) !important;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:has([data-card-id]) button[aria-label*="人声"] {
+    transition: none !important;
+  }
+  body:has([data-card-id]) button[aria-label*="人声"]:active {
+    transform: none;
+  }
+}
