@@ -304,7 +304,7 @@ export default function App() {
       {page === 'lobby' && <Lobby send={send} gameState={gameState} myInfo={myInfo} onContinueLastRoom={continueLastRoom} onExitRoom={exitRoom} />}
       <Suspense fallback={<ScreenLoader />}>
         {page === 'game' && <Game key={`game-${reconnectEpoch}`} send={send} gameState={gameState} myHand={myHand} setMyHand={setMyHand} myInfo={myInfo} toast={toast} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
-        {page === 'settlement' && <Settlement data={settlementData} send={send} myInfo={myInfo} gameState={gameState} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
+        {page === 'settlement' && <Settlement data={settlementData} send={send} myInfo={myInfo} gameState={gameState} connected={connected} onReturnLobby={returnToLobby} onExitRoom={exitRoom} />}
       </Suspense>
       <GameConnectionGuard guard={connectionGuard} onReturnLobby={returnToLobby} />
     </div>
