@@ -1,8 +1,19 @@
 export const SESSION_INVALIDATED_EVENT = 'henan50k-session-invalidated';
+export const RECOVERY_STATUS_EVENT = 'henan50k-recovery-status';
 export const MANUAL_RECOVERY_MARKER = '__henan50kManualRecoveryPending';
+export const RECOVERY_TIMEOUT_MS = 12000;
 
 const ROOM_MISSING_MARKERS = ['房间不存在', '房间已经关闭', '房间已关闭'];
 const CONTINUE_HIDE_GUARD_MS = 5000;
+
+const RECOVERY_STATUS_VIEWS = Object.freeze({
+  auto_pending: { phase: 'pending', text: '正在自动恢复上次房间…', tone: 'info' },
+  manual_pending: { phase: 'pending', text: '正在继续上次房间…', tone: 'info' },
+  success: { phase: 'success', text: '房间已恢复，可以继续游戏。', tone: 'success' },
+  invalidated: { phase: 'invalidated', text: '上次房间已经失效，旧的恢复记录已清理。', tone: 'warning' },
+  retained: { phase: 'retained', text: '这次恢复没有成功，房间记录仍然保留，可以稍后重试。', tone: 'warning' },
+  timeout: { phase: 'timeout', text: '恢复房间暂时没有响应，记录仍然保留，请检查网络后重试。', tone: 'warning' },
+});
 
 function isRecoveryJoin(message) {
   return Boolean(
@@ -13,6 +24,20 @@ function isRecoveryJoin(message) {
     && message.playerToken
     && !String(message.playerName || '').trim()
   );
+}
+
+export function getRecoveryStatusView(status, source = 'auto') {
+  const key = status === 'pending' ? `${source === 'manual' ? 'manual' : 'auto'}_pending` : status;
+  return RECOVERY_STATUS_VIEWS[key] || RECOVERY_STATUS_VIEWS.retained;
+}
+
+export function publishRecoveryStatus({ status, source = 'auto', roomId = '', target = globalThis }) {
+  const view = getRecoveryStatusView(status, source);
+  const detail = { ...view, status, source, roomId: String(roomId || '') };
+  if (typeof target?.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+    target.dispatchEvent(new CustomEvent(RECOVERY_STATUS_EVENT, { detail }));
+  }
+  return detail;
 }
 
 export function installManualRecoverySourceMarker(target = globalThis) {
@@ -49,22 +74,51 @@ export function isMissingRoomError(message) {
   return ROOM_MISSING_MARKERS.some((marker) => text.includes(marker));
 }
 
-export function createRecoveryRequestTracker() {
+export function createRecoveryRequestTracker({ target = globalThis, timeoutMs = RECOVERY_TIMEOUT_MS } = {}) {
   const attempts = new WeakMap();
+
+  function clear(socket) {
+    const attempt = socket ? attempts.get(socket) : null;
+    if (attempt?.timer && typeof target?.clearTimeout === 'function') target.clearTimeout(attempt.timer);
+    if (socket) attempts.delete(socket);
+    return attempt;
+  }
+
   return {
     start(socket, attempt) {
-      if (socket && attempt?.roomId) attempts.set(socket, { source: attempt.source, roomId: String(attempt.roomId) });
+      if (!socket || !attempt?.roomId) return;
+      clear(socket);
+      const tracked = { source: attempt.source, roomId: String(attempt.roomId), timer: null };
+      if (typeof target?.setTimeout === 'function') {
+        tracked.timer = target.setTimeout(() => {
+          if (attempts.get(socket) !== tracked) return;
+          attempts.delete(socket);
+          publishRecoveryStatus({ status: 'timeout', source: tracked.source, roomId: tracked.roomId, target });
+        }, timeoutMs);
+      }
+      attempts.set(socket, tracked);
+      publishRecoveryStatus({ status: 'pending', source: tracked.source, roomId: tracked.roomId, target });
     },
     complete(socket) {
-      if (socket) attempts.delete(socket);
+      const attempt = clear(socket);
+      if (attempt) publishRecoveryStatus({ status: 'success', source: attempt.source, roomId: attempt.roomId, target });
+    },
+    cancel(socket) {
+      clear(socket);
     },
     reject(socket, message) {
-      const attempt = socket ? attempts.get(socket) : null;
-      if (socket) attempts.delete(socket);
+      const attempt = clear(socket);
       if (!attempt) return { matched: false, shouldClear: false };
+      const shouldClear = isMissingRoomError(message);
+      publishRecoveryStatus({
+        status: shouldClear ? 'invalidated' : 'retained',
+        source: attempt.source,
+        roomId: attempt.roomId,
+        target,
+      });
       return {
         matched: true,
-        shouldClear: isMissingRoomError(message),
+        shouldClear,
         source: attempt.source,
         roomId: attempt.roomId,
       };
