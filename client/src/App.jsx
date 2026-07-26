@@ -4,6 +4,14 @@ import { scheduleAdaptivePreload } from './adaptive-preload';
 import { scheduleSettlementPreload, isSettlementImminent } from './settlement-preload';
 import { getGameConnectionGuard, getGlobalConnectionLabel } from './game-connection-guard';
 import { getGameChromeState, getTurnAnnouncement } from './game-chrome-state';
+import {
+  createPlaybackGate,
+  getSoundButtonState,
+  getSoundToggleResult,
+  prefersReducedFeedback,
+  readSoundPreference,
+  writeSoundPreference,
+} from './sound-feedback.js';
 import Lobby from './pages/Lobby';
 
 const preloadGame = () => import('./pages/Game');
@@ -104,11 +112,14 @@ export default function App() {
   const [myInfo, setMyInfo] = useState(null);
   const [settlementData, setSettlementData] = useState(null);
   const [toasts, setToasts] = useState([]);
-  const [soundOn, setSoundOn] = useState(() => localStorage.getItem('henan50k:soundOn') === '1');
+  const [soundOn, setSoundOn] = useState(() => readSoundPreference(localStorage));
   const [reconnectEpoch, setReconnectEpoch] = useState(0);
   const tid = useRef(0);
   const autoRejoinTried = useRef(false);
   const settlementPreloadTask = useRef(null);
+  const bombPlaybackGate = useRef(null);
+  const reducedFeedback = useRef(prefersReducedFeedback(window.matchMedia?.bind(window)));
+  if (!bombPlaybackGate.current) bombPlaybackGate.current = createPlaybackGate();
 
   const toast = useCallback((text, type = 'info') => {
     const id = tid.current++;
@@ -116,12 +127,23 @@ export default function App() {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2500);
   }, []);
 
-  const enableSound = useCallback(async () => {
-    localStorage.setItem('henan50k:soundOn', '1');
-    setSoundOn(true);
+  const toggleSound = useCallback(async () => {
+    if (soundOn) {
+      const result = getSoundToggleResult({ currentlyOn: true, playbackSucceeded: true, voiceVersion: VOICE_VERSION });
+      writeSoundPreference(localStorage, result.enabled);
+      setSoundOn(result.enabled);
+      bombPlaybackGate.current?.reset();
+      toast(result.message, result.type);
+      return;
+    }
+
     const ok = await playBombLine();
-    toast(ok ? `人声${VOICE_VERSION}已开启：以后炸弹会喊“懒干受”` : `人声${VOICE_VERSION}播放被浏览器拦截，请再点一次测试人声`, ok ? 'success' : 'dim');
-  }, [toast]);
+    const result = getSoundToggleResult({ currentlyOn: false, playbackSucceeded: ok, voiceVersion: VOICE_VERSION });
+    writeSoundPreference(localStorage, result.enabled);
+    setSoundOn(result.enabled);
+    if (result.enabled) bombPlaybackGate.current?.reset();
+    toast(result.message, result.type);
+  }, [soundOn, toast]);
 
   const resetToLobby = useCallback(() => {
     setPage('lobby');
@@ -171,12 +193,14 @@ export default function App() {
         setGameState(msg.state);
         if (msg.pattern?.type === 'bomb') {
           toast('💥 ' + msg.playerName + ' 炸弹！懒干受！', 'bomb');
-          if (soundOn) {
+          if (soundOn && bombPlaybackGate.current?.tryStart()) {
             playBombLine().then(ok => {
-              if (!ok) toast(`人声${VOICE_VERSION}被浏览器拦截，可返回大厅后重新测试`, 'dim');
+              if (!ok) {
+                writeSoundPreference(localStorage, false);
+                setSoundOn(false);
+                toast(`浏览器已阻止人声播放，已自动关闭。请返回大厅后重新开启人声${VOICE_VERSION}。`, 'error');
+              }
             });
-          } else {
-            toast('可在大厅开启炸弹人声', 'dim');
           }
         }
         break;
@@ -214,6 +238,7 @@ export default function App() {
   const currentPlayer = players[gameState?.currentPlayer] || null;
   const isMyTurn = Boolean(currentPlayer && currentPlayer.id === myInfo?.playerId);
   const turnAnnouncement = getTurnAnnouncement({ page, connected, isMyTurn, currentPlayerName: currentPlayer?.name });
+  const soundButton = getSoundButtonState(soundOn, VOICE_VERSION);
 
   useEffect(() => {
     if (!connected) { autoRejoinTried.current = false; return; }
@@ -284,12 +309,12 @@ export default function App() {
   return (
     <div style={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
       {chrome.showFloatingConnection && <div role="status" aria-live="polite" aria-label={`网络状态：${connectionLabel}`} style={{ position: 'fixed', top: 8, right: 8, zIndex: 1000, fontSize: 11, padding: '3px 8px', borderRadius: 12, background: '#00000088', backdropFilter: 'blur(8px)', color: connected ? '#4ade80' : '#f87171', border: `1px solid ${connected ? '#4ade8033' : '#f8717133'}`, display: 'flex', alignItems: 'center', gap: 4 }}>
-        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block', animation: connected ? 'none' : 'pulse 1s infinite' }} />
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block', animation: connected || reducedFeedback.current ? 'none' : 'pulse 1s infinite' }} />
         {connectionLabel}
       </div>}
 
-      {chrome.showFloatingSound && <button aria-label={soundOn ? `测试炸弹人声${VOICE_VERSION}` : `开启炸弹人声${VOICE_VERSION}`} onClick={enableSound} style={{ position:'fixed', top:chrome.showFloatingConnection ? 34 : 8, right:8, zIndex:1001, minHeight:30, padding:'0 10px', borderRadius:14, border:'1px solid rgba(251,191,36,.45)', background:soundOn ? 'rgba(20,83,45,.88)' : 'rgba(120,53,15,.88)', color:soundOn ? '#86efac' : '#fbbf24', fontSize:12, fontWeight:900, boxShadow:'0 4px 12px rgba(0,0,0,.25)' }}>
-        {soundOn ? `测试人声${VOICE_VERSION}` : `开启人声${VOICE_VERSION}`}
+      {chrome.showFloatingSound && <button aria-label={soundButton.label} aria-pressed={soundButton.pressed} title={soundButton.title} onClick={toggleSound} style={{ position:'fixed', top:chrome.showFloatingConnection ? 34 : 8, right:8, zIndex:1001, minHeight:44, padding:'0 12px', borderRadius:16, border:'1px solid rgba(251,191,36,.45)', background:soundOn ? 'rgba(20,83,45,.92)' : 'rgba(120,53,15,.92)', color:soundOn ? '#86efac' : '#fbbf24', fontSize:12, fontWeight:900, boxShadow:'0 4px 12px rgba(0,0,0,.25)', touchAction:'manipulation' }}>
+        {soundButton.text}
       </button>}
 
       {turnAnnouncement && <div role="status" aria-live="polite" aria-atomic="true" style={{ position:'absolute', width:1, height:1, padding:0, margin:-1, overflow:'hidden', clip:'rect(0,0,0,0)', whiteSpace:'nowrap', border:0 }}>{turnAnnouncement}</div>}
@@ -297,7 +322,7 @@ export default function App() {
       <div style={{ position: 'fixed', top: chrome.inGame ? 50 : 70, left: '50%', transform: 'translateX(-50%)', zIndex: 999, width:'min(560px, calc(100vw - 24px))', display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', pointerEvents: 'none' }}>
         {toasts.map(t => {
           const s = TOAST_STYLE[t.type] || TOAST_STYLE.info;
-          return <div key={t.id} style={{ maxWidth:'100%', padding: '7px 18px', borderRadius: 20, fontSize: 13, lineHeight:1.45, fontWeight: 600, textAlign:'center', color: s.color, background: s.bg + 'ee', border: `1px solid ${s.color}44`, animation: 'floatUp 2.5s ease-out forwards', whiteSpace: 'normal', overflowWrap:'anywhere', backdropFilter: 'blur(6px)' }}>{t.text}</div>;
+          return <div key={t.id} style={{ maxWidth:'100%', padding: '7px 18px', borderRadius: 20, fontSize: 13, lineHeight:1.45, fontWeight: 600, textAlign:'center', color: s.color, background: s.bg + 'ee', border: `1px solid ${s.color}44`, animation: reducedFeedback.current ? 'none' : 'floatUp 2.5s ease-out forwards', whiteSpace: 'normal', overflowWrap:'anywhere', backdropFilter: 'blur(6px)' }}>{t.text}</div>;
         })}
       </div>
 
