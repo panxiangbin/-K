@@ -1,3 +1,5 @@
+import { SERVER_REJECTION_EVENT } from './server-error-feedback';
+
 const ACTION_SELECTOR = '.btn-play, .btn-pass';
 const CARD_SELECTOR = '[data-card-id]';
 const CONNECTION_EVENT = 'henan50k-connection-change';
@@ -110,6 +112,11 @@ export function installGameActionGuard(root = document) {
       announce('网络连接已中断，本次操作未确认，请等待重连后再试。', root, 4200);
     }
   };
+  const handleServerRejection = (event) => {
+    if (!event.detail?.tableAction) return;
+    clearBusy();
+    announce(event.detail.text || '这次操作没有成功，请重新选择后再试。', root, 4200);
+  };
 
   const observer = new MutationObserver(() => {
     if (!busy) return;
@@ -123,6 +130,7 @@ export function installGameActionGuard(root = document) {
   root.addEventListener('pointerup', endPointer, true);
   root.addEventListener('pointercancel', endPointer, true);
   globalThis.addEventListener?.(CONNECTION_EVENT, handleConnection);
+  globalThis.addEventListener?.(SERVER_REJECTION_EVENT, handleServerRejection);
   observer.observe(root.documentElement || root.body, { childList: true, subtree: true, characterData: true });
 
   const cleanup = () => {
@@ -134,6 +142,7 @@ export function installGameActionGuard(root = document) {
     root.removeEventListener('pointerup', endPointer, true);
     root.removeEventListener('pointercancel', endPointer, true);
     globalThis.removeEventListener?.(CONNECTION_EVENT, handleConnection);
+    globalThis.removeEventListener?.(SERVER_REJECTION_EVENT, handleServerRejection);
     delete globalThis.__henan50kGameActionGuardCleanup;
   };
   globalThis.__henan50kGameActionGuardCleanup = cleanup;
