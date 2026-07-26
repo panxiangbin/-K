@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { installGameTableHeaderEnhancer } from './game-table-header';
 import './index.css';
 import './ui-responsive.css';
 import './ui-polish.css';
@@ -8,3 +9,4 @@ import './waiting-room.css';
 import './game-table-responsive.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+installGameTableHeaderEnhancer();
