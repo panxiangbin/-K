@@ -2,6 +2,7 @@ export const SESSION_INVALIDATED_EVENT = 'henan50k-session-invalidated';
 export const MANUAL_RECOVERY_MARKER = '__henan50kManualRecoveryPending';
 
 const ROOM_MISSING_MARKERS = ['房间不存在', '房间已经关闭', '房间已关闭'];
+const CONTINUE_HIDE_GUARD_MS = 5000;
 
 function isRecoveryJoin(message) {
   return Boolean(
@@ -78,6 +79,16 @@ function hideContinueButtons(doc) {
   }
 }
 
+function keepContinueHidden(target) {
+  const doc = target?.document;
+  const Observer = target?.MutationObserver;
+  if (!doc?.body || typeof Observer !== 'function') return;
+  const observer = new Observer(() => hideContinueButtons(doc));
+  observer.observe(doc.body, { childList: true, subtree: true });
+  const stop = () => observer.disconnect();
+  if (typeof target?.setTimeout === 'function') target.setTimeout(stop, CONTINUE_HIDE_GUARD_MS);
+}
+
 export function invalidateSavedSession({ storage, roomId, target = globalThis, source = 'auto' }) {
   if (!storage || !roomId) return false;
   const targetRoomId = String(roomId);
@@ -88,6 +99,7 @@ export function invalidateSavedSession({ storage, roomId, target = globalThis, s
   storage.removeItem(`henan50k:${targetRoomId}:playerToken`);
   storage.removeItem('henan50k:lastRoomId');
   hideContinueButtons(target?.document);
+  keepContinueHidden(target);
 
   if (typeof target?.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
     target.dispatchEvent(new CustomEvent(SESSION_INVALIDATED_EVENT, {
