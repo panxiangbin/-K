@@ -8,7 +8,7 @@ import {
   GLOBAL_STATUS_PRIORITY,
   dismissGlobalStatus,
   publishGlobalStatus,
-} from '../global-status-priority';
+} from '../global-status-priority.js';
 import {
   RECOVERY_STATUS_EVENT,
   createRecoveryRequestTracker,
