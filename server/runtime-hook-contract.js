@@ -102,6 +102,100 @@ wss.on('connection', (ws) => {`,
   if (room.publicPlays.length > 12) room.publicPlays.splice(0, room.publicPlays.length - 12);
   room.lastPlay = pattern;`,
   },
+  {
+    name: '统一玩家错误文案',
+    oldCode: `function sendError(ws, msg) { send(ws, { type: 'error', msg }); }`,
+    newCode: `function sendError(ws, codeOrMessage) {
+  const { getErrorMessage, isKnownErrorCode } = require('./error-messages');
+  const msg = isKnownErrorCode(codeOrMessage) ? getErrorMessage(codeOrMessage) : codeOrMessage;
+  send(ws, { type: 'error', msg });
+}`,
+  },
+  {
+    name: '加入房间错误反馈',
+    oldCode: `      if (!room) { sendError(ws, '房间不存在'); return; }
+      const token = msg.playerToken || msg.token;`,
+    newCode: `      if (!room) { sendError(ws, 'ROOM_NOT_FOUND'); return; }
+      const token = msg.playerToken || msg.token;`,
+  },
+  {
+    name: '加入房间校验反馈',
+    oldCode: `      if (room.status !== 'waiting') { sendError(ws, '游戏已开始，无法加入；断线重连请用原设备进入'); return; }
+      if (!cleanName) { sendError(ws, '请输入昵称'); return; }
+      if (room.players.some(p => !p.left && p.name === cleanName)) { sendError(ws, '昵称已被使用，请换一个'); return; }
+      if (room.players.filter(p => !p.left).length >= room.maxPlayers) { sendError(ws, '房间已满'); return; }`,
+    newCode: `      if (room.status !== 'waiting') { sendError(ws, 'ROOM_ALREADY_STARTED'); return; }
+      if (!cleanName) { sendError(ws, 'NICKNAME_REQUIRED'); return; }
+      if (room.players.some(p => !p.left && p.name === cleanName)) { sendError(ws, 'NICKNAME_IN_USE'); return; }
+      if (room.players.filter(p => !p.left).length >= room.maxPlayers) { sendError(ws, 'ROOM_FULL'); return; }`,
+  },
+  {
+    name: '开始游戏错误反馈',
+    oldCode: `      const room = rooms.get(clientInfo.roomId);
+      if (!room) return;
+      if (room.players[0].id !== clientInfo.playerId) { sendError(ws, '只有房主可以开始'); return; }
+      if (room.status !== 'waiting') { sendError(ws, '当前状态不能开始游戏'); return; }
+      if (room.players.filter(p => !p.left).length < 3) { sendError(ws, '至少需要3名玩家'); return; }`,
+    newCode: `      const room = rooms.get(clientInfo.roomId);
+      if (!room) { sendError(ws, 'ROOM_NOT_FOUND'); return; }
+      if (room.players[0].id !== clientInfo.playerId) { sendError(ws, 'HOST_ONLY_START'); return; }
+      if (room.status !== 'waiting') { sendError(ws, 'CANNOT_START_NOW'); return; }
+      if (room.players.filter(p => !p.left).length < 3) { sendError(ws, 'NEED_MORE_PLAYERS'); return; }`,
+  },
+  {
+    name: '出牌错误反馈',
+    oldCode: `      const room = rooms.get(clientInfo.roomId);
+      if (!room || room.status !== 'playing') return;
+      const playerIdx = room.players.findIndex(p => p.id === clientInfo.playerId);
+      if (playerIdx !== room.currentPlayer) { sendError(ws, '还没轮到你'); return; }
+
+      const player = room.players[playerIdx];
+      const cardIds = Array.isArray(msg.cardIds) ? msg.cardIds : [];
+      const selectedCards = cardIds.map(id => player.hand.find(c => c.id === id)).filter(Boolean);
+      if (selectedCards.length !== cardIds.length) { sendError(ws, '牌不在手中'); sendHand(room, player.id); return; }
+      const pattern = detectPattern(selectedCards);
+      if (!pattern) { sendError(ws, '非法牌型'); sendHand(room, player.id); return; }
+      if (!comparePatterns(pattern, room.lastPlay)) { sendError(ws, '不够大'); sendHand(room, player.id); return; }`,
+    newCode: `      const room = rooms.get(clientInfo.roomId);
+      if (!room || room.status !== 'playing') { sendError(ws, 'GAME_NOT_ACTIVE'); return; }
+      const playerIdx = room.players.findIndex(p => p.id === clientInfo.playerId);
+      if (playerIdx !== room.currentPlayer) { sendError(ws, 'NOT_YOUR_TURN'); return; }
+
+      const player = room.players[playerIdx];
+      const cardIds = Array.isArray(msg.cardIds) ? msg.cardIds : [];
+      const selectedCards = cardIds.map(id => player.hand.find(c => c.id === id)).filter(Boolean);
+      if (selectedCards.length !== cardIds.length) { sendError(ws, 'CARD_STATE_CHANGED'); sendHand(room, player.id); return; }
+      const pattern = detectPattern(selectedCards);
+      if (!pattern) { sendError(ws, 'INVALID_PATTERN'); sendHand(room, player.id); return; }
+      if (!comparePatterns(pattern, room.lastPlay)) { sendError(ws, 'CANNOT_BEAT'); sendHand(room, player.id); return; }`,
+  },
+  {
+    name: '过牌错误反馈',
+    oldCode: `      const room = rooms.get(clientInfo.roomId);
+      if (!room || room.status !== 'playing') return;
+      const playerIdx = room.players.findIndex(p => p.id === clientInfo.playerId);
+      if (playerIdx !== room.currentPlayer) return;
+      if (!room.lastPlay) { sendError(ws, '先手不能过牌'); return; }
+      const player = room.players[playerIdx];
+      if (canBeat(player.hand, room.lastPlay)) { sendError(ws, '你有能压的牌，必须出！'); return; }`,
+    newCode: `      const room = rooms.get(clientInfo.roomId);
+      if (!room || room.status !== 'playing') { sendError(ws, 'GAME_NOT_ACTIVE'); return; }
+      const playerIdx = room.players.findIndex(p => p.id === clientInfo.playerId);
+      if (playerIdx !== room.currentPlayer) { sendError(ws, 'NOT_YOUR_TURN'); return; }
+      if (!room.lastPlay) { sendError(ws, 'LEAD_CANNOT_PASS'); return; }
+      const player = room.players[playerIdx];
+      if (canBeat(player.hand, room.lastPlay)) { sendError(ws, 'MUST_BEAT'); return; }`,
+  },
+  {
+    name: '下一局错误反馈',
+    oldCode: `      const room = rooms.get(clientInfo.roomId);
+      if (!room || room.status !== 'settlement') return;
+      if (room.players[0].id !== clientInfo.playerId) return;`,
+    newCode: `      const room = rooms.get(clientInfo.roomId);
+      if (!room) { sendError(ws, 'ROOM_NOT_FOUND'); return; }
+      if (room.status !== 'settlement') { sendError(ws, 'SETTLEMENT_NOT_READY'); return; }
+      if (room.players[0].id !== clientInfo.playerId) { sendError(ws, 'HOST_ONLY_NEXT_ROUND'); return; }`,
+  },
 ];
 
 function transformServerSource(source) {
