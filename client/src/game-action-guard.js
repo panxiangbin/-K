@@ -53,7 +53,7 @@ export function installGameActionGuard(root = document) {
   let startSnapshot = '';
   let pointer = null;
 
-  const connected = () => globalThis.__henan50kConnected !== false;
+  const connected = () => globalThis.__henan50kConnected === true;
   const clearBusy = () => {
     busy = false;
     startSnapshot = '';
