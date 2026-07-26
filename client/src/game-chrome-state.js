@@ -16,7 +16,7 @@ export function getGameChromeState({ page = 'lobby', connected = false } = {}) {
     inGame,
     inProtectedPage,
     showFloatingConnection: !inProtectedPage,
-    showFloatingSound: !inGame,
+    showFloatingSound: true,
     connectionTone: connected ? 'online' : inProtectedPage ? 'reconnecting' : 'connecting',
   };
 }
