@@ -20,8 +20,12 @@ const ERROR_MESSAGES = Object.freeze({
   HOST_ONLY_NEXT_ROUND: '只有房主可以开始下一局。',
 });
 
+function isKnownErrorCode(code) {
+  return typeof code === 'string' && Object.prototype.hasOwnProperty.call(ERROR_MESSAGES, code);
+}
+
 function getErrorMessage(code) {
   return ERROR_MESSAGES[code] || '操作没有成功，请等待状态更新后重试。';
 }
 
-module.exports = { ERROR_MESSAGES, getErrorMessage };
+module.exports = { ERROR_MESSAGES, isKnownErrorCode, getErrorMessage };
