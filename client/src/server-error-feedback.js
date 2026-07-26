@@ -1,3 +1,9 @@
+import {
+  GLOBAL_STATUS_CHANNELS,
+  GLOBAL_STATUS_PRIORITY,
+  publishGlobalStatus,
+} from './global-status-priority';
+
 export const SERVER_REJECTION_EVENT = 'henan50k-server-rejection';
 export const SERVER_ERROR_BANNER_ID = 'henan50k-server-error-feedback';
 export const SERVER_ERROR_DEDUPE_MS = 1800;
@@ -119,6 +125,12 @@ export function publishServerRejection(message, target = globalThis, now = Date.
   const publish = shouldPublishServerError(text, now);
 
   if (publish) {
+    publishGlobalStatus(
+      GLOBAL_STATUS_CHANNELS.SERVER_ERROR,
+      null,
+      { priority: GLOBAL_STATUS_PRIORITY.SERVER_ERROR, duration, visible: false },
+      target,
+    );
     showPersistentServerError(text, duration, target);
     if (typeof target?.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
       target.dispatchEvent(new CustomEvent(SERVER_REJECTION_EVENT, {
