@@ -2,7 +2,7 @@ import {
   GLOBAL_STATUS_CHANNELS,
   GLOBAL_STATUS_PRIORITY,
   publishGlobalStatus,
-} from './global-status-priority';
+} from './global-status-priority.js';
 
 export const SERVER_REJECTION_EVENT = 'henan50k-server-rejection';
 export const SERVER_ERROR_BANNER_ID = 'henan50k-server-error-feedback';
