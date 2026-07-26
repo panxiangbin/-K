@@ -7,6 +7,7 @@ import './ui-responsive.css';
 import './ui-polish.css';
 import './waiting-room.css';
 import './game-table-responsive.css';
+import './game-table-header.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 installGameTableHeaderEnhancer();
