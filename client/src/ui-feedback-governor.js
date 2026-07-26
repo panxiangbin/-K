@@ -6,7 +6,7 @@ export function normalizeToastText(text) {
 }
 
 export function isPassToast(text) {
-  return /过牌$/.test(normalizeToastText(text));
+  return /\s过牌$/.test(normalizeToastText(text));
 }
 
 export function getToastPriority(text, type = '') {
@@ -40,12 +40,13 @@ function applyToastPolicy(container) {
   const nodes = [...container.children];
   if (!nodes.length) return;
 
-  const passNodes = nodes.filter(node => isPassToast(node.textContent));
-  passNodes.forEach(node => {
-    node.hidden = false;
+  nodes.forEach(node => {
     const original = node.dataset.originalToastText;
     if (original) node.textContent = original;
+    node.hidden = false;
   });
+
+  const passNodes = nodes.filter(node => isPassToast(node.dataset.originalToastText || node.textContent));
   if (passNodes.length > 1) {
     passNodes.slice(0, -1).forEach(node => { node.hidden = true; });
     const latest = passNodes.at(-1);
@@ -74,7 +75,7 @@ export function installUiFeedbackGovernor({ documentObject = globalThis.document
     currentContainer = container;
     applyToastPolicy(container);
     toastObserver = new MutationObserverClass(() => applyToastPolicy(container));
-    toastObserver.observe(container, { childList: true, subtree: true, characterData: true });
+    toastObserver.observe(container, { childList: true });
   };
 
   const rootObserver = new MutationObserverClass(attach);
