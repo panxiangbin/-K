@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { createJoinRequestGuard } from '../join-request-guard';
 import { createWebSocketCoordinator } from '../websocket-coordinator';
+import { CONNECTION_PHASES, getConnectionStatusView } from '../connection-status';
 
 const RENDER_URL = 'wss://henan-50k.onrender.com';
 const INITIAL_RECONNECT_DELAY = 1000;
@@ -25,23 +26,41 @@ function getStatusBanner() {
   banner.id = STATUS_BANNER_ID;
   banner.setAttribute('role', 'status');
   banner.setAttribute('aria-live', 'polite');
+  banner.setAttribute('aria-atomic', 'true');
   Object.assign(banner.style, {
     position: 'fixed', left: '50%', bottom: 'max(18px, env(safe-area-inset-bottom))',
     transform: 'translateX(-50%)', zIndex: '1200', width: 'min(calc(100% - 32px), 440px)',
-    boxSizing: 'border-box', padding: '10px 14px', borderRadius: '14px',
-    border: '1px solid rgba(251, 191, 36, 0.38)', background: 'rgba(30, 41, 59, 0.94)',
+    boxSizing: 'border-box', padding: '10px 12px', borderRadius: '14px',
+    border: '1px solid rgba(251, 191, 36, 0.38)', background: 'rgba(30, 41, 59, 0.96)',
     color: '#f8fafc', boxShadow: '0 10px 28px rgba(0, 0, 0, 0.32)', backdropFilter: 'blur(10px)',
-    fontSize: '13px', lineHeight: '1.45', textAlign: 'center', pointerEvents: 'none',
+    fontSize: '13px', lineHeight: '1.45', textAlign: 'center', pointerEvents: 'auto',
   });
   document.body.appendChild(banner);
   return banner;
 }
 
-function showConnectionStatus(text, tone = 'waking') {
+function showConnectionPhase(phase, onRetry) {
+  const view = getConnectionStatusView(phase);
   const banner = getStatusBanner();
-  banner.textContent = text;
-  banner.style.borderColor = tone === 'offline' ? 'rgba(248, 113, 113, 0.48)' : 'rgba(251, 191, 36, 0.38)';
-  banner.style.color = tone === 'offline' ? '#fecaca' : '#fef3c7';
+  banner.replaceChildren();
+  const text = document.createElement('span');
+  text.textContent = view.text;
+  banner.appendChild(text);
+  if (view.retryable && typeof onRetry === 'function') {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = '立即重试';
+    button.setAttribute('aria-label', '立即重新连接游戏服务器');
+    Object.assign(button.style, {
+      marginLeft: '10px', minHeight: '36px', padding: '0 12px', borderRadius: '999px',
+      border: '1px solid rgba(250, 204, 21, .55)', background: 'rgba(120, 53, 15, .72)',
+      color: '#fef3c7', fontWeight: '800', cursor: 'pointer',
+    });
+    button.addEventListener('click', onRetry, { once: true });
+    banner.appendChild(button);
+  }
+  banner.style.borderColor = view.tone === 'offline' ? 'rgba(248, 113, 113, 0.48)' : 'rgba(251, 191, 36, 0.38)';
+  banner.style.color = view.tone === 'offline' ? '#fecaca' : '#fef3c7';
 }
 
 function hideConnectionStatus() {
@@ -56,6 +75,16 @@ export function useWebSocket(onMessage) {
   const [connected, setConnected] = useState(false);
   const onMsg = useRef(onMessage);
   onMsg.current = onMessage;
+
+  const retryNow = useCallback(() => {
+    const coordinator = coordinatorRef.current;
+    if (!navigator.onLine) {
+      showConnectionPhase(CONNECTION_PHASES.OFFLINE);
+      return;
+    }
+    showConnectionPhase(CONNECTION_PHASES.RECONNECTING, retryNow);
+    coordinator?.ensureCurrent('manual-retry');
+  }, []);
 
   useEffect(() => {
     let stopped = false;
@@ -72,7 +101,7 @@ export function useWebSocket(onMessage) {
         wakeHintTimer.current = null;
         const socket = coordinatorRef.current?.getCurrent();
         if (stopped || socket?.readyState === WebSocket.OPEN || !navigator.onLine) return;
-        showConnectionStatus('服务器正在启动，首次打开可能需要稍等一会儿，页面会自动连接。');
+        showConnectionPhase(CONNECTION_PHASES.WAKING, retryNow);
       }, WAKE_HINT_DELAY);
     }
 
@@ -97,10 +126,8 @@ export function useWebSocket(onMessage) {
         if (!state.isCurrent) return;
         setConnected(false);
         if (!navigator.onLine) return;
-        if (state.reason === 'send-failed') {
-          showConnectionStatus('消息发送失败，正在重新连接游戏服务器…');
-        } else if (state.reason?.endsWith('-backpressure')) {
-          showConnectionStatus('连接响应过慢，正在重新建立连接…');
+        if (state.reason === 'send-failed' || state.reason?.endsWith('-backpressure')) {
+          showConnectionPhase(CONNECTION_PHASES.FAILED, retryNow);
         }
         scheduleWakeHint();
       },
@@ -120,12 +147,12 @@ export function useWebSocket(onMessage) {
     function handleOffline() {
       clearWakeHintTimer();
       setConnected(false);
-      showConnectionStatus('当前网络已断开，网络恢复后会自动重新连接。', 'offline');
+      showConnectionPhase(CONNECTION_PHASES.OFFLINE);
       coordinator.goOffline();
     }
 
     function handleOnline() {
-      showConnectionStatus('网络已恢复，正在重新连接游戏服务器…');
+      showConnectionPhase(CONNECTION_PHASES.RECONNECTING, retryNow);
       coordinator.goOnline();
     }
 
@@ -150,7 +177,7 @@ export function useWebSocket(onMessage) {
       coordinator.stop();
       coordinatorRef.current = null;
     };
-  }, []);
+  }, [retryNow]);
 
   const send = useCallback((msg) => {
     const coordinator = coordinatorRef.current;
@@ -159,8 +186,7 @@ export function useWebSocket(onMessage) {
       const now = Date.now();
       if (now - lastSendHintAt.current >= SEND_HINT_COOLDOWN) {
         lastSendHintAt.current = now;
-        if (navigator.onLine) showConnectionStatus('连接状态异常，正在重新连接游戏服务器…');
-        else showConnectionStatus('当前网络已断开，网络恢复后会自动重新连接。', 'offline');
+        showConnectionPhase(navigator.onLine ? CONNECTION_PHASES.RECONNECTING : CONNECTION_PHASES.OFFLINE, navigator.onLine ? retryNow : undefined);
       }
       return false;
     }
@@ -186,11 +212,10 @@ export function useWebSocket(onMessage) {
     const now = Date.now();
     if (now - lastSendHintAt.current >= SEND_HINT_COOLDOWN) {
       lastSendHintAt.current = now;
-      if (navigator.onLine) showConnectionStatus('游戏服务器尚未连接，请稍等，连接成功后再试一次。');
-      else showConnectionStatus('当前网络已断开，网络恢复后会自动重新连接。', 'offline');
+      showConnectionPhase(navigator.onLine ? CONNECTION_PHASES.WAKING : CONNECTION_PHASES.OFFLINE, navigator.onLine ? retryNow : undefined);
     }
     return false;
-  }, []);
+  }, [retryNow]);
 
-  return { send, connected };
+  return { send, connected, retryNow };
 }
