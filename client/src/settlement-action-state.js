@@ -8,7 +8,7 @@ export function getSettlementActionState({
   isSolo = false,
 } = {}) {
   const busy = pendingAction === 'next_round' || pendingAction === 'copy_room';
-  const canCopy = Boolean(roomId) && !isSolo && pendingAction !== 'copy_room';
+  const canCopy = Boolean(roomId) && !isSolo && !busy;
   const canStartNextRound = connected && isHost && !busy;
 
   let nextRoundLabel = '继续下一局 →';
