@@ -3,6 +3,13 @@ import { createJoinRequestGuard } from '../join-request-guard';
 import { createWebSocketCoordinator } from '../websocket-coordinator';
 import { CONNECTION_PHASES, getConnectionStatusView } from '../connection-status';
 import { publishServerRejection } from '../server-error-feedback';
+import {
+  createRecoveryRequestTracker,
+  getRecoveryAttempt,
+  installManualRecoverySourceMarker,
+  invalidateSavedSession,
+  stripRecoveryMetadata,
+} from '../session-recovery';
 
 const RENDER_URL = 'wss://henan-50k.onrender.com';
 const INITIAL_RECONNECT_DELAY = 1000;
@@ -79,6 +86,7 @@ export function useWebSocket(onMessage) {
   const wakeHintTimer = useRef(null);
   const lastSendHintAt = useRef(0);
   const joinRequestGuard = useRef(createJoinRequestGuard());
+  const recoveryTracker = useRef(createRecoveryRequestTracker());
   const [connected, setConnected] = useState(false);
   const onMsg = useRef(onMessage);
   onMsg.current = onMessage;
@@ -95,6 +103,7 @@ export function useWebSocket(onMessage) {
 
   useEffect(() => {
     let stopped = false;
+    const removeRecoveryMarker = installManualRecoverySourceMarker(window);
 
     function setConnectionState(nextConnected) {
       setConnected(nextConnected);
@@ -143,12 +152,27 @@ export function useWebSocket(onMessage) {
         }
         scheduleWakeHint();
       },
-      onDisposeSocket: (socket) => joinRequestGuard.current.clear(socket),
+      onDisposeSocket: (socket) => {
+        joinRequestGuard.current.clear(socket);
+        recoveryTracker.current.complete(socket);
+      },
       onMessage: (event, socket) => {
         try {
           let msg = JSON.parse(event.data);
           if (msg.type === 'room_joined' || msg.type === 'error') joinRequestGuard.current.clear(socket);
-          if (msg.type === 'error') msg = { ...msg, msg: publishServerRejection(msg.msg, window) };
+          if (msg.type === 'room_joined') recoveryTracker.current.complete(socket);
+          if (msg.type === 'error') {
+            msg = { ...msg, msg: publishServerRejection(msg.msg, window) };
+            const resolution = recoveryTracker.current.reject(socket, msg.msg);
+            if (resolution.shouldClear) {
+              invalidateSavedSession({
+                storage: window.localStorage,
+                roomId: resolution.roomId,
+                target: window,
+                source: resolution.source,
+              });
+            }
+          }
           onMsg.current(msg);
         } catch {
           // 忽略无法解析的非协议消息，保持连接继续工作。
@@ -185,6 +209,7 @@ export function useWebSocket(onMessage) {
       stopped = true;
       clearWakeHintTimer();
       hideConnectionStatus();
+      removeRecoveryMarker();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -209,17 +234,22 @@ export function useWebSocket(onMessage) {
 
     const socket = coordinator.getCurrent();
     if (socket?.readyState === WebSocket.OPEN) {
-      if (!joinRequestGuard.current.tryStart(socket, msg)) return true;
+      const recoveryAttempt = getRecoveryAttempt(msg, window);
+      const wireMessage = stripRecoveryMetadata(msg);
+      if (!joinRequestGuard.current.tryStart(socket, wireMessage)) return true;
       try {
-        socket.send(JSON.stringify(msg));
+        socket.send(JSON.stringify(wireMessage));
+        if (recoveryAttempt) recoveryTracker.current.start(socket, recoveryAttempt);
         if (socket.bufferedAmount > MAX_BUFFERED_AMOUNT) {
           joinRequestGuard.current.clear(socket);
+          recoveryTracker.current.complete(socket);
           coordinator.failCurrent('send-backpressure');
           return false;
         }
         return true;
       } catch {
         joinRequestGuard.current.clear(socket);
+        recoveryTracker.current.complete(socket);
         coordinator.failCurrent('send-failed');
         return false;
       }
