@@ -73,6 +73,14 @@ assert.equal(isMissingRoomError('房间人数已满，请加入其他房间。')
 
 {
   const removedButtons = [];
+  let observerCallback;
+  let observed = false;
+  let disconnected = false;
+  let stopDelay = 0;
+  const buttons = [
+    { textContent:'继续上次房间', remove:() => removedButtons.push('continue') },
+    { textContent:'创建房间', remove:() => removedButtons.push('create') },
+  ];
   const storage = createStorage({
     'henan50k:lastRoomId':'333333',
     'henan50k:333333:playerId':'p3',
@@ -81,16 +89,25 @@ assert.equal(isMissingRoomError('房间人数已满，请加入其他房间。')
   });
   const target = {
     document: {
-      querySelectorAll: () => [
-        { textContent:'继续上次房间', remove:() => removedButtons.push('continue') },
-        { textContent:'创建房间', remove:() => removedButtons.push('create') },
-      ],
+      body:{},
+      querySelectorAll: () => buttons,
     },
+    MutationObserver: class {
+      constructor(callback) { observerCallback = callback; }
+      observe() { observed = true; }
+      disconnect() { disconnected = true; }
+    },
+    setTimeout: (callback, delay) => { stopDelay = delay; callback(); },
     dispatchEvent: () => {},
   };
   assert.equal(invalidateSavedSession({ storage, roomId:'333333', target, source:'auto' }), true);
   assert.deepEqual(storage.snapshot(), { 'henan50k:444444:playerId':'keep' });
   assert.deepEqual(removedButtons, ['continue']);
+  assert.equal(observed, true);
+  observerCallback();
+  assert.deepEqual(removedButtons, ['continue', 'continue']);
+  assert.equal(stopDelay, 5000);
+  assert.equal(disconnected, true);
 }
 
 {
