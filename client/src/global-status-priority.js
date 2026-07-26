@@ -161,11 +161,13 @@ function renderBanner(view, entry, target) {
 function getSingleton(target = globalThis) {
   if (singleton && singletonTarget === target) return singleton;
   singletonTarget = target;
+  const targetSetTimeout = typeof target?.setTimeout === 'function' ? target.setTimeout.bind(target) : globalThis.setTimeout.bind(globalThis);
+  const targetClearTimeout = typeof target?.clearTimeout === 'function' ? target.clearTimeout.bind(target) : globalThis.clearTimeout.bind(globalThis);
   singleton = createGlobalStatusArbiter({
     render: (view, entry) => renderBanner(view, entry, target),
     clear: () => target?.document?.getElementById?.('henan50k-connection-status')?.remove(),
-    setTimer: (...args) => target.setTimeout(...args),
-    clearTimer: (...args) => target.clearTimeout(...args),
+    setTimer: targetSetTimeout,
+    clearTimer: targetClearTimeout,
     now: () => Date.now(),
   });
   return singleton;
