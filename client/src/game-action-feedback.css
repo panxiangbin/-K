@@ -1,0 +1,48 @@
+.game-action-feedback {
+  margin: 0 10px 5px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 12px;
+  background: rgba(2, 18, 11, 0.78);
+  color: #fef3c7;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.btn-play[data-disabled-reason]:disabled,
+.btn-pass[data-disabled-reason]:disabled,
+.btn-lite.hint[data-disabled-reason]:disabled {
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+  .game-action-feedback {
+    margin-inline: max(7px, env(safe-area-inset-left));
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  .game-action-feedback {
+    min-height: 25px;
+    margin-bottom: 3px;
+    padding-block: 3px;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-action-feedback {
+    transition: none !important;
+    animation: none !important;
+  }
+}
