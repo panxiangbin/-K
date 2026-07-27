@@ -57,16 +57,26 @@ export default function RulesHelp({ open, onClose }) {
       >
         <header className="rules-help-header">
           <div>
+            <p className="rules-help-eyebrow">对局帮助</p>
             <h1 id="rules-help-title">{RULES_HELP_TITLE}</h1>
-            <p id="rules-help-intro">这里只展示当前游戏已经确认的牌型、大小和压牌规则。</p>
+            <p id="rules-help-intro">只展示当前游戏已经确认的牌型、大小、计分和强制压牌规则。</p>
           </div>
           <button ref={closeRef} type="button" className="rules-help-close" onClick={onClose} aria-label="关闭游戏规则">关闭</button>
         </header>
 
-        <div className="rules-help-scroll" tabIndex="0" aria-label="游戏规则正文，可上下滚动">
+        <nav className="rules-help-nav" aria-label="规则章节快捷导航">
           {RULES_HELP_SECTIONS.map(section => (
+            <a key={section.id} href={`#rules-${section.id}`}>{section.title}</a>
+          ))}
+        </nav>
+
+        <div className="rules-help-scroll" tabIndex="0" aria-label="游戏规则正文，可上下滚动">
+          {RULES_HELP_SECTIONS.map((section, index) => (
             <section key={section.id} className="rules-help-section" aria-labelledby={`rules-${section.id}`}>
-              <h2 id={`rules-${section.id}`}>{section.title}</h2>
+              <div className="rules-help-section-heading">
+                <span aria-hidden="true">{index + 1}</span>
+                <h2 id={`rules-${section.id}`}>{section.title}</h2>
+              </div>
               <ul>
                 {section.items.map(item => <li key={item}>{item}</li>)}
               </ul>
@@ -75,7 +85,8 @@ export default function RulesHelp({ open, onClose }) {
         </div>
 
         <footer className="rules-help-footer">
-          <button type="button" className="rules-help-done" onClick={onClose}>我知道了</button>
+          <p>按 Esc 也可以关闭规则。</p>
+          <button type="button" className="rules-help-done" onClick={onClose}>返回游戏</button>
         </footer>
       </section>
     </div>
