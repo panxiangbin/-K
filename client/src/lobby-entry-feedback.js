@@ -1,5 +1,9 @@
 const CONNECTION_EVENT = 'henan50k-connection-change';
 const ENHANCED_ATTR = 'data-lobby-feedback-ready';
+const STALLED_CONNECTION_DELAY = 18000;
+
+let stalledTimer = null;
+let lastConnected = false;
 
 function setText(node, text) {
   if (node && node.textContent !== text) node.textContent = text;
@@ -57,20 +61,62 @@ function ensureConnectionSummary(panel) {
     dot.setAttribute('aria-hidden', 'true');
     const label = document.createElement('span');
     label.className = 'lobby-connection-label';
-    summary.append(dot, label);
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'lobby-connection-retry';
+    retry.textContent = '重新尝试';
+    retry.hidden = true;
+    retry.addEventListener('click', () => {
+      if (!navigator.onLine) {
+        updateConnectionSummary(summary, false, 'offline');
+        return;
+      }
+      updateConnectionSummary(summary, false, 'retrying');
+      window.dispatchEvent(new Event('online'));
+      scheduleStalledState(summary);
+    });
+    summary.append(dot, label, retry);
     panel.prepend(summary);
   }
   return summary;
 }
 
-function updateConnectionSummary(summary, connected) {
+function clearStalledTimer() {
+  if (!stalledTimer) return;
+  clearTimeout(stalledTimer);
+  stalledTimer = null;
+}
+
+function scheduleStalledState(summary) {
+  clearStalledTimer();
+  if (lastConnected || !navigator.onLine) return;
+  stalledTimer = setTimeout(() => {
+    stalledTimer = null;
+    if (!lastConnected) updateConnectionSummary(summary, false, 'stalled');
+  }, STALLED_CONNECTION_DELAY);
+}
+
+function updateConnectionSummary(summary, connected, phase = connected ? 'connected' : 'waking') {
   if (!summary) return;
-  summary.classList.toggle('connected', connected);
-  summary.classList.toggle('waking', !connected);
-  setText(
-    summary.querySelector('.lobby-connection-label'),
-    connected ? '游戏服务器已连接' : '服务器正在启动，联网功能稍后可用',
-  );
+  lastConnected = Boolean(connected);
+  summary.dataset.phase = phase;
+  summary.classList.toggle('connected', phase === 'connected');
+  summary.classList.toggle('waking', phase === 'waking' || phase === 'retrying');
+  summary.classList.toggle('stalled', phase === 'stalled' || phase === 'offline');
+
+  const messages = {
+    connected: '游戏服务器已连接',
+    waking: '服务器正在启动，联网功能稍后可用',
+    retrying: '正在重新连接游戏服务器…',
+    stalled: '连接时间较长，可以继续等待或重新尝试',
+    offline: '当前网络已断开，恢复网络后再试',
+  };
+  setText(summary.querySelector('.lobby-connection-label'), messages[phase] || messages.waking);
+  const retry = summary.querySelector('.lobby-connection-retry');
+  if (retry) retry.hidden = !(phase === 'stalled' || phase === 'offline');
+
+  if (connected) clearStalledTimer();
+  else if (phase === 'waking') scheduleStalledState(summary);
 }
 
 function updateBusyButtons(root) {
@@ -88,11 +134,22 @@ function installViewportTracking(shell) {
   shell.dataset.viewportTracking = 'true';
   const viewport = window.visualViewport;
   if (!viewport) return;
+  let keyboardWasOpen = false;
 
   const update = () => {
     const keyboardHeight = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+    const keyboardOpen = keyboardHeight > 120;
     shell.style.setProperty('--lobby-viewport-height', `${Math.round(viewport.height)}px`);
-    shell.dataset.keyboardOpen = String(keyboardHeight > 120);
+    shell.dataset.keyboardOpen = String(keyboardOpen);
+
+    if (keyboardOpen && !keyboardWasOpen) {
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+        if (active?.closest?.('.lobby-panel')) active.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
+    }
+    if (!keyboardOpen && keyboardWasOpen) shell.scrollTo({ top: 0, behavior: 'auto' });
+    keyboardWasOpen = keyboardOpen;
   };
   viewport.addEventListener('resize', update);
   viewport.addEventListener('scroll', update);
@@ -146,6 +203,8 @@ export function installLobbyEntryFeedback() {
     if (!input || input.value.trim()) return;
     const message = ensureFieldMessage(input, 'player-name-message');
     setFieldError(input, message, '请先填写昵称，再使用联网功能。');
+    input.focus({ preventScroll: true });
+    input.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, true);
 
   window.addEventListener(CONNECTION_EVENT, event => {
@@ -154,8 +213,15 @@ export function installLobbyEntryFeedback() {
     updateConnectionSummary(summary, window.__henan50kConnected);
   });
 
+  window.addEventListener('offline', () => {
+    updateConnectionSummary(document.querySelector('.lobby-connection-summary'), false, 'offline');
+  });
+
   const observer = new MutationObserver(scheduleEnhance);
   observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
   scheduleEnhance();
-  return () => observer.disconnect();
+  return () => {
+    clearStalledTimer();
+    observer.disconnect();
+  };
 }
