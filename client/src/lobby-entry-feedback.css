@@ -2,15 +2,21 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  min-height: 40px;
+  min-height: 44px;
   margin-bottom: 18px;
-  padding: 9px 12px;
+  padding: 8px 10px 8px 12px;
   border: 1px solid rgba(225, 213, 178, 0.18);
   border-radius: 12px;
   color: #d9ded8;
   background: #123523;
   font-size: 13px;
   line-height: 1.45;
+}
+
+.lobby-connection-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
 }
 
 .lobby-connection-dot {
@@ -38,6 +44,47 @@
 .lobby-connection-summary.waking .lobby-connection-dot {
   border-top-color: transparent;
   animation: lobby-connection-spin 0.9s linear infinite;
+}
+
+.lobby-connection-summary.stalled {
+  color: #f0c7a1;
+  border-color: rgba(201, 109, 93, 0.35);
+  background: #3a281f;
+}
+
+.lobby-connection-summary.stalled .lobby-connection-dot {
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.lobby-connection-retry {
+  min-width: 88px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid rgba(240, 199, 161, 0.42);
+  border-radius: 10px;
+  color: #fff5e9;
+  background: #5a3828;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lobby-connection-retry:hover {
+  background: #6a4431;
+}
+
+.lobby-connection-retry:active {
+  transform: translateY(1px);
+}
+
+.lobby-connection-retry:focus-visible {
+  outline: 3px solid #f0d58d;
+  outline-offset: 2px;
+}
+
+.lobby-connection-retry[hidden] {
+  display: none;
 }
 
 .lobby-inline-message {
@@ -87,6 +134,21 @@
 }
 
 @media (max-width: 760px) {
+  .lobby-connection-summary {
+    align-items: stretch;
+    flex-wrap: wrap;
+    font-size: 14px;
+  }
+
+  .lobby-connection-label {
+    align-self: center;
+  }
+
+  .lobby-connection-retry {
+    flex: 1 0 100%;
+    width: 100%;
+  }
+
   .lobby-shell[data-keyboard-open="true"] {
     min-height: var(--lobby-viewport-height, 100dvh);
     grid-template-rows: auto 1fr;
@@ -121,5 +183,9 @@
   .lobby-button.is-busy::before,
   .lobby-choice-card.is-busy::before {
     animation: none;
+  }
+
+  .lobby-connection-retry:active {
+    transform: none;
   }
 }
