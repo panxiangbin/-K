@@ -1,0 +1,234 @@
+.game-table-shell {
+  --table-header-h: 52px;
+  --table-side-w: clamp(78px, 10vw, 112px);
+  --table-gap: clamp(6px, 1vw, 12px);
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255,255,255,0.055), transparent 46%),
+    linear-gradient(145deg, #123f2a 0%, #0b3020 52%, #082719 100%) !important;
+  color: var(--ui-text, #f7f2e7);
+}
+
+.game-table-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .22;
+  background-image:
+    linear-gradient(30deg, rgba(255,255,255,.018) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.018) 87.5%),
+    linear-gradient(150deg, rgba(255,255,255,.018) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.018) 87.5%);
+  background-size: 26px 46px;
+}
+
+.game-table-header {
+  min-height: var(--table-header-h) !important;
+  height: auto !important;
+  padding: max(6px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 6px max(12px, env(safe-area-inset-left)) !important;
+  background: rgba(7, 29, 19, .96) !important;
+  border-bottom: 1px solid rgba(222, 190, 118, .22) !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.22);
+}
+
+.game-table-header__actions {
+  gap: 8px !important;
+}
+
+.game-table-header .top-action,
+.game-table-room-copy {
+  min-width: 44px;
+  min-height: 44px !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(235, 221, 188, .24) !important;
+  background: rgba(255,255,255,.055) !important;
+  color: #f8f1df !important;
+  box-shadow: none !important;
+}
+
+.game-table-header .top-action:hover,
+.game-table-room-copy:hover {
+  background: rgba(255,255,255,.10) !important;
+}
+
+.game-table-header .top-action:active,
+.game-table-room-copy:active {
+  transform: translateY(1px);
+}
+
+.game-table-header .top-action:focus-visible,
+.game-table-room-copy:focus-visible {
+  outline: 3px solid #e5bd63;
+  outline-offset: 2px;
+}
+
+.game-table-header__room {
+  color: #fff8e7 !important;
+  font-size: 13px !important;
+  letter-spacing: .01em;
+}
+
+.game-table-header__turn {
+  min-width: 0 !important;
+  max-width: min(38vw, 330px);
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  color: #e7eadf !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-table-header__turn[data-turn-state='self'] {
+  border-color: rgba(229, 189, 99, .68);
+  background: rgba(229, 189, 99, .13);
+  color: #ffe7a8 !important;
+  box-shadow: inset 0 0 0 1px rgba(229,189,99,.15);
+}
+
+.game-table-stage {
+  display: grid !important;
+  grid-template-columns: var(--table-side-w) minmax(0, 1fr) var(--table-side-w);
+  gap: var(--table-gap);
+  padding: 6px max(8px, env(safe-area-inset-right)) 4px max(8px, env(safe-area-inset-left));
+  min-height: 0;
+  overflow: hidden;
+}
+
+.game-table-player-rail {
+  width: auto !important;
+  min-width: 0;
+  align-self: stretch;
+}
+
+.game-table-center-column {
+  min-width: 0;
+  min-height: 0;
+}
+
+.game-table-trick-board {
+  width: min(720px, 96%) !important;
+  border-radius: 22px !important;
+  background: rgba(6, 27, 18, .76) !important;
+  border: 1px solid rgba(225, 195, 128, .18) !important;
+  box-shadow: 0 12px 28px rgba(0,0,0,.20) !important;
+}
+
+.game-table-hand-dock {
+  position: relative;
+  padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+  background: linear-gradient(to top, rgba(3,17,11,.94), rgba(6,30,20,.76) 72%, transparent) !important;
+  border-top: 1px solid rgba(255,255,255,.055);
+}
+
+.game-table-hand-dock .btn-lite,
+.game-table-hand-dock .btn-pass {
+  min-height: 44px !important;
+  border-radius: 14px !important;
+  background: rgba(255,255,255,.065) !important;
+  border: 1px solid rgba(236,225,198,.20) !important;
+  color: #f8f1df !important;
+}
+
+.game-table-hand-dock .btn-lite.hint {
+  color: #f4d995 !important;
+  border-color: rgba(229,189,99,.35) !important;
+}
+
+.game-table-hand-dock .btn-play {
+  min-height: 50px !important;
+  background: #d9ae54 !important;
+  color: #13261a !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,.28) !important;
+}
+
+.game-table-hand-dock button:focus-visible {
+  outline: 3px solid #fff0b9;
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .game-table-shell {
+    --table-header-h: 50px;
+    --table-side-w: clamp(64px, 18vw, 82px);
+    --table-gap: 4px;
+  }
+
+  .game-table-header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px !important;
+    padding-top: max(4px, env(safe-area-inset-top)) !important;
+  }
+
+  .game-table-header__room {
+    font-size: 12px !important;
+  }
+
+  .game-table-header__turn {
+    max-width: 31vw;
+    padding-inline: 9px;
+    font-size: 12px !important;
+  }
+
+  .game-table-stage {
+    padding-inline: max(4px, env(safe-area-inset-left));
+  }
+
+  .game-table-trick-board {
+    width: 98% !important;
+    padding: 8px !important;
+    border-radius: 18px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  .game-table-shell {
+    --table-header-h: 44px;
+    --table-side-w: clamp(62px, 9vw, 78px);
+    --table-gap: 3px;
+  }
+
+  .game-table-header {
+    min-height: 44px !important;
+    padding-block: 2px !important;
+  }
+
+  .game-table-header .top-action,
+  .game-table-room-copy {
+    min-height: 40px !important;
+  }
+
+  .game-table-stage {
+    padding-block: 2px;
+  }
+
+  .game-table-trick-board {
+    padding: 6px 8px !important;
+    border-radius: 16px !important;
+  }
+
+  .game-table-hand-dock {
+    padding-bottom: max(3px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .game-table-hand-dock .btn-lite,
+  .game-table-hand-dock .btn-pass {
+    min-height: 40px !important;
+  }
+
+  .game-table-hand-dock .btn-play {
+    min-height: 44px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-table-shell *,
+  .game-table-shell *::before,
+  .game-table-shell *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
