@@ -1,0 +1,105 @@
+.governed-toast-stack[data-feedback-governed="true"] {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: min(92vw, 520px) !important;
+  max-width: calc(100vw - max(24px, env(safe-area-inset-left)) - max(24px, env(safe-area-inset-right))) !important;
+  pointer-events: none !important;
+}
+
+.governed-toast-stack[data-feedback-surface="game"] {
+  top: max(64px, calc(env(safe-area-inset-top) + 56px)) !important;
+  bottom: auto !important;
+}
+
+.governed-toast {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 40px;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 14px !important;
+  border: 1px solid rgba(220, 206, 173, .42) !important;
+  border-radius: 12px !important;
+  background: #173b2f !important;
+  color: #fff7e7 !important;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .32) !important;
+  font-size: 14px !important;
+  font-weight: 750 !important;
+  line-height: 1.45 !important;
+  text-align: center;
+  overflow-wrap: anywhere;
+  backdrop-filter: none !important;
+}
+
+.governed-toast[data-feedback-tone="error"] {
+  border-color: #b9685d !important;
+  background: #582c28 !important;
+  color: #fff1ed !important;
+}
+.governed-toast[data-feedback-tone="connection"] {
+  border-style: dashed !important;
+  border-color: #c9a65c !important;
+  background: #463d24 !important;
+  color: #fff2c9 !important;
+}
+.governed-toast[data-feedback-tone="warning"] {
+  border-color: #c39b43 !important;
+  background: #4c3d1f !important;
+  color: #fff0bc !important;
+}
+.governed-toast[data-feedback-tone="success"] {
+  border-color: #75a98a !important;
+  background: #214b37 !important;
+  color: #eafff1 !important;
+}
+.governed-toast[data-feedback-tone="special"],
+.governed-toast[data-feedback-tone="score"] {
+  border-color: #d0aa4f !important;
+  background: #4a3a1c !important;
+  color: #fff1b9 !important;
+}
+.governed-toast[data-feedback-tone="quiet"] {
+  opacity: .82;
+  border-style: dashed !important;
+  background: #243d34 !important;
+  color: #e6eee9 !important;
+}
+
+@media (max-width: 520px) {
+  .governed-toast-stack[data-feedback-governed="true"] {
+    width: calc(100vw - max(16px, env(safe-area-inset-left)) - max(16px, env(safe-area-inset-right))) !important;
+    gap: 6px !important;
+  }
+  .governed-toast-stack[data-feedback-surface="game"] {
+    top: max(104px, calc(env(safe-area-inset-top) + 96px)) !important;
+  }
+  .governed-toast {
+    min-height: 42px;
+    padding: 9px 12px !important;
+    font-size: 13px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  .governed-toast-stack[data-feedback-surface="game"] {
+    top: max(48px, calc(env(safe-area-inset-top) + 42px)) !important;
+    width: min(62vw, 460px) !important;
+  }
+  .governed-toast {
+    min-height: 36px;
+    padding: 7px 11px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .governed-toast { border-width: 2px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .governed-toast-stack,
+  .governed-toast { animation: none !important; transition: none !important; }
+}
