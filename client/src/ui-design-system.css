@@ -1,0 +1,133 @@
+:root {
+  --ui-table-900: #08291f;
+  --ui-table-800: #0d3a2b;
+  --ui-table-700: #15523c;
+  --ui-surface: #f6f0e4;
+  --ui-surface-strong: #fffaf0;
+  --ui-surface-muted: #e8dfcf;
+  --ui-text-on-table: #fffaf0;
+  --ui-text: #282722;
+  --ui-text-muted: #706b61;
+  --ui-border: rgba(70, 58, 40, 0.22);
+  --ui-accent: #b58a32;
+  --ui-accent-strong: #8b611d;
+  --ui-danger: #9f342d;
+  --ui-success: #2f7654;
+  --ui-focus: #ffd66b;
+  --ui-shadow-sm: 0 2px 8px rgba(8, 24, 18, 0.18);
+  --ui-shadow-md: 0 8px 24px rgba(5, 20, 14, 0.24);
+  --ui-radius-sm: 10px;
+  --ui-radius-md: 16px;
+  --ui-radius-lg: 22px;
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-control-min: 44px;
+  --ui-control-primary: 50px;
+  --ui-font-body: 16px;
+  --ui-font-small: 13px;
+  --ui-font-title: clamp(28px, 6vw, 44px);
+}
+
+html,
+body,
+#root {
+  color: var(--ui-text-on-table);
+  background-color: var(--ui-table-900);
+}
+
+body {
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255, 250, 240, 0.05), transparent 34%),
+    linear-gradient(145deg, var(--ui-table-700), var(--ui-table-800) 52%, var(--ui-table-900));
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  min-width: var(--ui-control-min);
+  min-height: var(--ui-control-min);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--ui-focus);
+  outline-offset: 3px;
+}
+
+button:not(:disabled):active {
+  transform: translateY(1px) scale(0.98);
+}
+
+button:disabled,
+[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.56;
+  filter: saturate(0.55);
+}
+
+.top-action,
+.btn-lite,
+.btn-pass,
+.btn-play {
+  min-height: var(--ui-control-min) !important;
+  border-radius: var(--ui-radius-md) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.top-action,
+.btn-lite,
+.btn-pass {
+  border: 1px solid rgba(255, 250, 240, 0.24) !important;
+  box-shadow: var(--ui-shadow-sm) !important;
+}
+
+.btn-play {
+  min-height: var(--ui-control-primary) !important;
+  color: #30230c !important;
+  background: linear-gradient(180deg, #f5d77a, var(--ui-accent)) !important;
+  border: 1px solid rgba(255, 250, 240, 0.42) !important;
+  box-shadow: 0 5px 14px rgba(78, 52, 13, 0.28) !important;
+  text-shadow: none !important;
+}
+
+.btn-play:not(:disabled) {
+  animation: none !important;
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  :root {
+    --ui-control-min: 40px;
+    --ui-control-primary: 44px;
+  }
+
+  button {
+    min-width: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  button:not(:disabled):active {
+    transform: none;
+  }
+}
