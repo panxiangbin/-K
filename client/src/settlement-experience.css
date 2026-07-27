@@ -1,0 +1,335 @@
+.settlement-experience {
+  min-height: 100%;
+  display: grid !important;
+  grid-template-columns: minmax(260px, 34%) minmax(0, 1fr);
+  background:
+    radial-gradient(circle at 18% 22%, rgba(180, 145, 72, .08), transparent 30%),
+    linear-gradient(145deg, #071b15, #0b2a20 52%, #061711) !important;
+  color: #f4efe4;
+  overflow: auto !important;
+}
+
+.settlement-experience::before {
+  background:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.014) 1px, transparent 1px) !important;
+  background-size: 20px 20px !important;
+}
+
+.settlement-experience-actions {
+  position: fixed !important;
+  inset: max(10px, env(safe-area-inset-top)) auto auto max(10px, env(safe-area-inset-left));
+  display: flex;
+  gap: 10px;
+  z-index: 90 !important;
+}
+
+.settlement-experience-action {
+  position: static !important;
+  min-width: 96px;
+  min-height: 44px !important;
+  padding: 0 14px !important;
+  border: 1px solid rgba(207, 178, 112, .38) !important;
+  border-radius: 12px !important;
+  background: rgba(9, 43, 32, .94) !important;
+  color: #f4efe4 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  box-shadow: 0 5px 16px rgba(0,0,0,.22) !important;
+  backdrop-filter: none !important;
+}
+
+.settlement-experience-action:last-child {
+  border-color: rgba(161, 76, 65, .5) !important;
+  background: rgba(84, 34, 29, .9) !important;
+  color: #ffe2dc !important;
+}
+
+.settlement-experience-hero {
+  width: auto !important;
+  min-height: 100%;
+  padding: 78px 28px 28px !important;
+  border-right: 1px solid rgba(207, 178, 112, .18) !important;
+  background: rgba(5, 28, 21, .48) !important;
+}
+
+.settlement-experience .settlement-hero-icon {
+  filter: none !important;
+}
+
+.settlement-experience .settlement-leader-name {
+  color: #ead6a1 !important;
+  text-shadow: none !important;
+  font-size: clamp(24px, 3vw, 34px) !important;
+}
+
+.settlement-experience .settlement-leader-meta,
+.settlement-experience .settlement-room-id,
+.settlement-experience .settlement-target-summary {
+  color: #c9c1b0 !important;
+  font-size: 13px !important;
+}
+
+.settlement-experience-score {
+  color: #f0d493 !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: none !important;
+}
+
+.settlement-experience[data-result="loss"] .settlement-experience-score,
+.settlement-experience[data-result="loss"] .settlement-leader-name {
+  color: #e3a69c !important;
+}
+
+.settlement-experience-room {
+  padding: 12px;
+  border: 1px solid rgba(207, 178, 112, .22);
+  border-radius: 14px;
+  background: rgba(255,255,255,.025);
+}
+
+.settlement-experience .settlement-room-copy-button {
+  min-height: 44px;
+  border-color: rgba(207, 178, 112, .42);
+  background: #173c2f;
+  color: #f0d493;
+}
+
+.settlement-experience .settlement-content {
+  padding: 72px clamp(18px, 3vw, 42px) 28px !important;
+  gap: 12px !important;
+  justify-content: center !important;
+}
+
+.settlement-experience .settlement-section-heading {
+  align-items: flex-end !important;
+}
+
+.settlement-experience .settlement-heading-text,
+.settlement-experience .settlement-history-heading h2 {
+  color: #f4efe4;
+  font-size: 16px;
+}
+
+.settlement-experience .settlement-score-list {
+  display: grid !important;
+  gap: 9px;
+}
+
+.settlement-experience-card {
+  display: grid !important;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px !important;
+  min-height: 64px;
+  padding: 11px 14px !important;
+  border: 1px solid rgba(207, 178, 112, .22) !important;
+  border-radius: 14px !important;
+  background: rgba(12, 50, 38, .78) !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.16) !important;
+  animation: none !important;
+}
+
+.settlement-experience-card[data-rank="1"] {
+  border-color: rgba(222, 190, 113, .58) !important;
+  background: rgba(52, 61, 33, .58) !important;
+}
+
+.settlement-experience-card[data-self="true"] {
+  box-shadow: inset 4px 0 0 #d7b568, 0 6px 18px rgba(0,0,0,.16) !important;
+}
+
+.settlement-experience-card[data-outcome="unqualified"] {
+  border-style: dashed !important;
+  border-color: rgba(170, 91, 80, .48) !important;
+}
+
+.settlement-experience-detail {
+  color: #c9c1b0 !important;
+  font-size: 12px !important;
+}
+
+.settlement-experience-history {
+  padding: 10px 12px !important;
+  border: 1px solid rgba(207, 178, 112, .18) !important;
+  border-radius: 14px !important;
+  background: rgba(3, 22, 16, .42) !important;
+  box-shadow: none !important;
+}
+
+.settlement-experience .settlement-history-heading > div,
+.settlement-experience .settlement-history-empty,
+.settlement-experience .settlement-history-row {
+  font-size: 12px;
+}
+
+.settlement-experience .settlement-history-row {
+  min-height: 30px;
+}
+
+.settlement-experience-next {
+  margin-top: 2px;
+}
+
+.settlement-experience-primary {
+  min-height: 50px !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  border-radius: 14px !important;
+  background: #c9a85f !important;
+  color: #10251d !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18) !important;
+  animation: none !important;
+}
+
+.settlement-experience-primary:active,
+.settlement-experience-action:active,
+.settlement-experience .settlement-room-copy-button:active {
+  transform: translateY(1px) !important;
+}
+
+.settlement-experience-status {
+  min-height: 22px !important;
+  margin-top: 7px !important;
+  color: #d4c8ae !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  text-align: center !important;
+  overflow-wrap: anywhere;
+}
+
+.settlement-experience button:focus-visible {
+  outline: 3px solid #f3d98f !important;
+  outline-offset: 3px !important;
+}
+
+@media (max-width: 760px), (orientation: portrait) {
+  .settlement-experience {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: max(62px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
+  }
+
+  .settlement-experience-actions {
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    justify-content: space-between;
+  }
+
+  .settlement-experience-action {
+    min-width: 0;
+    width: calc(50% - 5px);
+  }
+
+  .settlement-experience-hero {
+    min-height: auto;
+    padding: 14px !important;
+    border: 1px solid rgba(207, 178, 112, .18) !important;
+    border-radius: 16px;
+  }
+
+  .settlement-experience .settlement-content {
+    padding: 14px 0 0 !important;
+  }
+
+  .settlement-experience-card {
+    min-height: 60px;
+    padding: 10px 11px !important;
+  }
+
+  .settlement-experience-primary {
+    position: static !important;
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .settlement-experience-card {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .settlement-experience-card > :nth-child(2) {
+    display: none !important;
+  }
+
+  .settlement-experience .settlement-section-heading {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 3px !important;
+  }
+
+  .settlement-experience .settlement-target-summary,
+  .settlement-experience-detail {
+    max-width: none !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  .settlement-experience {
+    grid-template-columns: minmax(190px, 29%) minmax(0, 1fr);
+    padding: max(48px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)) !important;
+  }
+
+  .settlement-experience-actions {
+    top: max(5px, env(safe-area-inset-top));
+  }
+
+  .settlement-experience-action {
+    min-height: 40px !important;
+  }
+
+  .settlement-experience-hero {
+    min-height: auto;
+    padding: 8px 12px !important;
+  }
+
+  .settlement-experience .settlement-content {
+    padding: 6px 12px !important;
+    gap: 5px !important;
+  }
+
+  .settlement-experience-card {
+    min-height: 48px;
+    padding: 6px 10px !important;
+  }
+
+  .settlement-experience-history {
+    max-height: 64px;
+    overflow-y: auto;
+  }
+
+  .settlement-experience-primary {
+    min-height: 44px !important;
+  }
+}
+
+@media (min-width: 1366px) {
+  .settlement-experience .settlement-content {
+    max-width: 980px;
+    width: 100%;
+    justify-self: center;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .settlement-experience-card,
+  .settlement-experience-hero,
+  .settlement-experience-history,
+  .settlement-experience-action,
+  .settlement-experience-primary {
+    border-width: 2px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settlement-experience *,
+  .settlement-experience *::before,
+  .settlement-experience *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
