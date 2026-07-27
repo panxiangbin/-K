@@ -34,9 +34,12 @@ export function getWaitingRoomProgress({ current = 0, max = 0, isHost = false, c
 
 function readPlayerCount(card) {
   const text = card.querySelector('.waiting-room-count')?.textContent || '';
-  const match = text.match(/(\d+)\s*\/\s*(\d+)/);
+  const match = text.match(/(?:玩家\s*)?(\d+)\s*\/\s*(\d+)|已到\s*(\d+)\s*人\s*·\s*共\s*(\d+)/);
   if (!match) return { current: 0, max: 0 };
-  return { current: Number(match[1]), max: Number(match[2]) };
+  return {
+    current: Number(match[1] || match[3]),
+    max: Number(match[2] || match[4]),
+  };
 }
 
 function isHostView(card) {
@@ -44,8 +47,16 @@ function isHostView(card) {
   return [...(panel?.querySelectorAll('button') || [])].some(button => /开始游戏|开始中/.test(button.textContent || ''));
 }
 
+function buildSignature(card, current, max, connected, isHost) {
+  const players = [...card.querySelectorAll('.waiting-player:not(.waiting-player--empty)')]
+    .map(player => `${player.querySelector('.waiting-player-name')?.textContent || ''}:${player.querySelector('.waiting-player-status')?.textContent || ''}`)
+    .join('|');
+  return `${current}:${max}:${connected ? 1 : 0}:${isHost ? 1 : 0}:${players}`;
+}
+
 function buildSeatGrid(card, current, max) {
   let grid = card.querySelector('.waiting-seat-grid');
+  const players = [...card.querySelectorAll('.waiting-player:not(.waiting-player--empty)')];
   if (!grid) {
     grid = document.createElement('div');
     grid.className = 'waiting-seat-grid';
@@ -55,8 +66,8 @@ function buildSeatGrid(card, current, max) {
   }
 
   grid.replaceChildren();
-  const players = [...card.querySelectorAll('.waiting-player')];
   players.forEach((player, index) => {
+    player.querySelectorAll(':scope > .waiting-seat-number').forEach(node => node.remove());
     player.dataset.seat = String(index + 1);
     const seat = document.createElement('span');
     seat.className = 'waiting-seat-number';
@@ -66,7 +77,7 @@ function buildSeatGrid(card, current, max) {
     grid.appendChild(player);
   });
 
-  for (let index = current; index < max; index++) {
+  for (let index = players.length; index < max; index++) {
     const empty = document.createElement('div');
     empty.className = 'waiting-player waiting-player--empty';
     empty.setAttribute('aria-label', `${index + 1}号位，等待玩家加入`);
@@ -75,15 +86,10 @@ function buildSeatGrid(card, current, max) {
   }
 }
 
-function updateGuidance(card, current, max) {
+function updateGuidance(card, current, max, connected, isHost) {
   const panel = card.closest('.lobby-panel');
   if (!panel) return;
-  const guidance = getWaitingRoomProgress({
-    current,
-    max,
-    isHost: isHostView(card),
-    connected: Boolean(window.__henan50kConnected),
-  });
+  const guidance = getWaitingRoomProgress({ current, max, isHost, connected });
 
   let status = panel.querySelector('.waiting-room-guidance');
   if (!status) {
@@ -95,7 +101,12 @@ function updateGuidance(card, current, max) {
     card.insertAdjacentElement('afterend', status);
   }
   status.dataset.tone = guidance.tone;
-  status.innerHTML = `<strong>${guidance.title}</strong><span>${guidance.detail}</span>`;
+  status.replaceChildren();
+  const title = document.createElement('strong');
+  title.textContent = guidance.title;
+  const detail = document.createElement('span');
+  detail.textContent = guidance.detail;
+  status.append(title, detail);
 
   const count = card.querySelector('.waiting-room-count');
   if (count) {
@@ -107,9 +118,15 @@ function updateGuidance(card, current, max) {
 function enhanceWaitingRoom(card) {
   const { current, max } = readPlayerCount(card);
   if (!max) return;
+  const connected = Boolean(window.__henan50kConnected);
+  const isHost = isHostView(card);
+  const signature = buildSignature(card, current, max, connected, isHost);
+  if (card.dataset.waitingRoomSignature === signature) return;
+
+  card.dataset.waitingRoomSignature = signature;
   card.classList.add(ENHANCED_CLASS);
   buildSeatGrid(card, current, max);
-  updateGuidance(card, current, max);
+  updateGuidance(card, current, max, connected, isHost);
 
   const copy = card.querySelector('.waiting-room-copy');
   if (copy) {
@@ -123,26 +140,25 @@ function enhanceWaitingRoom(card) {
 }
 
 function scan() {
-  document.querySelectorAll(ROOM_SELECTOR).forEach(card => {
-    const players = card.querySelectorAll('.waiting-player:not(.waiting-player--empty)').length;
-    const countText = card.querySelector('.waiting-room-count')?.textContent || '';
-    const match = countText.match(/(?:玩家\s*)?(\d+)\s*\/\s*(\d+)|已到\s*(\d+)\s*人\s*·\s*共\s*(\d+)/);
-    const current = Number(match?.[1] || match?.[3] || players);
-    const max = Number(match?.[2] || match?.[4] || players);
-    if (!max) return;
-    card.classList.add(ENHANCED_CLASS);
-    buildSeatGrid(card, current, max);
-    updateGuidance(card, current, max);
-  });
+  document.querySelectorAll(ROOM_SELECTOR).forEach(enhanceWaitingRoom);
 }
 
 export function installWaitingRoomExperience() {
   scan();
-  const observer = new MutationObserver(() => queueMicrotask(scan));
+  let scheduled = false;
+  const scheduleScan = () => {
+    if (scheduled) return;
+    scheduled = true;
+    queueMicrotask(() => {
+      scheduled = false;
+      scan();
+    });
+  };
+  const observer = new MutationObserver(scheduleScan);
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-  window.addEventListener('henan50k-connection-change', scan);
+  window.addEventListener('henan50k-connection-change', scheduleScan);
   return () => {
     observer.disconnect();
-    window.removeEventListener('henan50k-connection-change', scan);
+    window.removeEventListener('henan50k-connection-change', scheduleScan);
   };
 }
