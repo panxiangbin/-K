@@ -29,6 +29,7 @@ import './game-action-feedback.css';
 import './rules-help.css';
 import './compact-game-controls.css';
 import './ui-design-system.css';
+import './ui-feedback-governor.css';
 import './lobby-entry.css';
 import './lobby-entry-feedback.css';
 import './lobby-action-guidance.css';
