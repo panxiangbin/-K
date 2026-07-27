@@ -19,6 +19,7 @@
   justify-content: flex-end;
   gap: 10px;
   text-align: right;
+  flex-wrap: wrap;
 }
 
 .waiting-room-card--enhanced .waiting-room-code {
@@ -50,6 +51,27 @@
   outline-offset: 3px;
 }
 
+.waiting-copy-feedback {
+  flex-basis: 100%;
+  min-height: 20px;
+  color: var(--ui-text-muted, #d3c8b4);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.waiting-copy-feedback:empty {
+  display: none;
+}
+
+.waiting-copy-feedback[data-tone='success'] {
+  color: var(--ui-success-soft, #9bc9aa);
+}
+
+.waiting-copy-feedback[data-tone='error'] {
+  color: var(--ui-danger-soft, #e1a09a);
+}
+
 .waiting-room-count {
   color: var(--ui-text-muted, #d3c8b4);
   font-size: 14px;
@@ -78,6 +100,39 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ui-accent, #b89a5e) 18%, transparent);
 }
 
+.waiting-seat-grid .waiting-player[data-connection-state='offline'] {
+  border-style: dashed;
+  opacity: .72;
+}
+
+.waiting-seat-grid .waiting-player[data-connection-state='offline']::after,
+.waiting-seat-grid .waiting-player[data-connection-state='recovering']::after {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.waiting-seat-grid .waiting-player[data-connection-state='offline']::after {
+  content: '离线';
+  color: var(--ui-danger-soft, #e1a09a);
+  background: color-mix(in srgb, var(--ui-danger, #a04f49) 18%, transparent);
+}
+
+.waiting-seat-grid .waiting-player[data-connection-state='recovering'] {
+  border-color: color-mix(in srgb, var(--ui-warning, #c7a15a) 44%, transparent);
+}
+
+.waiting-seat-grid .waiting-player[data-connection-state='recovering']::after {
+  content: '恢复中';
+  color: var(--ui-warning-soft, #e4c987);
+  background: color-mix(in srgb, var(--ui-warning, #c7a15a) 16%, transparent);
+}
+
 .waiting-seat-number {
   position: absolute;
   top: 5px;
@@ -103,10 +158,10 @@
   color: var(--ui-text-muted, #d3c8b4);
 }
 
-.waiting-room-guidance {
+.waiting-room-guidance,
+.waiting-start-hint {
   display: grid;
   gap: 3px;
-  margin: 0 0 12px;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--ui-accent, #b89a5e) 28%, transparent);
   border-radius: var(--ui-radius-card, 14px);
@@ -114,24 +169,50 @@
   color: var(--ui-text, #f7f1e5);
 }
 
-.waiting-room-guidance strong {
+.waiting-room-guidance {
+  margin: 0 0 12px;
+}
+
+.waiting-start-hint {
+  margin: 12px 0 8px;
+}
+
+.waiting-room-guidance strong,
+.waiting-start-hint strong {
   font-size: 15px;
 }
 
-.waiting-room-guidance span {
+.waiting-room-guidance span,
+.waiting-start-hint span {
   color: var(--ui-text-muted, #d3c8b4);
   font-size: 13px;
   line-height: 1.45;
 }
 
-.waiting-room-guidance[data-tone='ready'] {
+.waiting-room-guidance[data-tone='ready'],
+.waiting-start-hint[data-state='ready'] {
   border-color: color-mix(in srgb, var(--ui-success, #63a67d) 48%, transparent);
   background: color-mix(in srgb, var(--ui-success, #63a67d) 12%, transparent);
 }
 
-.waiting-room-guidance[data-tone='recovering'] {
+.waiting-room-guidance[data-tone='recovering'],
+.waiting-start-hint[data-state='recovering'],
+.waiting-start-hint[data-state='busy'] {
   border-color: color-mix(in srgb, var(--ui-warning, #c7a15a) 50%, transparent);
   background: color-mix(in srgb, var(--ui-warning, #c7a15a) 12%, transparent);
+}
+
+.waiting-start-hint[data-state='guest'] {
+  border-style: dashed;
+}
+
+.waiting-start-hint + button {
+  margin-top: 0;
+}
+
+.waiting-start-hint + button + button,
+.waiting-start-hint ~ button + button {
+  margin-top: 10px;
 }
 
 @media (max-width: 430px) and (orientation: portrait) {
@@ -153,8 +234,21 @@
     width: 100%;
   }
 
+  .waiting-copy-feedback {
+    text-align: left;
+  }
+
   .waiting-seat-grid {
     grid-template-columns: 1fr;
+  }
+
+  .waiting-start-hint ~ button {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .waiting-start-hint ~ button + button {
+    margin-top: 12px;
   }
 }
 
@@ -182,14 +276,23 @@
     padding: 15px 8px 5px;
   }
 
+  .waiting-room-guidance,
+  .waiting-start-hint {
+    padding: 8px 10px;
+  }
+
   .waiting-room-guidance {
     margin-bottom: 8px;
-    padding: 8px 10px;
+  }
+
+  .waiting-start-hint {
+    margin: 8px 0 6px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .waiting-room-card--enhanced .waiting-room-copy {
+  .waiting-room-card--enhanced .waiting-room-copy,
+  .waiting-start-hint ~ button {
     transition: none;
   }
 }
