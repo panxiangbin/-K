@@ -8,7 +8,9 @@
   --ui-text-on-table: #fffaf0;
   --ui-text: #282722;
   --ui-text-muted: #706b61;
+  --ui-text-soft-on-table: rgba(255, 250, 240, 0.76);
   --ui-border: rgba(70, 58, 40, 0.22);
+  --ui-border-on-table: rgba(255, 250, 240, 0.18);
   --ui-accent: #b58a32;
   --ui-accent-strong: #8b611d;
   --ui-danger: #9f342d;
@@ -28,8 +30,11 @@
   --ui-control-min: 44px;
   --ui-control-primary: 50px;
   --ui-font-body: 16px;
-  --ui-font-small: 13px;
+  --ui-font-small: 14px;
+  --ui-font-caption: 13px;
+  --ui-font-section: clamp(18px, 2.8vw, 22px);
   --ui-font-title: clamp(28px, 6vw, 44px);
+  --ui-line-body: 1.55;
 }
 
 html,
@@ -40,6 +45,8 @@ body,
 }
 
 body {
+  font-size: var(--ui-font-body);
+  line-height: var(--ui-line-body);
   background:
     radial-gradient(circle at 50% 20%, rgba(255, 250, 240, 0.05), transparent 34%),
     linear-gradient(145deg, var(--ui-table-700), var(--ui-table-800) 52%, var(--ui-table-900));
@@ -77,6 +84,58 @@ button:disabled,
   filter: saturate(0.55);
 }
 
+/* Shared panel language across lobby, waiting room, table chrome and settlement. */
+.lobby-panel,
+.waiting-room-card,
+.game-table-header,
+.settlement-content,
+.settlement-score-card {
+  border-color: var(--ui-border-on-table) !important;
+  border-radius: var(--ui-radius-lg) !important;
+  box-shadow: var(--ui-shadow-md) !important;
+}
+
+.lobby-panel,
+.waiting-room-card,
+.settlement-content {
+  background-color: rgba(8, 41, 31, 0.92) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.lobby-brand-title,
+.settlement-heading-text,
+.settlement-history-heading h2 {
+  color: var(--ui-text-on-table) !important;
+  text-wrap: balance;
+}
+
+.settlement-heading-text,
+.settlement-history-heading h2 {
+  font-size: var(--ui-font-section) !important;
+  line-height: 1.3;
+}
+
+.lobby-brand > div:last-child,
+.waiting-room-header > span,
+.settlement-room-id,
+.settlement-target-summary,
+[role='status'] {
+  font-size: var(--ui-font-caption) !important;
+  line-height: 1.45;
+}
+
+.lobby-brand > div:last-child,
+.waiting-room-header > span,
+.settlement-room-id,
+.settlement-target-summary {
+  color: var(--ui-text-soft-on-table) !important;
+}
+
+[role='status'] {
+  overflow-wrap: anywhere;
+}
+
 .top-action,
 .btn-lite,
 .btn-pass,
@@ -107,6 +166,22 @@ button:disabled,
   animation: none !important;
 }
 
+@media (max-width: 680px) {
+  .lobby-panel,
+  .waiting-room-card,
+  .settlement-content {
+    border-radius: var(--ui-radius-md) !important;
+  }
+
+  .lobby-brand > div:last-child,
+  .waiting-room-header > span,
+  .settlement-room-id,
+  .settlement-target-summary,
+  [role='status'] {
+    font-size: var(--ui-font-small) !important;
+  }
+}
+
 @media (max-height: 430px) and (orientation: landscape) {
   :root {
     --ui-control-min: 40px;
@@ -115,6 +190,23 @@ button:disabled,
 
   button {
     min-width: 40px;
+  }
+
+  .lobby-panel,
+  .waiting-room-card,
+  .settlement-content {
+    border-radius: var(--ui-radius-sm) !important;
+    box-shadow: var(--ui-shadow-sm) !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .lobby-panel,
+  .waiting-room-card,
+  .game-table-header,
+  .settlement-content,
+  .settlement-score-card {
+    border-width: 2px !important;
   }
 }
 
