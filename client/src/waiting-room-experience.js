@@ -1,5 +1,6 @@
 const ROOM_SELECTOR = '.waiting-room-card';
 const ENHANCED_CLASS = 'waiting-room-card--enhanced';
+const START_BUTTON_PATTERN = /开始游戏|开始中/;
 
 export function getWaitingRoomProgress({ current = 0, max = 0, isHost = false, connected = true } = {}) {
   const safeCurrent = Math.max(0, Number(current) || 0);
@@ -32,6 +33,43 @@ export function getWaitingRoomProgress({ current = 0, max = 0, isHost = false, c
   };
 }
 
+export function getStartActionState({ current = 0, max = 0, isHost = false, connected = true, busy = false } = {}) {
+  if (!isHost) {
+    return {
+      state: 'guest',
+      title: '等待房主开始',
+      detail: '人员到齐后，房主开始游戏，你会自动进入牌桌。',
+    };
+  }
+  if (!connected) {
+    return {
+      state: 'recovering',
+      title: '暂时不能开始',
+      detail: '正在恢复服务器连接，连接成功后会自动更新开始状态。',
+    };
+  }
+  if (busy) {
+    return {
+      state: 'busy',
+      title: '正在开始游戏',
+      detail: '请求已经发出，请勿重复点击。',
+    };
+  }
+  const remaining = Math.max(0, (Number(max) || 0) - (Number(current) || 0));
+  if (remaining > 0) {
+    return {
+      state: 'waiting',
+      title: `还需${remaining}位玩家`,
+      detail: '人员到齐后，“开始游戏”按钮会自动可用。',
+    };
+  }
+  return {
+    state: 'ready',
+    title: '可以开始游戏',
+    detail: '确认所有玩家都在房间内，再点击开始。',
+  };
+}
+
 function readPlayerCount(card) {
   const text = card.querySelector('.waiting-room-count')?.textContent || '';
   const match = text.match(/(?:玩家\s*)?(\d+)\s*\/\s*(\d+)|已到\s*(\d+)\s*人\s*·\s*共\s*(\d+)/);
@@ -42,16 +80,30 @@ function readPlayerCount(card) {
   };
 }
 
+function findStartButton(panel) {
+  return [...(panel?.querySelectorAll('button') || [])].find(button => START_BUTTON_PATTERN.test(button.textContent || '')) || null;
+}
+
 function isHostView(card) {
-  const panel = card.closest('.lobby-panel');
-  return [...(panel?.querySelectorAll('button') || [])].some(button => /开始游戏|开始中/.test(button.textContent || ''));
+  return Boolean(findStartButton(card.closest('.lobby-panel')));
+}
+
+function normalizePlayerState(player) {
+  const text = player.querySelector('.waiting-player-status')?.textContent?.trim() || '';
+  const state = /离线|断开/.test(text) ? 'offline' : /恢复|重连/.test(text) ? 'recovering' : /机器人/.test(text) ? 'bot' : 'online';
+  player.dataset.connectionState = state;
+  if (state === 'offline') player.setAttribute('aria-label', `${player.querySelector('.waiting-player-name')?.textContent || '玩家'}，当前离线`);
+  if (state === 'recovering') player.setAttribute('aria-label', `${player.querySelector('.waiting-player-name')?.textContent || '玩家'}，正在恢复连接`);
+  return state;
 }
 
 function buildSignature(card, current, max, connected, isHost) {
   const players = [...card.querySelectorAll('.waiting-player:not(.waiting-player--empty)')]
     .map(player => `${player.querySelector('.waiting-player-name')?.textContent || ''}:${player.querySelector('.waiting-player-status')?.textContent || ''}`)
     .join('|');
-  return `${current}:${max}:${connected ? 1 : 0}:${isHost ? 1 : 0}:${players}`;
+  const panel = card.closest('.lobby-panel');
+  const start = findStartButton(panel);
+  return `${current}:${max}:${connected ? 1 : 0}:${isHost ? 1 : 0}:${start?.disabled ? 1 : 0}:${start?.textContent || ''}:${players}`;
 }
 
 function buildSeatGrid(card, current, max) {
@@ -69,6 +121,7 @@ function buildSeatGrid(card, current, max) {
   players.forEach((player, index) => {
     player.querySelectorAll(':scope > .waiting-seat-number').forEach(node => node.remove());
     player.dataset.seat = String(index + 1);
+    normalizePlayerState(player);
     const seat = document.createElement('span');
     seat.className = 'waiting-seat-number';
     seat.setAttribute('aria-hidden', 'true');
@@ -115,6 +168,63 @@ function updateGuidance(card, current, max, connected, isHost) {
   }
 }
 
+function updateStartAction(panel, current, max, connected, isHost) {
+  const start = findStartButton(panel);
+  const busy = Boolean(start && (/开始中/.test(start.textContent || '') || start.getAttribute('aria-busy') === 'true'));
+  const action = getStartActionState({ current, max, connected, isHost, busy });
+  let hint = panel.querySelector('.waiting-start-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.className = 'waiting-start-hint';
+    hint.id = 'waiting-start-hint';
+    hint.setAttribute('role', 'status');
+    hint.setAttribute('aria-live', 'polite');
+    hint.setAttribute('aria-atomic', 'true');
+    const exit = [...panel.querySelectorAll('button')].find(button => /退出房间|退出中/.test(button.textContent || ''));
+    (start || exit)?.insertAdjacentElement('beforebegin', hint);
+  }
+  if (!hint) return;
+  hint.dataset.state = action.state;
+  hint.innerHTML = `<strong>${action.title}</strong><span>${action.detail}</span>`;
+  if (start) {
+    start.setAttribute('aria-describedby', hint.id);
+    start.setAttribute('title', action.detail);
+    start.dataset.readiness = action.state;
+    if (busy) start.setAttribute('aria-busy', 'true');
+    else start.removeAttribute('aria-busy');
+  }
+}
+
+function installCopyFeedback(card) {
+  const copy = card.querySelector('.waiting-room-copy');
+  if (!copy) return;
+  copy.setAttribute('aria-label', '复制房间号');
+  copy.setAttribute('title', '复制房间号，发给亲友加入');
+  if (copy.dataset.feedbackInstalled === 'true') return;
+  copy.dataset.feedbackInstalled = 'true';
+
+  let feedback = card.querySelector('.waiting-copy-feedback');
+  if (!feedback) {
+    feedback = document.createElement('span');
+    feedback.className = 'waiting-copy-feedback';
+    feedback.setAttribute('role', 'status');
+    feedback.setAttribute('aria-live', 'polite');
+    feedback.setAttribute('aria-atomic', 'true');
+    copy.insertAdjacentElement('afterend', feedback);
+  }
+
+  copy.addEventListener('click', () => {
+    feedback.dataset.tone = 'working';
+    feedback.textContent = '正在复制房间号…';
+    window.setTimeout(() => {
+      const text = copy.textContent || '';
+      const failed = /失败|不支持/.test(text);
+      feedback.dataset.tone = failed ? 'error' : 'success';
+      feedback.textContent = failed ? '复制失败，请长按房间号手动复制。' : '房间号已复制，可以发给亲友了。';
+    }, 220);
+  });
+}
+
 function enhanceWaitingRoom(card) {
   const { current, max } = readPlayerCount(card);
   if (!max) return;
@@ -128,13 +238,10 @@ function enhanceWaitingRoom(card) {
   buildSeatGrid(card, current, max);
   updateGuidance(card, current, max, connected, isHost);
 
-  const copy = card.querySelector('.waiting-room-copy');
-  if (copy) {
-    copy.setAttribute('aria-label', '复制房间号');
-    copy.setAttribute('title', '复制房间号，发给亲友加入');
-  }
-
   const panel = card.closest('.lobby-panel');
+  updateStartAction(panel, current, max, connected, isHost);
+  installCopyFeedback(card);
+
   const exit = [...(panel?.querySelectorAll('button') || [])].find(button => /退出房间|退出中/.test(button.textContent || ''));
   if (exit) exit.setAttribute('title', '退出当前房间并返回开始页');
 }
@@ -155,7 +262,7 @@ export function installWaitingRoomExperience() {
     });
   };
   const observer = new MutationObserver(scheduleScan);
-  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['disabled', 'aria-busy'] });
   window.addEventListener('henan50k-connection-change', scheduleScan);
   return () => {
     observer.disconnect();
