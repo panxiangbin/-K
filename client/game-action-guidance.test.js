@@ -16,6 +16,11 @@ assert.match(js, /aria-describedby/);
 assert.match(js, /role', 'status'/);
 assert.match(js, /aria-live', 'polite'/);
 assert.match(js, /attributeFilter: \['disabled', 'aria-busy'\]/);
+assert.match(js, /setTextIfChanged/);
+assert.match(js, /setAttributeIfChanged/);
+assert.match(js, /node\.id === ACTION_GUIDANCE_ID/);
+assert.match(js, /text\.length > 24/);
+assert.match(js, /\^提示\\s\*/);
 assert.doesNotMatch(js, /setInterval\(/);
 
 assert.match(css, /min-height: 34px/);
