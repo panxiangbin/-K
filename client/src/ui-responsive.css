@@ -1,6 +1,6 @@
-/* 河南五十K：补充手机竖屏与超窄横屏适配，只调整视觉与触控尺寸 */
+/* 河南五十K：手机竖屏、低高度横屏与安全区适配 */
 
-/* 操作区视觉层级：主操作更醒目，次级操作更克制，禁用状态更容易识别 */
+/* 交互行为由响应式层负责，颜色、阴影、焦点与状态外观统一交给 ui-design-system.css */
 .top-action,
 .btn-lite,
 .btn-pass,
@@ -8,62 +8,12 @@
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   user-select: none;
-  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease, background-color 120ms ease, border-color 120ms ease;
-}
-
-.top-action:not(:disabled):active,
-.btn-lite:not(:disabled):active,
-.btn-pass:not(:disabled):active,
-.btn-play:not(:disabled):active {
-  transform: translateY(1px) scale(0.97);
-  filter: brightness(0.96);
-}
-
-.top-action:focus-visible,
-.btn-lite:focus-visible,
-.btn-pass:focus-visible,
-.btn-play:focus-visible {
-  outline: 3px solid rgba(125, 211, 252, 0.72);
-  outline-offset: 2px;
-}
-
-.btn-lite:not(:disabled) {
-  background: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.055)) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.09), 0 3px 8px rgba(0,0,0,0.16);
-}
-
-.btn-lite.hint:not(:disabled) {
-  color: #dbeafe !important;
-  background: linear-gradient(180deg, rgba(37,99,235,0.34), rgba(30,64,175,0.22)) !important;
-  border-color: rgba(96,165,250,0.55) !important;
-  box-shadow: 0 0 0 1px rgba(96,165,250,0.08), 0 4px 12px rgba(15,23,42,0.28);
-}
-
-.btn-pass:not(:disabled) {
-  background: linear-gradient(180deg, rgba(71,85,105,0.92), rgba(51,65,85,0.92)) !important;
-  border-color: rgba(203,213,225,0.34) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), 0 4px 12px rgba(0,0,0,0.24);
-}
-
-.btn-play:not(:disabled) {
-  background: linear-gradient(180deg, #fde047 0%, #f5c518 58%, #eab308 100%) !important;
-  border: 1px solid rgba(254,240,138,0.72) !important;
-  color: #102016 !important;
-  box-shadow: 0 0 0 1px rgba(15,58,36,0.34), 0 7px 18px rgba(0,0,0,0.34), 0 0 18px rgba(245,197,24,0.20) !important;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.32);
-  animation: readyPlayPulse 1.45s ease-in-out infinite;
-}
-
-.btn-lite:disabled,
-.btn-pass:disabled,
-.btn-play:disabled {
-  cursor: not-allowed;
-  filter: saturate(0.35);
-}
-
-@keyframes readyPlayPulse {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(15,58,36,0.34), 0 7px 18px rgba(0,0,0,0.34), 0 0 12px rgba(245,197,24,0.16); }
-  50% { box-shadow: 0 0 0 2px rgba(254,240,138,0.26), 0 8px 20px rgba(0,0,0,0.36), 0 0 24px rgba(245,197,24,0.38); }
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease,
+    border-color 120ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -72,11 +22,11 @@
   .btn-pass:not(:disabled):hover,
   .btn-play:not(:disabled):hover {
     transform: translateY(-1px);
-    filter: brightness(1.06);
+    filter: brightness(1.04);
   }
 }
 
-/* 竖屏手机：优先保证手牌、玩家座位和操作按钮都能完整显示 */
+/* 竖屏手机：优先保证手牌、玩家座位和操作按钮完整显示。 */
 @media (orientation: portrait) and (max-width: 680px) {
   :root {
     --side-col-w: 48px;
@@ -90,7 +40,7 @@
     --hand-x-pad: 8px;
     --hand-y-pad-top: 4px;
     --hand-y-pad-bottom: 7px;
-    --hand-bottom-pad: max(6px, env(safe-area-inset-bottom));
+    --hand-bottom-pad: max(8px, env(safe-area-inset-bottom));
     --mini-card-w: 24px;
     --mini-card-h: 34px;
     --mini-rank-font: 8px;
@@ -98,33 +48,24 @@
     --mini-center-font: 13px;
   }
 
-  .top-action {
-    min-height: 30px !important;
-    padding: 0 8px !important;
-    font-size: 11px !important;
-  }
-
+  .top-action,
   .btn-lite,
   .btn-pass {
-    min-height: 38px !important;
-    padding-left: 8px !important;
-    padding-right: 8px !important;
-    border-radius: 13px !important;
-    font-size: 11px !important;
+    min-height: 44px !important;
+    padding-inline: 10px !important;
+    font-size: 13px !important;
     letter-spacing: 0 !important;
   }
 
   .btn-play {
-    min-height: 42px !important;
-    padding-left: 15px !important;
-    padding-right: 15px !important;
-    border-radius: 14px !important;
-    font-size: 14px !important;
+    min-height: 50px !important;
+    padding-inline: 18px !important;
+    font-size: 15px !important;
     letter-spacing: 0 !important;
   }
 }
 
-/* 很窄的旧手机：进一步压缩横向尺寸，避免底部按钮挤出屏幕 */
+/* 很窄的旧手机：只压缩横向留白，不牺牲触控高度与文字可读性。 */
 @media (max-width: 390px) and (orientation: portrait) {
   :root {
     --side-col-w: 42px;
@@ -137,24 +78,23 @@
     --mini-card-h: 31px;
   }
 
+  .top-action,
   .btn-lite,
   .btn-pass {
-    min-height: 36px !important;
-    padding-left: 6px !important;
-    padding-right: 6px !important;
-    font-size: 10px !important;
+    min-height: 44px !important;
+    padding-inline: 8px !important;
+    font-size: 12px !important;
   }
 
   .btn-play {
-    min-height: 40px !important;
-    padding-left: 12px !important;
-    padding-right: 12px !important;
-    font-size: 13px !important;
+    min-height: 48px !important;
+    padding-inline: 14px !important;
+    font-size: 14px !important;
   }
 }
 
-/* 超窄横屏：常见于浏览器地址栏未收起时，保持按钮仍可点击 */
-@media (max-width: 680px) and (max-height: 390px) and (orientation: landscape) {
+/* 低高度横屏：保留可点击尺寸，同时压缩纵向装饰和留白。 */
+@media (max-height: 430px) and (orientation: landscape) {
   :root {
     --side-col-w: 64px;
     --card-w: 42px;
@@ -167,29 +107,22 @@
     --hand-y-pad-bottom: 4px;
   }
 
-  .top-action {
-    min-height: 28px !important;
-    padding: 0 7px !important;
-    font-size: 10px !important;
-  }
-
+  .top-action,
   .btn-lite,
   .btn-pass {
-    min-height: 34px !important;
-    padding-left: 7px !important;
-    padding-right: 7px !important;
-    font-size: 10px !important;
+    min-height: 40px !important;
+    padding-inline: 8px !important;
+    font-size: 11px !important;
   }
 
   .btn-play {
-    min-height: 37px !important;
-    padding-left: 13px !important;
-    padding-right: 13px !important;
+    min-height: 44px !important;
+    padding-inline: 14px !important;
     font-size: 13px !important;
   }
 }
 
-/* 刘海屏与圆角屏安全区 */
+/* 刘海屏、圆角屏和底部系统手势区域。 */
 @supports (padding: max(0px)) {
   body {
     padding-left: env(safe-area-inset-left);
@@ -203,6 +136,5 @@
   .btn-pass,
   .btn-play {
     transition: none !important;
-    animation: none !important;
   }
 }
