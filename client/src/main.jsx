@@ -17,6 +17,7 @@ import './hand-interaction.css';
 import './game-action-feedback.css';
 import './rules-help.css';
 import './compact-game-controls.css';
+import './ui-design-system.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(<><App /><RulesHelpLauncher /></>);
 installGameTableHeaderEnhancer();
