@@ -119,6 +119,15 @@ function updateConnectionSummary(summary, connected, phase = connected ? 'connec
   else if (phase === 'waking') scheduleStalledState(summary);
 }
 
+function syncConnectionSummary(summary) {
+  if (!summary) return;
+  const connected = Boolean(window.__henan50kConnected);
+  const phase = summary.dataset.phase;
+  if (!phase || (connected && phase !== 'connected') || (!connected && phase === 'connected')) {
+    updateConnectionSummary(summary, connected);
+  }
+}
+
 function updateBusyButtons(root) {
   root.querySelectorAll('button').forEach(button => {
     const busy = /中…|正在|请稍候/.test(button.textContent || '');
@@ -163,7 +172,7 @@ function enhanceLobby() {
 
   const panel = shell.querySelector('.lobby-panel');
   const summary = ensureConnectionSummary(panel);
-  updateConnectionSummary(summary, Boolean(window.__henan50kConnected));
+  syncConnectionSummary(summary);
 
   const nameInput = shell.querySelector('#player-name');
   if (nameInput && nameInput.getAttribute(ENHANCED_ATTR) !== 'true') {
