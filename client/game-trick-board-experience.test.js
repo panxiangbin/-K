@@ -15,10 +15,20 @@ assert.match(moduleSource, /role', 'listitem'/, '单个行动卡必须使用列�
 assert.match(moduleSource, /is-passed/, '必须区分过牌状态');
 assert.match(moduleSource, /is-waiting/, '必须区分等待状态');
 assert.match(moduleSource, /is-played/, '必须区分已出牌状态');
+assert.match(moduleSource, /data-latest-trick-play/, '上一手牌必须有独立状态标记');
+assert.match(moduleSource, /is-latest-play/, '上一手牌必须具备明确视觉状态');
+assert.match(moduleSource, /is-history-play/, '历史出牌必须降低视觉层级');
+assert.match(moduleSource, /上一手牌/, '上一手必须提供可理解的中文读屏说明');
+assert.match(moduleSource, /trick-board-latest-summary/, '上一手变化必须提供独立状态摘要');
+assert.match(moduleSource, /changedToPlay/, '上一手识别必须基于实际动作变化');
 assert.doesNotMatch(moduleSource, /setInterval\s*\(/, '中央牌桌增强不得使用持续轮询');
 
 assert.match(css, /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/, '行动记录必须使用稳定两列布局');
 assert.match(css, /min-height:\s*78px/, '正常行动卡必须保留可读高度');
+assert.match(css, /\.trick-action-card\.is-latest-play/, '上一手牌必须有高层级样式');
+assert.match(css, /\.trick-action-card\.is-history-play/, '历史出牌必须有降层级样式');
+assert.match(css, /\.trick-action-card__latest-badge/, '上一手牌必须显示文字标记');
+assert.match(css, /min-height:\s*22px/, '上一手标记必须保留可读高度');
 assert.match(css, /@media \(max-width: 520px\)/, '必须覆盖手机竖屏');
 assert.match(css, /@media \(max-height: 430px\) and \(orientation: landscape\)/, '必须覆盖低高度横屏');
 assert.match(css, /@media \(prefers-contrast: more\)/, '必须支持高对比度');
