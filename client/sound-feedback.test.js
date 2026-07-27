@@ -23,14 +23,18 @@ assert.equal(readSoundPreference(storage), true);
 assert.equal(writeSoundPreference(storage, false), true);
 assert.equal(values.get(SOUND_STORAGE_KEY), '0');
 
-assert.deepEqual(getSoundButtonState(false, 'V2'), {
-  label: '开启并测试炸弹人声V2',
-  text: '开启人声V2',
-  pressed: false,
-  title: '点击后播放一次测试人声；浏览器允许播放后才会保存为开启',
-});
-assert.equal(getSoundButtonState(true).pressed, true);
-assert.match(getSoundButtonState(true).label, /关闭炸弹人声/);
+const soundOff = getSoundButtonState(false, 'V2');
+const soundOn = getSoundButtonState(true, 'V2');
+assert.equal(soundOff.label, '炸弹人声V2');
+assert.equal(soundOn.label, soundOff.label);
+assert.equal(soundOff.text, '人声：关 V2');
+assert.equal(soundOn.text, '人声：开 V2');
+assert.equal(soundOff.pressed, false);
+assert.equal(soundOn.pressed, true);
+assert.match(soundOff.statusText, /已关闭/);
+assert.match(soundOn.statusText, /已开启/);
+assert.match(soundOff.title, /点击后会先播放一次测试人声/);
+assert.match(soundOn.title, /点击关闭/);
 
 const enabled = getSoundToggleResult({ currentlyOn: false, playbackSucceeded: true });
 assert.equal(enabled.enabled, true);
@@ -41,6 +45,7 @@ const blocked = getSoundToggleResult({ currentlyOn: false, playbackSucceeded: fa
 assert.equal(blocked.enabled, false);
 assert.equal(blocked.type, 'error');
 assert.match(blocked.message, /手机未静音/);
+assert.match(blocked.message, /人声：关 V2/);
 
 const disabled = getSoundToggleResult({ currentlyOn: true, playbackSucceeded: true });
 assert.equal(disabled.enabled, false);
