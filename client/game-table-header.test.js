@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   extractTableRoomId,
   getTableRoomCopyState,
@@ -24,5 +25,21 @@ assert.equal(await copyTableRoomId('ABC123', { writeText: async text => { copied
 assert.equal(copied, 'ABC123');
 assert.equal(await copyTableRoomId('', { writeText: async () => {} }), false);
 assert.equal(await copyTableRoomId('ABC123', { writeText: async () => { throw new Error('denied'); } }), false);
+
+const css = readFileSync(new URL('./src/game-table-header.css', import.meta.url), 'utf8');
+assert.match(css, /--table-header-control-size:\s*44px/);
+assert.match(css, /\.game-table-room-copy\s*\{[\s\S]*?min-height:\s*44px/);
+assert.match(css, /grid-template-areas:\s*\n\s*"actions room"\s*\n\s*"turn turn"/);
+assert.match(css, /@media \(max-height: 430px\) and \(orientation: landscape\)/);
+assert.match(css, /--table-header-control-size:\s*40px/);
+assert.match(css, /font-size:\s*12px !important/);
+assert.doesNotMatch(css, /font-size:\s*10px/);
+assert.match(css, /env\(safe-area-inset-top\)/);
+assert.match(css, /env\(safe-area-inset-left\)/);
+assert.match(css, /env\(safe-area-inset-right\)/);
+assert.match(css, /@media \(forced-colors: active\)/);
+assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+assert.doesNotMatch(css, /backdrop-filter/);
+assert.doesNotMatch(css, /#(?:6366f1|7c3aed|8b5cf6|06b6d4)/i);
 
 console.log('game table header tests passed');
