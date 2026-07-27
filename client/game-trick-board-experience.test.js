@@ -21,6 +21,15 @@ assert.match(moduleSource, /is-history-play/, '历史出牌必须降低视觉层
 assert.match(moduleSource, /上一手牌/, '上一手必须提供可理解的中文读屏说明');
 assert.match(moduleSource, /trick-board-latest-summary/, '上一手变化必须提供独立状态摘要');
 assert.match(moduleSource, /changedToPlay/, '上一手识别必须基于实际动作变化');
+assert.match(moduleSource, /classifySpecialPlay/, '特殊炸弹必须使用独立分类函数');
+assert.match(moduleSource, /五十K/, '必须识别同花五十K');
+assert.match(moduleSource, /黑四/, '必须识别黑四炸弹');
+assert.match(moduleSource, /红四/, '必须识别红四炸弹');
+assert.match(moduleSource, /八张/, '必须识别八张同点炸弹');
+assert.match(moduleSource, /四王/, '必须识别四王炸弹');
+assert.match(moduleSource, /data\.cardCount/, '行动卡必须记录实际牌张数');
+assert.match(moduleSource, /data\.specialPlay/, '行动卡必须记录特殊牌型');
+assert.match(moduleSource, /共\$\{cardCount\}张牌/, '读屏说明必须包含实际牌张数');
 assert.doesNotMatch(moduleSource, /setInterval\s*\(/, '中央牌桌增强不得使用持续轮询');
 
 assert.match(css, /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/, '行动记录必须使用稳定两列布局');
@@ -29,6 +38,15 @@ assert.match(css, /\.trick-action-card\.is-latest-play/, '上一手牌必须有�
 assert.match(css, /\.trick-action-card\.is-history-play/, '历史出牌必须有降层级样式');
 assert.match(css, /\.trick-action-card__latest-badge/, '上一手牌必须显示文字标记');
 assert.match(css, /min-height:\s*22px/, '上一手标记必须保留可读高度');
+assert.match(css, /data-card-count="8"/, '八张牌必须具备独立压缩规则');
+assert.match(css, /--trick-card-overlap:\s*-16px/, '桌面八张牌必须使用可控重叠');
+assert.match(css, /--mini-card-w:\s*32px/, '手机牌面必须保持可读宽度');
+assert.match(css, /--mini-rank-font:\s*11px/, '手机牌面点数不得过小');
+assert.match(css, /\.trick-action-card\.is-fifty-k/, '五十K必须有独立视觉状态');
+assert.match(css, /\.trick-action-card\.is-red-four/, '红四必须有独立视觉状态');
+assert.match(css, /\.trick-action-card\.is-black-four/, '黑四必须有独立视觉状态');
+assert.match(css, /\.trick-action-card\.is-same-eight/, '八张炸弹必须有独立视觉状态');
+assert.match(css, /\.trick-action-card\.is-four-jokers/, '四王必须有独立视觉状态');
 assert.match(css, /@media \(max-width: 520px\)/, '必须覆盖手机竖屏');
 assert.match(css, /@media \(max-height: 430px\) and \(orientation: landscape\)/, '必须覆盖低高度横屏');
 assert.match(css, /@media \(prefers-contrast: more\)/, '必须支持高对比度');
