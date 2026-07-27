@@ -1,0 +1,81 @@
+/* Global sound toggle: stable, compact, and safe-area aware. */
+button[aria-label^="炸弹人声"] {
+  right: max(8px, env(safe-area-inset-right)) !important;
+  min-width: 112px;
+  min-height: 44px !important;
+  padding: 0 12px !important;
+  border: 1px solid rgba(211, 173, 76, .62) !important;
+  border-radius: 999px !important;
+  background: #173f31 !important;
+  color: #f8edcf !important;
+  box-shadow: 0 7px 20px rgba(0, 0, 0, .28) !important;
+  font-size: 13px !important;
+  line-height: 1.2;
+  letter-spacing: .01em;
+  transition: background-color 140ms ease, border-color 140ms ease, transform 100ms ease !important;
+}
+
+button[aria-label^="炸弹人声"][aria-pressed="true"] {
+  border-color: #8fb99f !important;
+  background: #1d503b !important;
+  color: #e9f7ee !important;
+}
+
+button[aria-label^="炸弹人声"][aria-pressed="false"] {
+  border-color: rgba(211, 173, 76, .72) !important;
+  background: #3f3421 !important;
+  color: #f7dda0 !important;
+}
+
+button[aria-label^="炸弹人声"]:hover {
+  border-color: #d3ad4c !important;
+  background: #245440 !important;
+}
+
+button[aria-label^="炸弹人声"]:active {
+  transform: translateY(1px) !important;
+}
+
+button[aria-label^="炸弹人声"]:focus-visible {
+  outline: 3px solid #f0cf72 !important;
+  outline-offset: 3px !important;
+}
+
+button[aria-label^="炸弹人声"]:disabled,
+button[aria-label^="炸弹人声"][aria-busy="true"] {
+  cursor: wait;
+  opacity: .72;
+  filter: saturate(.72);
+}
+
+@media (max-width: 520px) {
+  button[aria-label^="炸弹人声"] {
+    min-width: 104px;
+    min-height: 44px !important;
+    padding-inline: 10px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  button[aria-label^="炸弹人声"] {
+    top: max(48px, calc(env(safe-area-inset-top) + 42px)) !important;
+    min-width: 96px;
+    min-height: 40px !important;
+    padding-inline: 9px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  button[aria-label^="炸弹人声"] {
+    border-width: 2px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button[aria-label^="炸弹人声"] {
+    animation: none !important;
+    transition: none !important;
+  }
+}
