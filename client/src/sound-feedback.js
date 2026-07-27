@@ -19,19 +19,22 @@ export function writeSoundPreference(storage, enabled) {
 }
 
 export function getSoundButtonState(soundOn, voiceVersion = 'V2') {
+  const label = `炸弹人声${voiceVersion}`;
   if (soundOn) {
     return {
-      label: `关闭炸弹人声${voiceVersion}`,
-      text: `关闭人声${voiceVersion}`,
+      label,
+      text: `人声：开 ${voiceVersion}`,
+      statusText: `炸弹人声${voiceVersion}已开启`,
       pressed: true,
       title: '炸弹人声已开启，点击关闭',
     };
   }
   return {
-    label: `开启并测试炸弹人声${voiceVersion}`,
-    text: `开启人声${voiceVersion}`,
+    label,
+    text: `人声：关 ${voiceVersion}`,
+    statusText: `炸弹人声${voiceVersion}已关闭`,
     pressed: false,
-    title: '点击后播放一次测试人声；浏览器允许播放后才会保存为开启',
+    title: '炸弹人声已关闭；点击后会先播放一次测试人声',
   };
 }
 
@@ -53,7 +56,7 @@ export function getSoundToggleResult({ currentlyOn, playbackSucceeded, voiceVers
   return {
     enabled: false,
     type: 'error',
-    message: `浏览器暂时不允许播放人声。请确认手机未静音，再点一次“开启人声${voiceVersion}”。`,
+    message: `浏览器暂时不允许播放人声。请确认手机未静音，再点一次“人声：关 ${voiceVersion}”。`,
   };
 }
 
