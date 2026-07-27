@@ -1,22 +1,44 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { getHandDensity } from './src/hand-interaction-enhancer.js';
 
 const source = fs.readFileSync(new URL('./src/hand-interaction-enhancer.js', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('./src/hand-interaction.css', import.meta.url), 'utf8');
 
+assert.equal(getHandDensity(8), 'comfortable');
+assert.equal(getHandDensity(14), 'compact');
+assert.equal(getHandDensity(24), 'dense');
 assert.match(source, /role', 'button'/, '手牌必须具备按钮语义');
-assert.match(source, /tabindex', '0'/, '手牌必须支持键盘聚焦');
+assert.match(source, /tabindex', tabbable \? '0' : '-1'/, '手牌必须使用单一键盘焦点入口');
 assert.match(source, /aria-pressed/, '选中状态必须提供读屏语义');
-assert.match(source, /event\.key !== 'Enter'/, '必须支持回车选择');
-assert.match(source, /event\.key !== ' '/, '必须支持空格选择');
+assert.match(source, /aria-posinset/, '必须播报牌在手牌中的位置');
+assert.match(source, /aria-setsize/, '必须播报手牌总张数');
+assert.match(source, /已选\$\{selectedCount\}张/, '手牌区必须播报已选张数');
+assert.match(source, /event\.key === 'Enter'/, '必须支持回车选择');
+assert.match(source, /event\.key === ' '/, '必须支持空格选择');
+assert.match(source, /event\.key === 'ArrowLeft'/, '必须支持方向键移动');
+assert.match(source, /event\.key === 'ArrowRight'/, '必须支持方向键移动');
+assert.match(source, /event\.key === 'Home'/, '必须支持跳到第一张牌');
+assert.match(source, /event\.key === 'End'/, '必须支持跳到最后一张牌');
+assert.match(source, /scrollIntoView/, '方向键移动后必须保持焦点牌可见');
 assert.match(source, /role', 'group'/, '手牌区必须具备分组语义');
 assert.match(source, /共\$\{cards\.length\}张/, '手牌区必须播报总张数');
 assert.match(source, /MutationObserver/, '发牌和选中变化后必须同步语义');
 assert.match(css, /\[data-card-id\]:focus-visible/, '键盘焦点必须清楚');
 assert.match(css, /min-height:\s*44px/, '牌的可点击区域不得小于44px');
+assert.match(css, /@media \(pointer: coarse\)[\s\S]*?min-width:\s*48px/, '触屏牌目标应提高到48px');
+assert.match(css, /data-card-position='last'[\s\S]*?margin-right/, '最后一张牌必须保留可点空间');
+assert.match(css, /data-card-position='first'[\s\S]*?margin-left/, '第一张牌必须避开屏幕边缘');
+assert.match(css, /aria-pressed='true'\]::after[\s\S]*?content:\s*'✓'/, '选中状态不能只靠颜色');
+assert.match(css, /data-hand-density='dense'/, '牌多时必须启用密集布局');
+assert.match(css, /--hand-overlap:\s*-28px/, '窄屏密集手牌必须减少过度重叠');
+assert.match(css, /env\(safe-area-inset-right\)/, '手牌末端必须避开系统安全区');
+assert.match(css, /forced-colors:\s*active/, '必须支持高对比度模式');
 assert.match(css, /touch-action:\s*none/, '连续滑动选牌必须阻止页面误滚动');
 assert.match(css, /prefers-reduced-motion:\s*reduce/, '必须支持减弱动态');
 assert.doesNotMatch(css, /--card-w\s*:/, '本轮不得缩小扑克牌宽度');
 assert.doesNotMatch(css, /--card-h\s*:/, '本轮不得缩小扑克牌高度');
+assert.doesNotMatch(css, /#(?:6366f1|7c3aed|8b5cf6|06b6d4)/i, '手牌交互层不得引入蓝紫荧光主题');
+assert.doesNotMatch(css, /backdrop-filter/, '手牌交互层不得使用玻璃模糊');
 
 console.log('hand interaction enhancer tests passed');
