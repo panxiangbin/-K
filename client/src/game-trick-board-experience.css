@@ -136,7 +136,73 @@
 
 .trick-action-card__body {
   min-height: 38px !important;
+  min-width: 0;
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: visible !important;
   color: #d9d4c7 !important;
+  --trick-card-overlap: 0px;
+}
+
+.trick-action-card__body > * {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.trick-action-card__body > * + * {
+  margin-left: var(--trick-card-overlap) !important;
+}
+
+.trick-action-card[data-card-count="4"] .trick-action-card__body {
+  --trick-card-overlap: -4px;
+}
+
+.trick-action-card[data-card-count="5"] .trick-action-card__body {
+  --trick-card-overlap: -7px;
+}
+
+.trick-action-card[data-card-count="6"] .trick-action-card__body {
+  --trick-card-overlap: -10px;
+}
+
+.trick-action-card[data-card-count="7"] .trick-action-card__body {
+  --trick-card-overlap: -13px;
+}
+
+.trick-action-card[data-card-count="8"] .trick-action-card__body {
+  --trick-card-overlap: -16px;
+}
+
+.trick-action-card[data-special-play]:not([data-special-play="normal"]) {
+  border-width: 2px !important;
+}
+
+.trick-action-card[data-special-play]:not([data-special-play="normal"]) .trick-action-card__header > :last-child {
+  color: #ffe2a1 !important;
+  letter-spacing: 0.02em;
+}
+
+.trick-action-card.is-fifty-k {
+  background: rgba(162, 118, 44, 0.13) !important;
+  border-color: rgba(239, 206, 125, 0.72) !important;
+}
+
+.trick-action-card.is-red-four {
+  background: rgba(123, 38, 38, 0.15) !important;
+  border-color: rgba(219, 123, 111, 0.68) !important;
+}
+
+.trick-action-card.is-black-four {
+  background: rgba(34, 40, 37, 0.42) !important;
+  border-color: rgba(210, 201, 176, 0.58) !important;
+}
+
+.trick-action-card.is-same-eight,
+.trick-action-card.is-four-jokers {
+  background: rgba(145, 103, 31, 0.17) !important;
+  border-color: rgba(246, 213, 126, 0.82) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 204, 0.1) !important;
 }
 
 .trick-board-latest-summary {
@@ -181,6 +247,34 @@
     padding: 7px !important;
   }
 
+  .trick-action-card__body {
+    --mini-card-w: 32px;
+    --mini-card-h: 47px;
+    --mini-rank-font: 11px;
+    --mini-suit-font: 8px;
+    --mini-center-font: 17px;
+  }
+
+  .trick-action-card[data-card-count="4"] .trick-action-card__body {
+    --trick-card-overlap: -5px;
+  }
+
+  .trick-action-card[data-card-count="5"] .trick-action-card__body {
+    --trick-card-overlap: -8px;
+  }
+
+  .trick-action-card[data-card-count="6"] .trick-action-card__body {
+    --trick-card-overlap: -11px;
+  }
+
+  .trick-action-card[data-card-count="7"] .trick-action-card__body {
+    --trick-card-overlap: -14px;
+  }
+
+  .trick-action-card[data-card-count="8"] .trick-action-card__body {
+    --trick-card-overlap: -17px;
+  }
+
   .trick-action-card__latest-badge {
     min-height: 20px;
     padding-inline: 6px;
@@ -219,6 +313,15 @@
 
   .trick-action-card__body {
     min-height: 28px !important;
+    --mini-card-w: 30px;
+    --mini-card-h: 44px;
+    --mini-rank-font: 10px;
+    --mini-suit-font: 8px;
+    --mini-center-font: 16px;
+  }
+
+  .trick-action-card[data-card-count="8"] .trick-action-card__body {
+    --trick-card-overlap: -17px;
   }
 
   .trick-action-card__latest-badge {
