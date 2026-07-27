@@ -16,6 +16,7 @@ import { installWaitingRoomRequestLifecycle } from './waiting-room-request-lifec
 import { installGameTableFoundation } from './game-table-foundation.js';
 import { installGamePlayerCardExperience } from './game-player-card-experience.js';
 import { installGameTrickBoardExperience } from './game-trick-board-experience.js';
+import { installSettlementExperience } from './settlement-experience.js';
 import './index.css';
 import './ui-responsive.css';
 import './ui-polish.css';
@@ -39,6 +40,7 @@ import './waiting-room-request-lifecycle.css';
 import './game-table-foundation.css';
 import './game-player-card-experience.css';
 import './game-trick-board-experience.css';
+import './settlement-experience.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(<><App /><RulesHelpLauncher /></>);
 installGameTableHeaderEnhancer();
@@ -55,3 +57,4 @@ installWaitingRoomRequestLifecycle();
 installGameTableFoundation();
 installGamePlayerCardExperience();
 installGameTrickBoardExperience();
+installSettlementExperience();
