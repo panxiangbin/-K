@@ -3,8 +3,8 @@ import { getLobbyActionState, getLobbyActionStatus, LOBBY_ACTION_TIMEOUT_MS } fr
 import { getRoomActionState, getRoomActionStatus, ROOM_ACTION_TIMEOUT_MS } from '../room-action-state';
 import { formatPlayerName, getPresenceState, getRoomCopyState } from '../waiting-room-display';
 
-const AVATAR_COLORS = ['#9333ea','#0891b2','#d97706','#dc2626'];
-const AVATARS = ['🐲','🐯','🦊','🐺'];
+const AVATAR_COLORS = ['#7a4930', '#315d4d', '#8a6a35', '#6f3e3e'];
+const AVATARS = ['龙', '虎', '狐', '狼'];
 const CONNECTION_EVENT = 'henan50k-connection-change';
 
 function loadSavedSession(roomId) {
@@ -21,13 +21,28 @@ function getLastSavedSession() {
   return saved.playerId && saved.playerToken ? { roomId, ...saved } : null;
 }
 
-function buttonStyle(disabled, background, color = '#fff') {
-  return { width:'100%', minHeight:48, padding:'12px 10px', borderRadius:12, fontWeight:900, fontSize:15, background:disabled?'#1f2937':background, color:disabled?'#64748b':color, border:'1px solid rgba(255,255,255,.12)', cursor:disabled?'not-allowed':'pointer', opacity:disabled?0.78:1, touchAction:'manipulation' };
-}
-
 function StatusBox({ children, danger = false }) {
   if (!children) return null;
-  return <div role="status" aria-live="polite" aria-atomic="true" style={{ width:'100%', marginBottom:12, padding:'9px 12px', borderRadius:10, background:danger?'rgba(127,29,29,.28)':'rgba(30,41,59,.8)', border:`1px solid ${danger?'rgba(248,113,113,.42)':'rgba(148,163,184,.25)'}`, color:danger?'#fecaca':'#cbd5e1', fontSize:12, lineHeight:1.5, textAlign:'center' }}>{children}</div>;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      className={`lobby-status${danger ? ' danger' : ''}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function ViewHeading({ eyebrow, title, description }) {
+  return (
+    <header className="lobby-view-heading">
+      {eyebrow && <span className="lobby-eyebrow">{eyebrow}</span>}
+      <h2>{title}</h2>
+      {description && <p>{description}</p>}
+    </header>
+  );
 }
 
 async function copyText(text) {
@@ -66,8 +81,8 @@ export default function Lobby({ send, gameState, myInfo }) {
   const isHost = inRoom && gameState.players[0]?.id === myInfo.playerId;
   const playerCount = gameState?.players?.length || 0;
   const statusText = getLobbyActionStatus({ connected, pendingAction, timedOut });
-  const roomStatusText = getRoomActionStatus({ connected, pendingAction:roomPendingAction, timedOutAction:roomTimedOutAction });
-  const roomCopyState = getRoomCopyState({ mode:gameState?.mode, roomId:gameState?.id, copyState });
+  const roomStatusText = getRoomActionStatus({ connected, pendingAction: roomPendingAction, timedOutAction: roomTimedOutAction });
+  const roomCopyState = getRoomCopyState({ mode: gameState?.mode, roomId: gameState?.id, copyState });
 
   useEffect(() => { setSavedSession(Boolean(getLastSavedSession())); }, [view, inRoom]);
   useEffect(() => { if (inRoom) setView('room'); }, [inRoom]);
@@ -106,24 +121,27 @@ export default function Lobby({ send, gameState, myInfo }) {
   }, []);
 
   const states = useMemo(() => ({
-    continue: getLobbyActionState({ connected, pendingAction, action:'continue' }),
-    create: getLobbyActionState({ connected, pendingAction, action:'create' }),
-    solo: getLobbyActionState({ connected, pendingAction, action:'solo' }),
-    join: getLobbyActionState({ connected, pendingAction, action:'join', valid:joinId.length===6 }),
+    continue: getLobbyActionState({ connected, pendingAction, action: 'continue' }),
+    create: getLobbyActionState({ connected, pendingAction, action: 'create' }),
+    solo: getLobbyActionState({ connected, pendingAction, action: 'solo' }),
+    join: getLobbyActionState({ connected, pendingAction, action: 'join', valid: joinId.length === 6 }),
   }), [connected, pendingAction, joinId]);
 
   const roomStates = useMemo(() => ({
-    start: getRoomActionState({ action:'start', connected, pendingAction:roomPendingAction, isHost, playerCount, roomStatus:gameState?.status }),
-    exit: getRoomActionState({ action:'exit', connected, pendingAction:roomPendingAction, isHost, playerCount, roomStatus:gameState?.status }),
+    start: getRoomActionState({ action: 'start', connected, pendingAction: roomPendingAction, isHost, playerCount, roomStatus: gameState?.status }),
+    exit: getRoomActionState({ action: 'exit', connected, pendingAction: roomPendingAction, isHost, playerCount, roomStatus: gameState?.status }),
   }), [connected, roomPendingAction, isHost, playerCount, gameState?.status]);
 
   function beginRequest(action, message) {
-    const state = getLobbyActionState({ connected, pendingAction, action, valid:action!=='join'||joinId.length===6 });
+    const state = getLobbyActionState({ connected, pendingAction, action, valid: action !== 'join' || joinId.length === 6 });
     if (state.disabled || !send(message)) return;
     setTimedOut(false);
     setPendingAction(action);
     clearTimeout(pendingTimer.current);
-    pendingTimer.current = setTimeout(() => { setPendingAction(null); setTimedOut(true); }, LOBBY_ACTION_TIMEOUT_MS);
+    pendingTimer.current = setTimeout(() => {
+      setPendingAction(null);
+      setTimedOut(true);
+    }, LOBBY_ACTION_TIMEOUT_MS);
   }
 
   function beginRoomRequest(action, message) {
@@ -138,9 +156,22 @@ export default function Lobby({ send, gameState, myInfo }) {
     }, ROOM_ACTION_TIMEOUT_MS);
   }
 
+  function requireName(nextView) {
+    if (name.trim()) {
+      setView(nextView);
+      return;
+    }
+    document.getElementById('player-name')?.focus();
+  }
+
   function joinRoom() {
     if (!name.trim() || joinId.length !== 6) return;
-    beginRequest('join', { type:'join_room', roomId:joinId.trim(), playerName:name.trim(), ...loadSavedSession(joinId.trim()) });
+    beginRequest('join', {
+      type: 'join_room',
+      roomId: joinId.trim(),
+      playerName: name.trim(),
+      ...loadSavedSession(joinId.trim()),
+    });
   }
 
   async function copyRoomId() {
@@ -156,75 +187,251 @@ export default function Lobby({ send, gameState, myInfo }) {
     copyTimer.current = setTimeout(() => setCopyState('idle'), 2600);
   }
 
-  return <div className="lobby-shell" style={{ background:'radial-gradient(ellipse at 30% 50%, #10291c 0%, #0d1117 58%, #060b08 100%)', color:'#f8fafc', fontFamily:"'PingFang SC','Microsoft YaHei',sans-serif" }}>
-    <div className="lobby-brand">
-      <div className="lobby-brand-title" style={{ fontSize:48, fontWeight:900, color:'#f5c842', lineHeight:1 }}>河南<br/>五十K</div>
-      <div style={{ marginTop:12, fontSize:12, color:'#94a3b8' }}>联网对战 · 单机练习</div>
-    </div>
-    <main className="lobby-main">
-      <div className="lobby-panel">
-        {!inRoom && <StatusBox danger={timedOut}>{statusText}</StatusBox>}
-        {inRoom && <StatusBox danger={Boolean(roomTimedOutAction)}>{roomStatusText}</StatusBox>}
+  return (
+    <div className="lobby-shell">
+      <aside className="lobby-brand" aria-label="河南五十K">
+        <div className="lobby-brand-mark" aria-hidden="true">五十K</div>
+        <h1 className="lobby-brand-title">河南五十K</h1>
+        <p className="lobby-brand-subtitle">家乡规则，随时开一桌</p>
+        <ul className="lobby-brand-points" aria-label="游戏特点">
+          <li>单机练习，开局更快</li>
+          <li>三人或四人联网对战</li>
+          <li>自动断线恢复与规则提示</li>
+        </ul>
+      </aside>
 
-        {view === 'home' && !inRoom && <>
-          <label htmlFor="player-name" style={{ display:'block', fontSize:12, color:'#94a3b8', marginBottom:6 }}>你的昵称</label>
-          <input id="player-name" value={name} maxLength={8} onChange={e=>setName(e.target.value)} placeholder="输入昵称，单机可不填" style={{ width:'100%', minHeight:46, padding:'0 14px', borderRadius:10, background:'#ffffff0d', border:'1px solid #ffffff22', color:'#fff', marginBottom:12 }}/>
-          {savedSession && <button type="button" disabled={states.continue.disabled} onClick={()=>{const s=getLastSavedSession(); if(s) beginRequest('continue',{type:'join_room',...s,playerName:''});}} style={{...buttonStyle(states.continue.disabled,'rgba(255,255,255,.08)','#f5c842'),marginBottom:10}}>{states.continue.label}</button>}
-          <button type="button" disabled={Boolean(pendingAction)} onClick={()=>setView('solo')} style={{...buttonStyle(Boolean(pendingAction),'linear-gradient(135deg,#f5c842,#d99920)','#102016'),marginBottom:10}}>🤖 单机练习</button>
-          <div style={{ display:'flex', gap:10 }}>
-            <button type="button" disabled={!connected||Boolean(pendingAction)} onClick={()=>{if(!name.trim())return alert('请输入昵称');setView('create');}} style={buttonStyle(!connected||Boolean(pendingAction),'#166534')}>创建房间</button>
-            <button type="button" disabled={!connected||Boolean(pendingAction)} onClick={()=>{if(!name.trim())return alert('请输入昵称');setView('join');}} style={buttonStyle(!connected||Boolean(pendingAction),'#0891b2')}>加入房间</button>
-          </div>
-        </>}
+      <main className="lobby-main">
+        <section className="lobby-panel" aria-label={inRoom ? '等待房间' : '进入游戏'}>
+          {!inRoom && <StatusBox danger={timedOut}>{statusText}</StatusBox>}
+          {inRoom && <StatusBox danger={Boolean(roomTimedOutAction)}>{roomStatusText}</StatusBox>}
 
-        {view === 'solo' && !inRoom && <>
-          <div style={{ textAlign:'center', color:'#94a3b8', marginBottom:12 }}>选择单机人数</div>
-          <div style={{ display:'flex', gap:10 }}>
-            <button type="button" disabled={states.solo.disabled} onClick={()=>beginRequest('solo',{type:'create_room',playerName:name.trim()||'我',maxPlayers:3,solo:true})} style={buttonStyle(states.solo.disabled,'#166534')}>三人单机</button>
-            <button type="button" disabled={states.solo.disabled} onClick={()=>beginRequest('solo',{type:'create_room',playerName:name.trim()||'我',maxPlayers:4,solo:true})} style={buttonStyle(states.solo.disabled,'#6d28d9')}>四人单机</button>
-          </div>
-        </>}
-
-        {view === 'create' && !inRoom && <div style={{ display:'flex', gap:10 }}>
-          <button type="button" disabled={states.create.disabled} onClick={()=>beginRequest('create',{type:'create_room',playerName:name.trim(),maxPlayers:3})} style={buttonStyle(states.create.disabled,'#166534')}>三人局</button>
-          <button type="button" disabled={states.create.disabled} onClick={()=>beginRequest('create',{type:'create_room',playerName:name.trim(),maxPlayers:4})} style={buttonStyle(states.create.disabled,'#6d28d9')}>四人局</button>
-        </div>}
-
-        {view === 'join' && !inRoom && <>
-          <label htmlFor="room-id" style={{ display:'block', fontSize:12, color:'#94a3b8', marginBottom:6 }}>6位房间号</label>
-          <input id="room-id" inputMode="numeric" value={joinId} maxLength={6} disabled={Boolean(pendingAction)} onChange={e=>setJoinId(e.target.value.replace(/\D/g,'').slice(0,6))} onKeyDown={e=>{if(e.key==='Enter'&&!states.join.disabled)joinRoom();}} style={{ width:'100%', minHeight:52, textAlign:'center', fontSize:24, letterSpacing:8, borderRadius:10, background:'#ffffff0d', border:'1px solid #ffffff22', color:'#f5c842', marginBottom:12 }}/>
-          <button type="button" disabled={states.join.disabled} onClick={joinRoom} style={buttonStyle(states.join.disabled,'#0891b2')}>{states.join.label}</button>
-        </>}
-
-        {!inRoom && view !== 'home' && <button type="button" disabled={Boolean(pendingAction)} onClick={()=>setView('home')} style={{ width:'100%', minHeight:44, marginTop:12, border:0, background:'transparent', color:'#94a3b8' }}>← 返回</button>}
-
-        {inRoom && <>
-          <section aria-label="房间玩家" className="waiting-room-card">
-            <div className="waiting-room-header">
-              <span style={{ color:'#94a3b8' }}>{gameState.mode==='solo'?'单机练习':'房间号'}</span>
-              <div className="waiting-room-code-wrap">
-                <strong className="waiting-room-code">{gameState.mode==='solo'?`${gameState.maxPlayers}人`:gameState.id}</strong>
-                {roomCopyState.visible && <button type="button" className="waiting-room-copy" disabled={roomCopyState.disabled} onClick={copyRoomId} aria-describedby="copy-room-status">{roomCopyState.label}</button>}
+          {view === 'home' && !inRoom && (
+            <>
+              <ViewHeading
+                eyebrow="开始游戏"
+                title="选一种方式，马上开局"
+                description="单机不用填写昵称；联网对战请先输入昵称。"
+              />
+              <div className="lobby-field">
+                <label htmlFor="player-name">你的昵称</label>
+                <input
+                  id="player-name"
+                  value={name}
+                  maxLength={8}
+                  autoComplete="nickname"
+                  onChange={event => setName(event.target.value)}
+                  placeholder="联网对战时填写，最多8个字"
+                />
               </div>
-            </div>
-            <div id="copy-room-status" role="status" aria-live="polite" aria-atomic="true" style={{ minHeight:roomCopyState.status?18:0, fontSize:12, color:copyState==='error'?'#fecaca':'#a7f3d0', textAlign:'right', marginBottom:roomCopyState.status?6:0 }}>{roomCopyState.status}</div>
-            <div style={{ fontSize:12, color:'#94a3b8', marginBottom:8 }}>玩家 {playerCount}/{gameState.maxPlayers}</div>
-            {gameState.players.map((p,i)=>{
-              const displayName = formatPlayerName(p.name, { isSelf:p.id===myInfo.playerId });
-              const presence = getPresenceState(p);
-              return <div key={p.id} className="waiting-player" style={{ background:p.id===myInfo.playerId?'#f5c84212':'transparent' }} aria-label={`${displayName.full}，${presence.announced}`}>
-                <span aria-hidden="true" style={{ width:30,height:30,borderRadius:'50%',background:AVATAR_COLORS[i%AVATAR_COLORS.length],display:'grid',placeItems:'center' }}>{p.isBot?'机':AVATARS[i%AVATARS.length]}</span>
-                <span className="waiting-player-name" title={displayName.truncated?displayName.full:undefined}>{displayName.visible}</span>
-                <span className={`waiting-player-status ${presence.tone}`}>{presence.label}</span>
-              </div>;
-            })}
-          </section>
-          {isHost ? <button type="button" disabled={roomStates.start.disabled} aria-describedby="room-action-help" onClick={()=>beginRoomRequest('start',{type:'start_game'})} style={buttonStyle(roomStates.start.disabled,'linear-gradient(135deg,#f5c842,#e8a020)','#0d1117')}>{roomStates.start.label}</button> : <div style={{ textAlign:'center', color:'#94a3b8', padding:10 }}>等待房主开始游戏…</div>}
-          {roomStates.start.reason && isHost && !roomPendingAction && <div style={{ textAlign:'center', color:'#94a3b8', fontSize:12, marginTop:8 }}>{roomStates.start.reason}</div>}
-          <button type="button" disabled={roomStates.exit.disabled} aria-describedby="room-action-help" onClick={()=>beginRoomRequest('exit',{type:'leave_room'})} style={{...buttonStyle(roomStates.exit.disabled,'rgba(127,29,29,.35)','#fecaca'),marginTop:12}}>{roomStates.exit.label}</button>
-          <span id="room-action-help" style={{ position:'absolute', width:1, height:1, overflow:'hidden', clip:'rect(0 0 0 0)' }}>{roomStatusText || roomStates.start.reason || roomStates.exit.reason || '房间操作可用。'}</span>
-        </>}
-      </div>
-    </main>
-  </div>;
+
+              {savedSession && (
+                <button
+                  type="button"
+                  className="lobby-button secondary full"
+                  disabled={states.continue.disabled}
+                  onClick={() => {
+                    const session = getLastSavedSession();
+                    if (session) beginRequest('continue', { type: 'join_room', ...session, playerName: '' });
+                  }}
+                >
+                  {states.continue.label}
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="lobby-button primary full lobby-solo-button"
+                disabled={Boolean(pendingAction)}
+                onClick={() => setView('solo')}
+              >
+                <span className="lobby-button-icon" aria-hidden="true">牌</span>
+                <span><strong>单机练习</strong><small>和电脑直接开局</small></span>
+              </button>
+
+              <div className="lobby-action-grid">
+                <button
+                  type="button"
+                  className="lobby-button secondary"
+                  disabled={!connected || Boolean(pendingAction)}
+                  onClick={() => requireName('create')}
+                >
+                  <strong>创建房间</strong>
+                  <small>邀请朋友加入</small>
+                </button>
+                <button
+                  type="button"
+                  className="lobby-button secondary"
+                  disabled={!connected || Boolean(pendingAction)}
+                  onClick={() => requireName('join')}
+                >
+                  <strong>加入房间</strong>
+                  <small>输入6位房间号</small>
+                </button>
+              </div>
+              {!name.trim() && (
+                <p className="lobby-field-hint">联网功能需要昵称；点击后会自动定位到输入框。</p>
+              )}
+            </>
+          )}
+
+          {view === 'solo' && !inRoom && (
+            <>
+              <ViewHeading eyebrow="单机练习" title="选择参与人数" description="其余座位由电脑玩家补齐。" />
+              <div className="lobby-choice-grid">
+                <button
+                  type="button"
+                  className="lobby-choice-card"
+                  disabled={states.solo.disabled}
+                  onClick={() => beginRequest('solo', { type: 'create_room', playerName: name.trim() || '我', maxPlayers: 3, solo: true })}
+                >
+                  <strong>三人单机</strong>
+                  <span>节奏更快，适合练习</span>
+                </button>
+                <button
+                  type="button"
+                  className="lobby-choice-card"
+                  disabled={states.solo.disabled}
+                  onClick={() => beginRequest('solo', { type: 'create_room', playerName: name.trim() || '我', maxPlayers: 4, solo: true })}
+                >
+                  <strong>四人单机</strong>
+                  <span>完整四人牌桌体验</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {view === 'create' && !inRoom && (
+            <>
+              <ViewHeading eyebrow="创建房间" title="选择房间人数" description="创建后把房间号发给朋友。" />
+              <div className="lobby-choice-grid">
+                <button
+                  type="button"
+                  className="lobby-choice-card"
+                  disabled={states.create.disabled}
+                  onClick={() => beginRequest('create', { type: 'create_room', playerName: name.trim(), maxPlayers: 3 })}
+                >
+                  <strong>三人局</strong>
+                  <span>满3人即可开始</span>
+                </button>
+                <button
+                  type="button"
+                  className="lobby-choice-card"
+                  disabled={states.create.disabled}
+                  onClick={() => beginRequest('create', { type: 'create_room', playerName: name.trim(), maxPlayers: 4 })}
+                >
+                  <strong>四人局</strong>
+                  <span>满4人即可开始</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {view === 'join' && !inRoom && (
+            <>
+              <ViewHeading eyebrow="加入房间" title="输入6位房间号" description="房间号只包含数字。" />
+              <div className="lobby-field">
+                <label htmlFor="room-id">房间号</label>
+                <input
+                  id="room-id"
+                  className="room-id-input"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={joinId}
+                  maxLength={6}
+                  disabled={Boolean(pendingAction)}
+                  onChange={event => setJoinId(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onKeyDown={event => { if (event.key === 'Enter' && !states.join.disabled) joinRoom(); }}
+                  placeholder="000000"
+                />
+              </div>
+              <button type="button" disabled={states.join.disabled} onClick={joinRoom} className="lobby-button primary full">
+                {states.join.label}
+              </button>
+            </>
+          )}
+
+          {!inRoom && view !== 'home' && (
+            <button type="button" disabled={Boolean(pendingAction)} onClick={() => setView('home')} className="lobby-back-button">
+              <span aria-hidden="true">←</span> 返回开始页
+            </button>
+          )}
+
+          {inRoom && (
+            <>
+              <ViewHeading
+                eyebrow={gameState.mode === 'solo' ? '单机练习' : '等待房间'}
+                title={gameState.mode === 'solo' ? `${gameState.maxPlayers}人牌桌` : `房间 ${gameState.id}`}
+                description={isHost ? '人员到齐后即可开始。' : '等待房主开始游戏。'}
+              />
+              <section aria-label="房间玩家" className="waiting-room-card">
+                <div className="waiting-room-header">
+                  <span>{gameState.mode === 'solo' ? '参与人数' : '房间号'}</span>
+                  <div className="waiting-room-code-wrap">
+                    <strong className="waiting-room-code">{gameState.mode === 'solo' ? `${gameState.maxPlayers}人` : gameState.id}</strong>
+                    {roomCopyState.visible && (
+                      <button type="button" className="waiting-room-copy" disabled={roomCopyState.disabled} onClick={copyRoomId} aria-describedby="copy-room-status">
+                        {roomCopyState.label}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div id="copy-room-status" role="status" aria-live="polite" aria-atomic="true" className={`waiting-room-copy-status ${copyState}`}>
+                  {roomCopyState.status}
+                </div>
+                <div className="waiting-room-count">玩家 {playerCount}/{gameState.maxPlayers}</div>
+                {gameState.players.map((player, index) => {
+                  const displayName = formatPlayerName(player.name, { isSelf: player.id === myInfo.playerId });
+                  const presence = getPresenceState(player);
+                  return (
+                    <div
+                      key={player.id}
+                      className={`waiting-player${player.id === myInfo.playerId ? ' self' : ''}`}
+                      aria-label={`${displayName.full}，${presence.announced}`}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="waiting-player-avatar"
+                        style={{ '--avatar-color': AVATAR_COLORS[index % AVATAR_COLORS.length] }}
+                      >
+                        {player.isBot ? '机' : AVATARS[index % AVATARS.length]}
+                      </span>
+                      <span className="waiting-player-name" title={displayName.truncated ? displayName.full : undefined}>{displayName.visible}</span>
+                      <span className={`waiting-player-status ${presence.tone}`}>{presence.label}</span>
+                    </div>
+                  );
+                })}
+              </section>
+
+              {isHost ? (
+                <button
+                  type="button"
+                  disabled={roomStates.start.disabled}
+                  aria-describedby="room-action-help"
+                  onClick={() => beginRoomRequest('start', { type: 'start_game' })}
+                  className="lobby-button primary full"
+                >
+                  {roomStates.start.label}
+                </button>
+              ) : (
+                <div className="waiting-room-message">等待房主开始游戏…</div>
+              )}
+              {roomStates.start.reason && isHost && !roomPendingAction && <div className="waiting-room-reason">{roomStates.start.reason}</div>}
+              <button
+                type="button"
+                disabled={roomStates.exit.disabled}
+                aria-describedby="room-action-help"
+                onClick={() => beginRoomRequest('exit', { type: 'leave_room' })}
+                className="lobby-button danger full lobby-exit-button"
+              >
+                {roomStates.exit.label}
+              </button>
+              <span id="room-action-help" className="visually-hidden">
+                {roomStatusText || roomStates.start.reason || roomStates.exit.reason || '房间操作可用。'}
+              </span>
+            </>
+          )}
+        </section>
+      </main>
+    </div>
+  );
 }
