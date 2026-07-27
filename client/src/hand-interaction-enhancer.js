@@ -30,10 +30,18 @@ export function syncCardAccessibility(cardNode, index = 0, total = 1, tabbable =
   cardNode.setAttribute('aria-label', `${cardAccessibleLabel(cardNode, index)}，${selected ? '已选中' : '未选中'}`);
 }
 
+function prefersReducedMotion() {
+  return Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+}
+
 function setRovingFocus(cards, target) {
   cards.forEach(card => card.setAttribute('tabindex', card === target ? '0' : '-1'));
   target?.focus?.({ preventScroll: true });
-  target?.scrollIntoView?.({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  target?.scrollIntoView?.({
+    block: 'nearest',
+    inline: 'center',
+    behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+  });
 }
 
 export function enhanceHand(root = document) {
