@@ -1,5 +1,5 @@
 const ACTION_GUIDANCE_ID = 'game-action-guidance';
-const HINT_TOAST_PATTERN = /提示\s*(\d+)\s*\/\s*(\d+)/;
+const HINT_TOAST_PATTERN = /^提示\s*(\d+)\s*\/\s*(\d+)$/;
 
 function getStatusText(root) {
   return root.querySelector?.('.game-hand-selection-status')?.textContent?.trim() || '';
@@ -32,6 +32,14 @@ function getHintReason(hintButton, statusText, hintProgress) {
   return '当前暂时不能使用提示。';
 }
 
+function setAttributeIfChanged(node, name, value) {
+  if (node.getAttribute(name) !== value) node.setAttribute(name, value);
+}
+
+function setTextIfChanged(node, text) {
+  if (node.textContent !== text) node.textContent = text;
+}
+
 function ensureDescription(root, id, text) {
   let node = root.getElementById?.(id);
   if (!node) {
@@ -40,14 +48,18 @@ function ensureDescription(root, id, text) {
     node.className = 'game-action-description sr-only';
     root.body?.appendChild(node);
   }
-  node.textContent = text;
+  setTextIfChanged(node, text);
   return node;
 }
 
 function findLatestHintProgress(root) {
   const nodes = [...(root.querySelectorAll?.('div') || [])];
   for (let index = nodes.length - 1; index >= 0; index--) {
-    const match = nodes[index].textContent?.trim().match(HINT_TOAST_PATTERN);
+    const node = nodes[index];
+    if (node.id === ACTION_GUIDANCE_ID || node.closest?.(`#${ACTION_GUIDANCE_ID}`)) continue;
+    const text = node.textContent?.trim() || '';
+    if (text.length > 24) continue;
+    const match = text.match(HINT_TOAST_PATTERN);
     if (match) return { current: Number(match[1]), total: Number(match[2]) };
   }
   return null;
@@ -72,12 +84,12 @@ export function enhanceGameActionGuidance(root = document) {
   const passDescription = ensureDescription(root, 'game-pass-description', descriptions.pass);
   const hintDescription = ensureDescription(root, 'game-hint-description', descriptions.hint);
 
-  playButton.setAttribute('aria-describedby', playDescription.id);
-  passButton.setAttribute('aria-describedby', passDescription.id);
-  hintButton.setAttribute('aria-describedby', hintDescription.id);
-  playButton.title = descriptions.play;
-  passButton.title = descriptions.pass;
-  hintButton.title = descriptions.hint;
+  setAttributeIfChanged(playButton, 'aria-describedby', playDescription.id);
+  setAttributeIfChanged(passButton, 'aria-describedby', passDescription.id);
+  setAttributeIfChanged(hintButton, 'aria-describedby', hintDescription.id);
+  if (playButton.title !== descriptions.play) playButton.title = descriptions.play;
+  if (passButton.title !== descriptions.pass) passButton.title = descriptions.pass;
+  if (hintButton.title !== descriptions.hint) hintButton.title = descriptions.hint;
 
   let guidance = root.getElementById?.(ACTION_GUIDANCE_ID);
   if (!guidance) {
@@ -97,8 +109,9 @@ export function enhanceGameActionGuidance(root = document) {
       : !passButton.disabled
         ? descriptions.pass
         : descriptions.play;
-  guidance.textContent = activeText;
-  guidance.dataset.state = hintProgress ? 'hint' : playButton.disabled ? 'waiting' : 'ready';
+  const nextState = hintProgress ? 'hint' : playButton.disabled ? 'waiting' : 'ready';
+  setTextIfChanged(guidance, activeText);
+  if (guidance.dataset.state !== nextState) guidance.dataset.state = nextState;
   return true;
 }
 
@@ -126,4 +139,4 @@ export function installGameActionGuidance(root = document) {
   return () => observer.disconnect();
 }
 
-export { ACTION_GUIDANCE_ID, HINT_TOAST_PATTERN, getHintReason, getPassReason, getPlayReason };
+export { ACTION_GUIDANCE_ID, HINT_TOAST_PATTERN, findLatestHintProgress, getHintReason, getPassReason, getPlayReason };
