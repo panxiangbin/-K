@@ -21,6 +21,8 @@ assert.match(source, /event\.key === 'ArrowRight'/, '必须支持方向键移动
 assert.match(source, /event\.key === 'Home'/, '必须支持跳到第一张牌');
 assert.match(source, /event\.key === 'End'/, '必须支持跳到最后一张牌');
 assert.match(source, /scrollIntoView/, '方向键移动后必须保持焦点牌可见');
+assert.match(source, /prefers-reduced-motion:\s*reduce/, '键盘焦点移动必须尊重减少动画设置');
+assert.match(source, /behavior:\s*prefersReducedMotion\(\) \? 'auto' : 'smooth'/, '减少动画时不得平滑滚动');
 assert.match(source, /role', 'group'/, '手牌区必须具备分组语义');
 assert.match(source, /共\$\{cards\.length\}张/, '手牌区必须播报总张数');
 assert.match(source, /MutationObserver/, '发牌和选中变化后必须同步语义');
