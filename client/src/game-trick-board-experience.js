@@ -23,6 +23,26 @@ function classifyCell(cell) {
   return 'played';
 }
 
+function classifySpecialPlay(actionText) {
+  if (actionText.includes('五十K')) return 'fifty-k';
+  if (actionText.includes('黑四')) return 'black-four';
+  if (actionText.includes('红四')) return 'red-four';
+  if (actionText.includes('八张')) return 'same-eight';
+  if (actionText.includes('四王')) return 'four-jokers';
+  if (actionText.includes('炸弹')) return 'bomb';
+  return '';
+}
+
+function specialPlayLabel(specialPlay) {
+  if (specialPlay === 'fifty-k') return '同花五十K';
+  if (specialPlay === 'black-four') return '黑四炸弹';
+  if (specialPlay === 'red-four') return '红四炸弹';
+  if (specialPlay === 'same-eight') return '八张同点炸弹';
+  if (specialPlay === 'four-jokers') return '四王炸弹';
+  if (specialPlay === 'bomb') return '炸弹';
+  return '';
+}
+
 function getCellKey(cell, index) {
   const header = cell.firstElementChild;
   return normalizeText(header?.firstElementChild?.textContent) || `seat-${index}`;
@@ -61,7 +81,17 @@ function setLatestCell(cells, latestKey) {
 
 function enhanceCell(cell, index) {
   const state = classifyCell(cell);
-  cell.classList.remove('is-played', 'is-passed', 'is-waiting');
+  cell.classList.remove(
+    'is-played',
+    'is-passed',
+    'is-waiting',
+    'is-fifty-k',
+    'is-black-four',
+    'is-red-four',
+    'is-same-eight',
+    'is-four-jokers',
+    'is-bomb',
+  );
   cell.classList.add('trick-action-card', `is-${state}`);
   cell.dataset.trickState = state;
   cell.setAttribute('role', 'listitem');
@@ -72,8 +102,21 @@ function enhanceCell(cell, index) {
   body?.classList.add('trick-action-card__body');
 
   const seatText = normalizeText(header?.firstElementChild?.textContent) || `第${index + 1}位玩家`;
-  const actionText = state === 'passed' ? '已过牌' : state === 'waiting' ? '等待操作' : normalizeText(header?.lastElementChild?.textContent) || '已出牌';
-  const ariaLabel = `${seatText}，${actionText}`;
+  const actionText = state === 'passed'
+    ? '已过牌'
+    : state === 'waiting'
+      ? '等待操作'
+      : normalizeText(header?.lastElementChild?.textContent) || '已出牌';
+  const cardCount = state === 'played' ? body?.children?.length || 0 : 0;
+  const specialPlay = state === 'played' ? classifySpecialPlay(actionText) : '';
+  const specialLabel = specialPlayLabel(specialPlay);
+
+  cell.dataset.cardCount = String(cardCount);
+  cell.dataset.specialPlay = specialPlay || 'normal';
+  if (specialPlay) cell.classList.add(`is-${specialPlay}`);
+
+  const cardCountText = cardCount > 0 ? `，共${cardCount}张牌` : '';
+  const ariaLabel = `${seatText}，${specialLabel || actionText}${cardCountText}`;
   cell.dataset.trickAriaLabel = ariaLabel;
   cell.setAttribute('aria-label', ariaLabel);
 
@@ -177,7 +220,9 @@ function installGameTrickBoardExperience() {
 
 export {
   classifyCell,
+  classifySpecialPlay,
   enhanceBoard,
   installGameTrickBoardExperience,
+  specialPlayLabel,
   updateLatestPlay,
 };
