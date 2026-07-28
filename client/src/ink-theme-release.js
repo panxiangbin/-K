@@ -1,5 +1,5 @@
 export const INK_THEME_ID = 'ink-06';
-export const INK_THEME_RELEASE = 'ink-06-mobile-r3';
+export const INK_THEME_RELEASE = 'ink-06-mobile-r4';
 
 function ensureReleaseBadge(documentObject) {
   const brand = documentObject?.querySelector?.('.lobby-brand');
@@ -7,7 +7,7 @@ function ensureReleaseBadge(documentObject) {
   const badge = documentObject.createElement('span');
   badge.className = 'ink-release-badge';
   badge.textContent = '新中式墨韵 · 06';
-  badge.setAttribute('aria-label', '当前界面主题：新中式墨韵06号，手机操作优化版');
+  badge.setAttribute('aria-label', '当前界面主题：新中式墨韵06号，手机操作优化R4版');
   brand.appendChild(badge);
   return true;
 }
@@ -30,5 +30,5 @@ export function installInkThemeRelease({ documentObject = globalThis.document, M
 
   const observer = new MutationObserverClass(() => applyInkThemeRelease(documentObject));
   observer.observe(root, { childList: true, subtree: true });
-  return observer;
+  return () => observer.disconnect();
 }
