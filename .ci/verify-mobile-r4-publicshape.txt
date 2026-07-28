@@ -1,0 +1,1 @@
+Validation-only marker for the current mobile UI r4 release after the legacy public-shape compatibility fix. This branch must not be merged.
