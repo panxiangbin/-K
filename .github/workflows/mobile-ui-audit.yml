@@ -1,0 +1,109 @@
+name: Mobile UI Audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'client/**'
+      - 'server/**'
+      - '.github/mobile-ui-audit.spec.cjs'
+      - '.github/workflows/mobile-ui-audit.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-ui-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  mobile-browser-audit:
+    name: Mobile browser audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
+
+      - name: Install and build client
+        working-directory: client
+        run: |
+          npm ci --include=dev --no-audit --no-fund
+          npm test
+          npm run build
+
+      - name: Install server
+        working-directory: server
+        run: npm ci --omit=dev --no-audit --no-fund
+
+      - name: Start local production server
+        run: |
+          PORT=10000 npm --prefix server start > /tmp/henan50k-server.log 2>&1 &
+          echo $! > /tmp/henan50k-server.pid
+          for attempt in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:10000/healthz >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/henan50k-server.log
+          exit 1
+
+      - name: Install mobile browser runner
+        run: |
+          mkdir -p /tmp/henan50k-mobile-audit
+          cd /tmp/henan50k-mobile-audit
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+          cp "$GITHUB_WORKSPACE/.github/mobile-ui-audit.spec.cjs" audit.spec.cjs
+
+      - name: Run real mobile journeys
+        env:
+          BASE_URL: http://127.0.0.1:10000
+          AUDIT_DIR: ${{ github.workspace }}/mobile-audit-output
+        run: |
+          cd /tmp/henan50k-mobile-audit
+          npx playwright test audit.spec.cjs --reporter=line --workers=1
+
+      - name: Save server log
+        if: always()
+        run: |
+          mkdir -p mobile-audit-output
+          cp /tmp/henan50k-server.log mobile-audit-output/server.log || true
+          printf '%s\n' "source_commit=${GITHUB_SHA}" > mobile-audit-output/source-commit.txt
+
+      - name: Upload mobile screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-ui-audit-${{ github.sha }}
+          path: mobile-audit-output
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Publish latest audit to results branch
+        if: always()
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --orphan mobile-audit-results
+          git rm -rf . >/dev/null 2>&1 || true
+          mkdir -p results
+          cp -R mobile-audit-output/. results/ || true
+          printf '# 河南五十K 手机端自动审计\n\n来源提交：`%s`\n\n尺寸：390×844、430×932、844×390。\n' "$GITHUB_SHA" > results/README.md
+          git add results
+          git commit -m "audit(ui): publish mobile browser results for ${GITHUB_SHA}" || exit 0
+          git push origin HEAD:mobile-audit-results --force
