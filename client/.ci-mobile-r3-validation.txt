@@ -1,0 +1,1 @@
+Temporary validation marker for ink-06-mobile-r3 and the narrow intact-group AI correction. This branch is validation-only and must not be merged.
