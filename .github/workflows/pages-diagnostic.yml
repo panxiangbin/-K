@@ -11,7 +11,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -22,9 +22,11 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: client/package-lock.json
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
 
-      - name: Install dependencies
+      - name: Install client dependencies
         working-directory: client
         run: npm ci --include=dev --no-audit --no-fund
 
@@ -103,6 +105,53 @@ jobs:
           cat pages-build.log
           exit 0
 
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci --omit=dev --no-audit --no-fund
+
+      - name: Run full server tests
+        working-directory: server
+        shell: bash
+        run: |
+          set +e
+          npm test > full-server-test.log 2>&1
+          echo $? > full-server-test.exit
+          cat full-server-test.log
+          exit 0
+
+      - name: Run every server test independently
+        working-directory: server
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const { spawnSync } = require('child_process');
+
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const commands = String(pkg.scripts.test || '').split(/\s*&&\s*/).filter(Boolean);
+          const failures = [];
+          const report = [];
+
+          for (const command of commands) {
+            const match = command.match(/^node\s+(.+)$/);
+            if (!match) {
+              failures.push(command);
+              report.push(`FAIL ${command}\nUnsupported diagnostic command\n`);
+              continue;
+            }
+            const file = match[1].trim();
+            const result = spawnSync(process.execPath, [file], { encoding: 'utf8' });
+            const status = result.status === 0 ? 'PASS' : 'FAIL';
+            report.push(`${status} ${file}\n${result.stdout || ''}${result.stderr || ''}\n`);
+            if (result.status !== 0) failures.push(file);
+          }
+
+          report.push(`SUMMARY failures=${failures.length}\n${failures.join('\n')}\n`);
+          fs.writeFileSync('individual-server-tests.log', report.join('\n'));
+          fs.writeFileSync('individual-server-tests.exit', failures.length ? '1\n' : '0\n');
+          console.log(report[report.length - 1]);
+          NODE
+
       - name: Upload diagnostic logs
         uses: actions/upload-artifact@v4
         with:
@@ -118,5 +167,9 @@ jobs:
             client/render-build.exit
             client/pages-build.log
             client/pages-build.exit
+            server/full-server-test.log
+            server/full-server-test.exit
+            server/individual-server-tests.log
+            server/individual-server-tests.exit
           if-no-files-found: error
           retention-days: 1
