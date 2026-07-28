@@ -1,5 +1,5 @@
-import { armConnectionTimeout } from './connection-timeout';
-import { bindWebSocketLifecycle } from './websocket-lifecycle';
+import { armConnectionTimeout } from './connection-timeout.js';
+import { bindWebSocketLifecycle } from './websocket-lifecycle.js';
 
 export function createWebSocketAttempt({
   url,
