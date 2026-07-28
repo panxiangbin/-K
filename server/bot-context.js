@@ -60,6 +60,12 @@ function summarizePublicPlays(plays, { botPlayerId = null, nextOpponentId = null
 
     const isBotPlay = botPlayerId && play.playerId === botPlayerId;
     if (isBotPlay) continue;
+
+    // 旧记录没有玩家归属时，只保留全局牌型与炸弹统计。
+    // 不能把它们误判为“远处对手”的近期压力，否则会重复加权。
+    const hasPlayerId = typeof play.playerId === 'string' && play.playerId.length > 0;
+    if (!hasPlayerId) continue;
+
     incrementCount(opponentPlayCounts, play.count);
     const age = recentPlays.length - 1 - index;
     if (nextOpponentId && play.playerId === nextOpponentId) {
