@@ -1,5 +1,6 @@
 const fs = require('fs');
 
+const UI_RELEASE = 'ink-06-r2';
 const MEDIA_EXTENSIONS = new Set(['.mp3', '.ogg', '.wav', '.m4a', '.aac', '.webm']);
 const COMPRESSIBLE_EXTENSIONS = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt', '.xml']);
 const STATIC_ASSET_EXTENSIONS = new Set([
@@ -62,12 +63,19 @@ function appendVary(res, value) {
   res.setHeader('Vary', Array.from(values).join(', '));
 }
 
+function applyHtmlNoStoreHeaders(res) {
+  res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('X-Henan50K-Release', UI_RELEASE);
+}
+
 function applyCompressedHeaders(res, originalPath, encoding) {
   res.setHeader('Content-Encoding', encoding);
   appendVary(res, 'Accept-Encoding');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   if (originalPath.endsWith('.html')) {
-    res.setHeader('Cache-Control', 'no-cache');
+    applyHtmlNoStoreHeaders(res);
   } else {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   }
@@ -104,7 +112,7 @@ function createStaticOptions() {
     lastModified: true,
     setHeaders(res, filePath) {
       if (filePath.endsWith('.html')) {
-        res.setHeader('Cache-Control', 'no-cache');
+        applyHtmlNoStoreHeaders(res);
         return;
       }
       if (isMediaFile(filePath)) {
@@ -129,6 +137,7 @@ function configureHttpDelivery(app, express, path, dirname) {
   app.use(express.static(distDir, createStaticOptions()));
   app.get('/healthz', (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Henan50K-Release', UI_RELEASE);
     res.status(200).type('text/plain').send('ok');
   });
   app.get('*', (req, res) => {
@@ -145,12 +154,14 @@ function configureHttpDelivery(app, express, path, dirname) {
       res.sendFile(variant.compressedPath);
       return;
     }
-    res.setHeader('Cache-Control', 'no-cache');
+    applyHtmlNoStoreHeaders(res);
     res.sendFile(indexFile);
   });
 }
 
 module.exports = {
+  UI_RELEASE,
+  applyHtmlNoStoreHeaders,
   createPrecompressedMiddleware,
   createStaticOptions,
   configureHttpDelivery,
