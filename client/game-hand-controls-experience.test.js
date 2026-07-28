@@ -7,11 +7,16 @@ const main = fs.readFileSync(new URL('./src/main.jsx', import.meta.url), 'utf8')
 const pkg = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 assert.match(source, /SLIDE_INTENT_PX = 9/, 'mouse slide selection should require deliberate movement');
-assert.match(source, /Math\.hypot/, 'mouse slide intent should use pointer distance rather than any micro movement');
+assert.match(source, /TOUCH_CLICK_SUPPRESSION_MS = 420/, 'touch swipes should suppress the synthetic follow-up click');
+assert.match(source, /Math\.hypot/, 'slide intent should use pointer distance rather than any micro movement');
+assert.match(source, /Math\.abs\(dx\) >= Math\.abs\(dy\)/, 'touch guard should only commit horizontal hand browsing');
 assert.match(source, /pointerType: event\.pointerType \|\| 'mouse'/, 'slide guard must remember the input device');
 assert.match(source, /active\.pointerType !== 'mouse'/, 'touch and pen movement must be reserved for hand scrolling');
-assert.match(source, /event\.stopImmediatePropagation\(\)/, 'touch movement must not reach the React slide selector');
-assert.doesNotMatch(source, /preventDefault\(\)/, 'touch guard must not cancel the browser horizontal scroll default');
+assert.match(source, /suppressClickUntil/, 'touch swipe guard must remember a short click suppression window');
+assert.match(source, /dataset\.handScrolling = 'true'/, 'hand surface should expose its active scrolling state');
+assert.match(source, /root\.addEventListener\('click'/, 'the guard must intercept the synthetic click after a swipe');
+assert.match(source, /event\.preventDefault\(\)/, 'only the synthetic post-swipe click should be cancelled');
+assert.match(source, /event\.stopImmediatePropagation\(\)/, 'touch movement and synthetic clicks must not reach React card selection');
 assert.match(source, /左右滑动查看全部手牌/, 'mobile accessibility instructions must explain horizontal hand browsing');
 assert.match(source, /pointercancel/, 'pointer cancellation must clear slide intent state');
 assert.match(source, /role', 'group'/, 'hand actions should expose grouped semantics');
