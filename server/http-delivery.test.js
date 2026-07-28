@@ -31,7 +31,7 @@ function createResponse() {
   };
 }
 
-assert.strictEqual(UI_RELEASE, 'ink-06-r2');
+assert.strictEqual(UI_RELEASE, 'ink-06-mobile-r4');
 const directHtmlResponse = createResponse();
 applyHtmlNoStoreHeaders(directHtmlResponse);
 assert.strictEqual(directHtmlResponse.headers['Cache-Control'], 'no-store, max-age=0, must-revalidate');
