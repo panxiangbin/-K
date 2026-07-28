@@ -19,6 +19,59 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function keepRecent(items, maximum = 40) {
+  if (items.length > maximum) items.splice(0, items.length - maximum);
+}
+
+async function capturePageSnapshot(page, auditState) {
+  try { auditState.pageTitle = await page.title(); } catch { auditState.pageTitle = ''; }
+  try {
+    auditState.bodyText = (await page.locator('body').innerText({ timeout: 3000 })).slice(0, 2000);
+  } catch {
+    auditState.bodyText = '';
+  }
+  try {
+    auditState.documentHtml = (await page.locator('html').evaluate(node => node.outerHTML)).slice(0, 4000);
+  } catch {
+    auditState.documentHtml = '';
+  }
+}
+
+function installPageDiagnostics(page, auditState, profileName) {
+  const diagnostics = {
+    consoleMessages: [],
+    pageErrors: [],
+    requestFailures: [],
+    httpErrors: [],
+  };
+  auditState.profileDiagnostics[profileName] = diagnostics;
+
+  page.on('console', message => {
+    if (message.type() !== 'error' && message.type() !== 'warning') return;
+    diagnostics.consoleMessages.push({ type: message.type(), text: message.text() });
+    keepRecent(diagnostics.consoleMessages);
+  });
+  page.on('pageerror', error => {
+    diagnostics.pageErrors.push(error.message);
+    keepRecent(diagnostics.pageErrors);
+  });
+  page.on('requestfailed', request => {
+    diagnostics.requestFailures.push({
+      method: request.method(),
+      url: request.url(),
+      failure: request.failure()?.errorText || 'unknown',
+    });
+    keepRecent(diagnostics.requestFailures);
+  });
+  page.on('response', response => {
+    if (response.status() < 400) return;
+    diagnostics.httpErrors.push({ status: response.status(), url: response.url() });
+    keepRecent(diagnostics.httpErrors);
+  });
+
+  return diagnostics;
+}
+
 async function waitForRelease(page, auditState) {
   const deadline = Date.now() + releaseTimeoutMs;
   let lastRelease = '';
@@ -42,12 +95,22 @@ async function waitForRelease(page, auditState) {
       auditState.lastError = lastError;
       auditState.lastUrl = page.url();
       auditState.releaseAttempts = attempt;
+      await capturePageSnapshot(page, auditState);
       if (lastRelease === expectedRelease) return;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
       auditState.lastError = lastError;
       auditState.lastUrl = page.url();
       auditState.releaseAttempts = attempt;
+      await capturePageSnapshot(page, auditState);
+      try {
+        await page.screenshot({
+          path: path.join(outputDir, `${auditState.activeProfile || 'unknown'}-release-wait.png`),
+          fullPage: true,
+        });
+      } catch {
+        // 页面可能已关闭，诊断 JSON 仍会保留其他信息。
+      }
     }
     console.log(`[mobile-audit] attempt ${attempt}: ${lastError || `release=${lastRelease || '未标记'}`}`);
     await page.waitForTimeout(15_000);
@@ -213,6 +276,10 @@ const auditState = {
   lastError: '',
   lastUrl: '',
   releaseAttempts: 0,
+  pageTitle: '',
+  bodyText: '',
+  documentHtml: '',
+  profileDiagnostics: {},
 };
 let auditFailure = null;
 
@@ -227,11 +294,7 @@ try {
       userAgent: 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36',
     });
     const page = await context.newPage();
-    const consoleErrors = [];
-    page.on('console', message => {
-      if (message.type() === 'error') consoleErrors.push(message.text());
-    });
-    page.on('pageerror', error => consoleErrors.push(error.message));
+    const diagnostics = installPageDiagnostics(page, auditState, profile.name);
 
     await waitForRelease(page, auditState);
     await page.screenshot({ path: path.join(outputDir, `${profile.name}-lobby.png`), fullPage: true });
@@ -243,7 +306,7 @@ try {
     await verifyCardTap(page, profile);
     await page.screenshot({ path: path.join(outputDir, `${profile.name}-game.png`), fullPage: true });
 
-    report.push({ ...profile, metrics, consoleErrors });
+    report.push({ ...profile, metrics, diagnostics });
     auditState.completedProfiles.push(profile.name);
     await context.close();
   }
