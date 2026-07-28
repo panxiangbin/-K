@@ -27,8 +27,8 @@ assert.match(moduleSource, /黑四/, '必须识别黑四炸弹');
 assert.match(moduleSource, /红四/, '必须识别红四炸弹');
 assert.match(moduleSource, /八张/, '必须识别八张同点炸弹');
 assert.match(moduleSource, /四王/, '必须识别四王炸弹');
-assert.match(moduleSource, /data\.cardCount/, '行动卡必须记录实际牌张数');
-assert.match(moduleSource, /data\.specialPlay/, '行动卡必须记录特殊牌型');
+assert.match(moduleSource, /dataset\.cardCount\s*=\s*String\(cardCount\)/, '行动卡必须记录实际牌张数');
+assert.match(moduleSource, /dataset\.specialPlay\s*=\s*specialPlay \|\| 'normal'/, '行动卡必须记录特殊牌型');
 assert.match(moduleSource, /共\$\{cardCount\}张牌/, '读屏说明必须包含实际牌张数');
 assert.doesNotMatch(moduleSource, /setInterval\s*\(/, '中央牌桌增强不得使用持续轮询');
 
