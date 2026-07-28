@@ -111,7 +111,7 @@ run('两手残局优先打掉分数牌组，避免把10留到最后一手', () =
   assert.equal(structure.endgameScoreGroups, 0);
 });
 
-run('下家只剩三张时，结构相同时保留更高控制牌', () => {
+run('高分牌堆且下家只剩三张时，结构相同时保留更高控制牌', () => {
   const pairSeven = [card('7'), card('7', '♥')];
   const pairNine = [card('9'), card('9', '♥')];
   const pairAce = [card('A'), card('A', '♥')];
@@ -121,7 +121,7 @@ run('下家只剩三张时，结构相同时保留更高控制牌', () => {
     hand,
     { type: 'pair', rank: '6' },
     pairNine,
-    { nextOpponentCards: 3, minOpponentCards: 3 },
+    { nextOpponentCards: 3, minOpponentCards: 3, pileScore: 20 },
   );
   assert.deepEqual(new Set(move.map(item => item.id)), new Set(pairSeven.map(item => item.id)));
   assert.equal(remainingStructure(hand, move).controlFloor, ORDER.indexOf('9'));
@@ -137,9 +137,10 @@ run('无迫近对手时仍使用较小合法对子，不无故抬高', () => {
   assert.deepEqual(new Set(move.map(item => item.id)), new Set(pairSeven.map(item => item.id)));
 });
 
-run('威胁识别覆盖下家和全桌最少牌数', () => {
-  assert.equal(isImmediateThreat({ nextOpponentCards: 3 }), true);
-  assert.equal(isImmediateThreat({ nextOpponentCards: 5, minOpponentCards: 2 }), true);
+run('威胁识别同时考虑位置、剩余牌数和牌堆分数', () => {
+  assert.equal(isImmediateThreat({ nextOpponentCards: 3, pileScore: 20 }), true);
+  assert.equal(isImmediateThreat({ nextOpponentCards: 3, pileScore: 0 }), false);
+  assert.equal(isImmediateThreat({ nextOpponentCards: 5, minOpponentCards: 2, threatSource: 'table', pileScore: 20 }), true);
   assert.equal(isImmediateThreat({ nextOpponentCards: 4, minOpponentCards: 4 }), false);
   assert.equal(isImmediateThreat({}), false);
 });
