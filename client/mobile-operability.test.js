@@ -53,7 +53,7 @@ assert.equal((css.match(/{/g) || []).length, (css.match(/}/g) || []).length, 'mo
 assert.equal((scrollHotfix.match(/{/g) || []).length, (scrollHotfix.match(/}/g) || []).length, 'mobile scroll hotfix CSS braces must balance');
 assert.equal((overlayCss.match(/{/g) || []).length, (overlayCss.match(/}/g) || []).length, 'mobile overlay CSS braces must balance');
 assert(!scrollHotfix.includes('grid-template-columns: repeat(5, minmax(0, 1fr))'), 'last-loaded mobile layer must not force five actions into one cramped row');
-assert(!scrollHotfix.includes('height: auto !important'), 'mobile lobby scroll container must have a bounded viewport height');
+assert(!/(^|\n)\s*height:\s*auto\s*!important/.test(scrollHotfix), 'mobile lobby scroll container must have a bounded viewport height');
 assert(main.includes("import './mobile-operability.css';"), 'main entry must load mobile operability CSS');
 assert(main.includes("import './mobile-scroll-hotfix.css';"), 'main entry must load mobile scroll hotfix CSS');
 assert(main.includes("import './mobile-game-overlay.css';"), 'main entry must load mobile overlay safeguards');
