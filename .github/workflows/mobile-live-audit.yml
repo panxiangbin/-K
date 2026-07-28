@@ -4,8 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'client/src/**'
-      - 'client/mobile-live-audit.mjs'
+      - 'client/**'
+      - '.github/workflows/mobile-live-audit.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'client/**'
       - '.github/workflows/mobile-live-audit.yml'
   workflow_dispatch:
 
@@ -13,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mobile-live-audit
+  group: mobile-live-audit-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -53,7 +57,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-live-audit
+          name: mobile-live-audit-${{ github.run_attempt }}
           path: client/mobile-audit-artifacts
           if-no-files-found: warn
           retention-days: 14
