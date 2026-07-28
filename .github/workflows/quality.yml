@@ -27,7 +27,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: |
             client/package-lock.json
@@ -51,4 +51,16 @@ jobs:
 
       - name: Test server
         working-directory: server
-        run: npm test
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee ../server-test-output.log
+
+      - name: Upload server test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-test-diagnostics-${{ github.run_attempt }}
+          path: server-test-output.log
+          if-no-files-found: warn
+          retention-days: 7
