@@ -3,6 +3,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const {
+  UI_RELEASE,
+  applyHtmlNoStoreHeaders,
   createPrecompressedMiddleware,
   createStaticOptions,
   configureHttpDelivery,
@@ -29,10 +31,19 @@ function createResponse() {
   };
 }
 
+assert.strictEqual(UI_RELEASE, 'ink-06-r2');
+const directHtmlResponse = createResponse();
+applyHtmlNoStoreHeaders(directHtmlResponse);
+assert.strictEqual(directHtmlResponse.headers['Cache-Control'], 'no-store, max-age=0, must-revalidate');
+assert.strictEqual(directHtmlResponse.headers.Pragma, 'no-cache');
+assert.strictEqual(directHtmlResponse.headers.Expires, '0');
+assert.strictEqual(directHtmlResponse.headers['X-Henan50K-Release'], UI_RELEASE);
+
 const options = createStaticOptions();
 const htmlResponse = createResponse();
 options.setHeaders(htmlResponse, '/tmp/index.html');
-assert.strictEqual(htmlResponse.headers['Cache-Control'], 'no-cache');
+assert.strictEqual(htmlResponse.headers['Cache-Control'], 'no-store, max-age=0, must-revalidate');
+assert.strictEqual(htmlResponse.headers['X-Henan50K-Release'], UI_RELEASE);
 
 const assetResponse = createResponse();
 options.setHeaders(assetResponse, '/tmp/assets/app.abc123.js');
@@ -126,10 +137,14 @@ assert.strictEqual(healthResponse.statusCode, 200);
 assert.strictEqual(healthResponse.contentType, 'text/plain');
 assert.strictEqual(healthResponse.body, 'ok');
 assert.strictEqual(healthResponse.headers['Cache-Control'], 'no-store');
+assert.strictEqual(healthResponse.headers['X-Henan50K-Release'], UI_RELEASE);
 
 const fallbackResponse = createResponse();
 routes.get('*')({ path: '/room/ABC123', headers: {} }, fallbackResponse);
-assert.strictEqual(fallbackResponse.headers['Cache-Control'], 'no-cache');
+assert.strictEqual(fallbackResponse.headers['Cache-Control'], 'no-store, max-age=0, must-revalidate');
+assert.strictEqual(fallbackResponse.headers.Pragma, 'no-cache');
+assert.strictEqual(fallbackResponse.headers.Expires, '0');
+assert.strictEqual(fallbackResponse.headers['X-Henan50K-Release'], UI_RELEASE);
 assert.strictEqual(fallbackResponse.file, path.join(__dirname, '../client/dist/index.html'));
 
 const missingAssetResponse = createResponse();
