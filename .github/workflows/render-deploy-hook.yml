@@ -1,0 +1,45 @@
+name: Trigger Render Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    name: Trigger production deploy hook
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Trigger latest Render deployment when configured
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_DEPLOY_HOOK_URL:-}" ]; then
+            echo "::notice::RENDER_DEPLOY_HOOK_URL is not configured; Render auto-deploy remains the active path."
+            exit 0
+          fi
+
+          response_file="${RUNNER_TEMP}/render-deploy-response.json"
+          status="$(curl --silent --show-error --location \
+            --retry 3 --retry-all-errors --connect-timeout 15 --max-time 90 \
+            --output "${response_file}" --write-out '%{http_code}' \
+            --request POST "${RENDER_DEPLOY_HOOK_URL}")"
+
+          if [ "${status}" != "200" ] && [ "${status}" != "202" ]; then
+            echo "Render deploy hook returned HTTP ${status}."
+            cat "${response_file}" || true
+            exit 1
+          fi
+
+          echo "Render deployment accepted with HTTP ${status}."
