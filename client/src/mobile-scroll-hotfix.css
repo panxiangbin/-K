@@ -1,0 +1,44 @@
+/* 紧急修复：全局根节点禁止滚动时，手机大厅必须成为固定视口内的独立滚动容器。 */
+
+@media (max-width: 680px) and (orientation: portrait) {
+  html[data-ui-theme="ink-06"] .lobby-shell {
+    height: 100vh !important;
+    min-height: 0 !important;
+    max-height: 100vh !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @supports (height: 100dvh) {
+    html[data-ui-theme="ink-06"] .lobby-shell {
+      height: 100dvh !important;
+      max-height: 100dvh !important;
+    }
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-brand,
+  html[data-ui-theme="ink-06"] .lobby-main,
+  html[data-ui-theme="ink-06"] .lobby-panel {
+    flex: 0 0 auto;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-main {
+    min-height: auto !important;
+    touch-action: pan-y;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-panel {
+    overflow: visible !important;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-button,
+  html[data-ui-theme="ink-06"] .lobby-choice-card,
+  html[data-ui-theme="ink-06"] .lobby-back-button,
+  html[data-ui-theme="ink-06"] .waiting-room-copy {
+    touch-action: manipulation;
+  }
+}
