@@ -1,0 +1,349 @@
+/* 手机牌桌 R4：使用明确的网格分区，不再依赖桌面布局被动压缩。 */
+
+@media (max-width: 680px) and (orientation: portrait) {
+  html[data-ui-theme="ink-06"] body:has(.game-table-shell) {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-shell {
+    width: 100vw !important;
+    height: 100svh !important;
+    min-height: 100svh !important;
+    max-height: 100svh !important;
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    overflow: hidden !important;
+  }
+
+  @supports (height: 100dvh) {
+    html[data-ui-theme="ink-06"] .game-table-shell {
+      height: 100dvh !important;
+      min-height: 100dvh !important;
+      max-height: 100dvh !important;
+    }
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-header {
+    min-height: 50px !important;
+    max-height: 58px !important;
+    padding: max(3px, env(safe-area-inset-top)) 6px 4px !important;
+    overflow: hidden;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-header__actions {
+    gap: 4px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-header .top-action,
+  html[data-ui-theme="ink-06"] .game-table-room-copy {
+    min-width: 38px !important;
+    min-height: 38px !important;
+    padding-inline: 7px !important;
+    border-radius: 9px !important;
+    font-size: 11px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-header__turn {
+    max-width: 42vw !important;
+    min-height: 32px !important;
+    padding: 4px 7px !important;
+    font-size: 11px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-stage {
+    --table-side-w: 44px;
+    --table-gap: 2px;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    grid-template-columns: var(--table-side-w) minmax(0, 1fr) var(--table-side-w) !important;
+    padding: 2px 3px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-player-rail {
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-center-column {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    display: grid !important;
+    grid-template-rows: minmax(38px, 14%) minmax(0, 1fr) !important;
+    overflow: hidden !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-center-column > div:first-child,
+  html[data-ui-theme="ink-06"] .game-table-center-column > div:last-child {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-trick-board,
+  html[data-ui-theme="ink-06"] .trick-board-experience {
+    width: 99% !important;
+    max-height: 100% !important;
+    padding: 6px !important;
+    overflow: hidden !important;
+  }
+
+  html[data-ui-theme="ink-06"] .trick-board-summary {
+    margin-bottom: 4px !important;
+    padding-bottom: 4px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .trick-action-grid {
+    gap: 4px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .trick-action-card {
+    min-height: 52px !important;
+    padding: 4px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-hand-dock {
+    min-height: 0 !important;
+    max-height: min(45svh, 330px) !important;
+    display: grid !important;
+    grid-template-rows: auto minmax(88px, 108px) auto !important;
+    overflow: visible !important;
+    background: linear-gradient(to top, rgba(3, 20, 15, .995), rgba(7, 39, 29, .98) 82%, rgba(7, 39, 29, .78)) !important;
+  }
+
+  @supports (height: 100dvh) {
+    html[data-ui-theme="ink-06"] .game-table-hand-dock {
+      max-height: min(45dvh, 330px) !important;
+    }
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-hand-dock > div:first-child:has(.game-player-card--self) {
+    max-height: 38px !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-player-card--self {
+    min-height: 34px !important;
+    max-width: min(240px, 76vw) !important;
+    padding: 3px 8px !important;
+    border-radius: 9px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-selection-status {
+    min-height: 26px !important;
+    max-height: 38px !important;
+    padding: 1px 5px !important;
+    overflow: hidden !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-selection-status > div {
+    max-width: 100% !important;
+    padding: 3px 7px !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+    text-align: center !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 88px !important;
+    max-height: 108px !important;
+    justify-content: flex-start !important;
+    padding: 14px max(10px, env(safe-area-inset-right)) 7px max(10px, env(safe-area-inset-left)) !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: none;
+    touch-action: pan-x !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface::-webkit-scrollbar,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"]::-webkit-scrollbar {
+    display: none;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface > div,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] > div {
+    width: max-content !important;
+    min-width: max-content !important;
+    flex: 0 0 auto !important;
+    justify-content: flex-start !important;
+    padding-right: max(20px, env(safe-area-inset-right)) !important;
+  }
+
+  html[data-ui-theme="ink-06"] [data-card-id] {
+    min-width: 52px !important;
+    min-height: 76px !important;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface[data-hand-scrolling="true"] [data-card-id] {
+    filter: none !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-actions {
+    position: relative;
+    z-index: 40;
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    padding: 4px max(7px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(7px, env(safe-area-inset-left)) !important;
+    background: rgba(3, 20, 15, .98);
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-sort-legend {
+    display: none !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="utility"] {
+    grid-column: span 2;
+    min-height: 46px !important;
+    font-size: 13px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="secondary"] {
+    grid-column: span 2;
+    min-height: 52px !important;
+    font-size: 14px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="primary"] {
+    grid-column: span 4;
+    min-height: 52px !important;
+    font-size: 17px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding-inline: 6px !important;
+    border-radius: 9px !important;
+    white-space: nowrap !important;
+    touch-action: manipulation;
+  }
+}
+
+@media (max-width: 680px) and (orientation: portrait) and (max-height: 740px) {
+  html[data-ui-theme="ink-06"] .game-table-header {
+    min-height: 46px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-center-column {
+    grid-template-rows: minmax(32px, 11%) minmax(0, 1fr) !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-player-card--self .game-player-card__meta,
+  html[data-ui-theme="ink-06"] .trick-board-summary__meta {
+    display: none !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-hand-dock {
+    grid-template-rows: auto minmax(82px, 96px) auto !important;
+    max-height: 48svh !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] {
+    min-height: 82px !important;
+    max-height: 96px !important;
+    padding-top: 11px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="utility"] {
+    min-height: 42px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="secondary"],
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="primary"] {
+    min-height: 48px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  html[data-ui-theme="ink-06"] .game-table-shell {
+    height: 100svh !important;
+    min-height: 100svh !important;
+    max-height: 100svh !important;
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    overflow: hidden !important;
+  }
+
+  @supports (height: 100dvh) {
+    html[data-ui-theme="ink-06"] .game-table-shell {
+      height: 100dvh !important;
+      min-height: 100dvh !important;
+      max-height: 100dvh !important;
+    }
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-stage {
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-hand-dock {
+    min-height: 0 !important;
+    max-height: 142px !important;
+    display: grid !important;
+    grid-template-rows: minmax(56px, 72px) auto !important;
+    overflow: visible !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-hand-dock > div:first-child:has(.game-player-card--self),
+  html[data-ui-theme="ink-06"] .game-hand-selection-status {
+    display: none !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] {
+    min-height: 56px !important;
+    max-height: 72px !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    touch-action: pan-x !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-actions {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+    padding: 2px max(6px, env(safe-area-inset-right)) max(3px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)) !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action {
+    min-width: 0 !important;
+    min-height: 40px !important;
+    grid-column: auto !important;
+    font-size: 12px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="primary"] {
+    min-height: 44px !important;
+    font-size: 14px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-ui-theme="ink-06"] .game-hand-surface,
+  html[data-ui-theme="ink-06"] .game-hand-action,
+  html[data-ui-theme="ink-06"] [data-card-id] {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
