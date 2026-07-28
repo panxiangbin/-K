@@ -147,10 +147,10 @@ function isLessDamaging(candidate, original) {
 
 function sortByDamage(a, b) {
   return a.damage.bombsBroken - b.damage.bombsBroken
+    || rankStrength(a.pattern.rank) - rankStrength(b.pattern.rank)
     || b.damage.preservedBombStrength - a.damage.preservedBombStrength
     || b.damage.preservedBombs - a.damage.preservedBombs
     || a.damage.protectedCardsUsed - b.damage.protectedCardsUsed
-    || rankStrength(a.pattern.rank) - rankStrength(b.pattern.rank)
     || a.cards.map(card => card.id).sort().join('|').localeCompare(b.cards.map(card => card.id).sort().join('|'));
 }
 
