@@ -48,6 +48,7 @@ import './mobile-operability.css';
 import './mobile-scroll-hotfix.css';
 import './mobile-game-overlay.css';
 import './mobile-game-layout-r4.css';
+import './mobile-game-layout-r4-structure.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(<><App /><RulesHelpLauncher /></>);
 installGameTableHeaderEnhancer();
