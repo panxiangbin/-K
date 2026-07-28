@@ -44,6 +44,7 @@ import './game-trick-board-experience.css';
 import './settlement-experience.css';
 import './ink-theme.css';
 import './ink-theme-release.css';
+import './mobile-operability.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(<><App /><RulesHelpLauncher /></>);
 installGameTableHeaderEnhancer();
