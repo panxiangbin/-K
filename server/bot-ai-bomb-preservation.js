@@ -89,6 +89,10 @@ function rankStrength(rank) {
   return Math.max(0, CARD_ORDER.indexOf(rank));
 }
 
+function suitPreservationCost(cards) {
+  return cards.reduce((total, card) => total + (SUIT_ORDER[card.suit] || 0), 0);
+}
+
 function bombStrength(bomb) {
   const pattern = detectPattern(bomb);
   if (!pattern || pattern.type !== 'bomb') return 0;
@@ -151,6 +155,7 @@ function sortByDamage(a, b) {
     || b.damage.preservedBombStrength - a.damage.preservedBombStrength
     || b.damage.preservedBombs - a.damage.preservedBombs
     || a.damage.protectedCardsUsed - b.damage.protectedCardsUsed
+    || suitPreservationCost(a.cards) - suitPreservationCost(b.cards)
     || a.cards.map(card => card.id).sort().join('|').localeCompare(b.cards.map(card => card.id).sort().join('|'));
 }
 
