@@ -18,7 +18,7 @@ assert.deepEqual(getGameChromeState({ page: 'game', connected: true }), {
   inGame: true,
   inProtectedPage: true,
   showFloatingConnection: false,
-  showFloatingSound: false,
+  showFloatingSound: true,
   connectionTone: 'online',
 });
 
