@@ -1,4 +1,4 @@
-import { SERVER_REJECTION_EVENT } from './server-error-feedback';
+import { SERVER_REJECTION_EVENT } from './server-error-feedback.js';
 
 const ACTION_SELECTOR = '.btn-play, .btn-pass';
 const CARD_SELECTOR = '[data-card-id]';
