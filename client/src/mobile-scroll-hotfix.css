@@ -1,4 +1,4 @@
-/* 紧急修复：全局根节点禁止滚动时，手机大厅必须成为固定视口内的独立滚动容器。 */
+/* 手机最终可操作层：根节点禁止页面滚动时，大厅和手牌各自承担正确方向的滚动。 */
 
 @media (max-width: 680px) and (orientation: portrait) {
   html[data-ui-theme="ink-06"] .lobby-shell {
@@ -40,5 +40,150 @@
   html[data-ui-theme="ink-06"] .lobby-back-button,
   html[data-ui-theme="ink-06"] .waiting-room-copy {
     touch-action: manipulation;
+  }
+
+  /* 竖屏不再把36张牌压成一条不可点的细缝：牌保持可读尺寸，手牌单独横向滚动。 */
+  html[data-ui-theme="ink-06"] {
+    --card-w: 52px;
+    --card-h: 76px;
+    --card-rank-font: 14px;
+    --card-suit-font: 10px;
+    --card-center-font: 25px;
+    --card-selected-offset: -13px;
+    --hand-overlap: -19px;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-hand-dock {
+    overflow: visible !important;
+    padding-bottom: max(6px, env(safe-area-inset-bottom)) !important;
+    background: linear-gradient(to top, rgba(3, 20, 15, .99), rgba(7, 39, 29, .97) 82%, rgba(7, 39, 29, .72)) !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] {
+    width: 100% !important;
+    min-height: 96px !important;
+    max-height: 112px !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    padding: 14px max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left)) !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: none;
+    touch-action: pan-x !important;
+    scroll-padding-inline: 12px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface::-webkit-scrollbar,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"]::-webkit-scrollbar {
+    display: none;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface > div,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] > div {
+    width: max-content !important;
+    min-width: max-content !important;
+    flex: 0 0 auto !important;
+    justify-content: flex-start !important;
+    padding-right: max(18px, env(safe-area-inset-right));
+  }
+
+  html[data-ui-theme="ink-06"] [data-card-id] {
+    min-width: 52px;
+    min-height: 76px;
+  }
+
+  html[data-ui-theme="ink-06"] [data-hand-density="compact"]::before,
+  html[data-ui-theme="ink-06"] [data-hand-density="dense"]::before {
+    content: '左右滑动查看全部手牌';
+    position: sticky;
+    left: 8px;
+    z-index: 120;
+    align-self: flex-start;
+    flex: 0 0 auto;
+    margin: -11px 8px 0 0;
+    padding: 2px 7px;
+    border: 1px solid rgba(224, 191, 112, .35);
+    border-radius: 999px;
+    background: rgba(4, 25, 18, .88);
+    color: #ead9af;
+    font-size: 10px;
+    line-height: 1.4;
+    pointer-events: none;
+  }
+
+  /* 手机主操作改为两排：第一排理牌/清空/提示，第二排过牌/出牌。 */
+  html[data-ui-theme="ink-06"] .game-hand-actions,
+  html[data-ui-theme="ink-06"] .game-table-hand-dock > div:last-child {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+    padding: 4px max(7px, env(safe-area-inset-right)) max(5px, env(safe-area-inset-bottom)) max(7px, env(safe-area-inset-left)) !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-sort-legend,
+  html[data-ui-theme="ink-06"] .game-table-hand-dock > div:last-child > div:first-child {
+    display: none !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="utility"],
+  html[data-ui-theme="ink-06"] .game-table-hand-dock > div:last-child .btn-lite {
+    grid-column: span 2;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 46px !important;
+    padding-inline: 6px !important;
+    font-size: 13px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="secondary"],
+  html[data-ui-theme="ink-06"] .game-table-hand-dock > div:last-child .btn-pass {
+    grid-column: span 2;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 52px !important;
+    padding-inline: 6px !important;
+    font-size: 14px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="primary"],
+  html[data-ui-theme="ink-06"] .game-table-hand-dock > div:last-child .btn-play {
+    grid-column: span 4;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 52px !important;
+    padding-inline: 8px !important;
+    font-size: 17px !important;
+  }
+}
+
+@media (max-width: 370px) and (orientation: portrait) {
+  html[data-ui-theme="ink-06"] {
+    --card-w: 50px;
+    --card-h: 73px;
+    --hand-overlap: -18px;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] {
+    min-height: 92px !important;
+    padding-inline: 7px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-actions,
+  html[data-ui-theme="ink-06"] .game-table-hand-dock > div:last-child {
+    gap: 4px !important;
+    padding-inline: 4px !important;
+  }
+}
+
+@media (pointer: coarse) {
+  html[data-ui-theme="ink-06"] .game-hand-surface,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] {
+    touch-action: pan-x !important;
   }
 }
