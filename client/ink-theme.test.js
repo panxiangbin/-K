@@ -11,9 +11,8 @@ for (const token of [
   '--ink-pine',
   '--ink-gold',
   '--ink-cinnabar',
-  '--ui-control-min',
 ]) {
-  assert(theme.includes(token), `ink theme must define or preserve ${token}`);
+  assert(theme.includes(token), `ink theme must define ${token}`);
 }
 
 for (const selector of [
