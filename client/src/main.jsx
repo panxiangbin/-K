@@ -51,19 +51,30 @@ import './mobile-game-layout-r4.css';
 import './mobile-game-layout-r4-structure.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(<><App /><RulesHelpLauncher /></>);
-installGameTableHeaderEnhancer();
-installHandInteractionEnhancer();
-installGameHandControlsExperience();
-installGameActionGuidance();
-installGameActionGuard();
-installGameActionFeedback();
-installUiFeedbackGovernor();
-installLobbyEntryFeedback();
-installLobbyActionGuidance();
-installWaitingRoomExperience();
-installWaitingRoomRequestLifecycle();
-installGameTableFoundation();
-installGamePlayerCardExperience();
-installGameTrickBoardExperience();
-installSettlementExperience();
-installInkThemeRelease();
+
+const startupEnhancers = [
+  ['ink-theme-release', installInkThemeRelease],
+  ['game-table-header', installGameTableHeaderEnhancer],
+  ['hand-interaction', installHandInteractionEnhancer],
+  ['game-hand-controls', installGameHandControlsExperience],
+  ['game-action-guidance', installGameActionGuidance],
+  ['game-action-guard', installGameActionGuard],
+  ['game-action-feedback', installGameActionFeedback],
+  ['ui-feedback-governor', installUiFeedbackGovernor],
+  ['lobby-entry-feedback', installLobbyEntryFeedback],
+  ['lobby-action-guidance', installLobbyActionGuidance],
+  ['waiting-room-experience', installWaitingRoomExperience],
+  ['waiting-room-request-lifecycle', installWaitingRoomRequestLifecycle],
+  ['game-table-foundation', installGameTableFoundation],
+  ['game-player-card-experience', installGamePlayerCardExperience],
+  ['game-trick-board-experience', installGameTrickBoardExperience],
+  ['settlement-experience', installSettlementExperience],
+];
+
+for (const [name, install] of startupEnhancers) {
+  try {
+    install();
+  } catch (error) {
+    console.error(`[startup:${name}]`, error);
+  }
+}
