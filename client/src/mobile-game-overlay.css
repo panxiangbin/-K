@@ -1,0 +1,64 @@
+/* 手机牌桌浮动工具停靠在左右窄边栏，避免遮住回合提示、出牌区和手牌。 */
+
+@media (max-width: 680px) and (orientation: portrait) {
+  body:has(.game-table-shell) button[aria-label^="炸弹人声"] {
+    top: max(66px, calc(env(safe-area-inset-top) + 62px)) !important;
+    right: max(4px, env(safe-area-inset-right)) !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .22) !important;
+  }
+
+  .rules-help-launcher[data-surface="game"] {
+    top: max(66px, calc(env(safe-area-inset-top) + 62px)) !important;
+    left: max(4px, env(safe-area-inset-left)) !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .22) !important;
+  }
+
+  body:has(.game-table-shell) button[aria-label^="炸弹人声"]::before,
+  .rules-help-launcher[data-surface="game"] > span:first-child {
+    font-size: 17px !important;
+  }
+}
+
+@media (max-width: 370px) and (orientation: portrait) {
+  body:has(.game-table-shell) button[aria-label^="炸弹人声"],
+  .rules-help-launcher[data-surface="game"] {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  body:has(.game-table-shell) button[aria-label^="炸弹人声"] {
+    top: max(44px, calc(env(safe-area-inset-top) + 42px)) !important;
+    right: max(4px, env(safe-area-inset-right)) !important;
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 0 !important;
+    border-radius: 9px !important;
+  }
+
+  .rules-help-launcher[data-surface="game"] {
+    top: max(44px, calc(env(safe-area-inset-top) + 42px)) !important;
+    left: max(4px, env(safe-area-inset-left)) !important;
+    width: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    padding: 0 !important;
+    border-radius: 9px !important;
+  }
+}
