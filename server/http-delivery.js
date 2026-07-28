@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const UI_RELEASE = 'ink-06-r2';
+const UI_RELEASE = 'ink-06-mobile-r4';
 const MEDIA_EXTENSIONS = new Set(['.mp3', '.ogg', '.wav', '.m4a', '.aac', '.webm']);
 const COMPRESSIBLE_EXTENSIONS = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt', '.xml']);
 const STATIC_ASSET_EXTENSIONS = new Set([
