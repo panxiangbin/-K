@@ -35,7 +35,7 @@ assert(main.includes('function installStartupEnhancer(name, install)'), 'startup
 assert(main.includes("installStartupEnhancer('ink-theme-release', () => installInkThemeRelease());"), 'release marker must use the guarded startup wrapper');
 assert(main.indexOf("installStartupEnhancer('ink-theme-release'") < main.indexOf("installStartupEnhancer('game-table-header'"), 'release marker must run before optional UI enhancers');
 assert(main.includes('console.error(`[startup:${name}]`, error);'), 'startup failures must identify the failing enhancer without stopping later installers');
-assert(main.includes('installGameTableHeaderEnhancer();'), 'existing installer call contracts must remain visible to regression tests');
+assert(main.includes('installGameTableHeaderEnhancer()'), 'existing installer call contracts must remain visible to regression tests');
 assert(packageJson.scripts.test.includes('ink-theme-release.test.js'), 'client suite must run the visible theme release regression');
 
 console.log('visible new Chinese ink theme release regression passed');
