@@ -31,7 +31,10 @@ assert.equal((styles.match(/{/g) || []).length, (styles.match(/}/g) || []).lengt
 assert(main.includes("import { installInkThemeRelease } from './ink-theme-release.js';"), 'main must load the theme runtime');
 assert(main.includes("import './ink-theme-release.css';"), 'main must load the visible theme styles');
 assert(main.indexOf("import './ink-theme-release.css';") > main.indexOf("import './ink-theme.css';"), 'visible release styles must load after the base theme');
-assert(main.indexOf('installInkThemeRelease();') > main.indexOf('ReactDOM.createRoot'), 'runtime marker must be installed after app rendering starts');
+assert(main.includes("['ink-theme-release', installInkThemeRelease]"), 'release marker must be registered in the guarded startup list');
+assert(main.indexOf("['ink-theme-release', installInkThemeRelease]") < main.indexOf("['game-table-header', installGameTableHeaderEnhancer]"), 'release marker must run before optional UI enhancers');
+assert(main.includes('for (const [name, install] of startupEnhancers)'), 'startup enhancers must run independently');
+assert(main.includes('console.error(`[startup:${name}]`, error);'), 'startup failures must identify the failing enhancer without stopping later installers');
 assert(packageJson.scripts.test.includes('ink-theme-release.test.js'), 'client suite must run the visible theme release regression');
 
 console.log('visible new Chinese ink theme release regression passed');
