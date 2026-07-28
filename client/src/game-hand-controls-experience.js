@@ -1,4 +1,5 @@
 const SLIDE_INTENT_PX = 9;
+const TOUCH_CLICK_SUPPRESSION_MS = 420;
 
 function findHandSurface(actionBar) {
   const dock = actionBar?.parentElement;
@@ -60,6 +61,13 @@ export function enhanceGameHandControls(root = document) {
 
 export function installSlideIntentGuard(root = document) {
   let active = null;
+  let suppressClickUntil = 0;
+
+  function setScrolling(surface, scrolling) {
+    if (!surface) return;
+    if (scrolling) surface.dataset.handScrolling = 'true';
+    else delete surface.dataset.handScrolling;
+  }
 
   root.addEventListener('pointerdown', event => {
     const card = event.target?.closest?.('[data-card-id]');
@@ -70,6 +78,7 @@ export function installSlideIntentGuard(root = document) {
       pointerType: event.pointerType || 'mouse',
       x: event.clientX,
       y: event.clientY,
+      surface,
       committed: false,
     };
   }, true);
@@ -77,15 +86,23 @@ export function installSlideIntentGuard(root = document) {
   root.addEventListener('pointermove', event => {
     if (!active || active.pointerId !== event.pointerId) return;
 
-    // 触屏和手写笔优先用于横向浏览整副手牌。这里只阻止事件进入
-    // React 的连续选牌处理，不调用 preventDefault，因此浏览器仍可正常滚动。
+    const dx = event.clientX - active.x;
+    const dy = event.clientY - active.y;
+    const distance = Math.hypot(dx, dy);
+
     if (active.pointerType !== 'mouse') {
+      if (!active.committed && distance >= SLIDE_INTENT_PX && Math.abs(dx) >= Math.abs(dy)) {
+        active.committed = true;
+        suppressClickUntil = Date.now() + TOUCH_CLICK_SUPPRESSION_MS;
+        setScrolling(active.surface, true);
+      }
+      // 不取消浏览器默认行为，让 touch-action: pan-x 承担真实横向滚动；
+      // 这里只阻止 React 的连续选牌逻辑收到触屏移动事件。
       event.stopImmediatePropagation();
       return;
     }
 
     if (active.committed) return;
-    const distance = Math.hypot(event.clientX - active.x, event.clientY - active.y);
     if (distance >= SLIDE_INTENT_PX) {
       active.committed = true;
       return;
@@ -95,13 +112,27 @@ export function installSlideIntentGuard(root = document) {
 
   const clear = event => {
     if (!active || (event.pointerId != null && active.pointerId !== event.pointerId)) return;
+    if (active.committed && active.pointerType !== 'mouse') {
+      suppressClickUntil = Date.now() + TOUCH_CLICK_SUPPRESSION_MS;
+    }
+    const surface = active.surface;
     active = null;
+    setTimeout(() => setScrolling(surface, false), 0);
   };
   root.addEventListener('pointerup', clear, true);
   root.addEventListener('pointercancel', clear, true);
 
+  root.addEventListener('click', event => {
+    if (Date.now() >= suppressClickUntil) return;
+    const card = event.target?.closest?.('[data-card-id]');
+    if (!card?.closest?.('.game-hand-surface')) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+
   return () => {
     active = null;
+    suppressClickUntil = 0;
   };
 }
 
@@ -124,4 +155,4 @@ export function installGameHandControlsExperience(root = document) {
   return () => observer.disconnect();
 }
 
-export { SLIDE_INTENT_PX };
+export { SLIDE_INTENT_PX, TOUCH_CLICK_SUPPRESSION_MS };
