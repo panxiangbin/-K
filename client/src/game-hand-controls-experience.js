@@ -44,7 +44,7 @@ export function enhanceGameHandControls(root = document) {
   if (handSurface) {
     handSurface.classList.add('game-hand-surface');
     handSurface.dataset.slideIntent = String(SLIDE_INTENT_PX);
-    handSurface.setAttribute('aria-description', '轻点单张牌选择；横向滑动超过一定距离后才会连续选择，避免手指轻微抖动误选。');
+    handSurface.setAttribute('aria-description', '手机上轻点选牌、左右滑动查看全部手牌；鼠标可按住横向拖动连续选择。');
   }
 
   const status = findSelectionStatus(actionBar, handSurface);
@@ -67,6 +67,7 @@ export function installSlideIntentGuard(root = document) {
     if (!card || !surface || event.button > 0) return;
     active = {
       pointerId: event.pointerId,
+      pointerType: event.pointerType || 'mouse',
       x: event.clientX,
       y: event.clientY,
       committed: false,
@@ -74,7 +75,16 @@ export function installSlideIntentGuard(root = document) {
   }, true);
 
   root.addEventListener('pointermove', event => {
-    if (!active || active.pointerId !== event.pointerId || active.committed) return;
+    if (!active || active.pointerId !== event.pointerId) return;
+
+    // 触屏和手写笔优先用于横向浏览整副手牌。这里只阻止事件进入
+    // React 的连续选牌处理，不调用 preventDefault，因此浏览器仍可正常滚动。
+    if (active.pointerType !== 'mouse') {
+      event.stopImmediatePropagation();
+      return;
+    }
+
+    if (active.committed) return;
     const distance = Math.hypot(event.clientX - active.x, event.clientY - active.y);
     if (distance >= SLIDE_INTENT_PX) {
       active.committed = true;
