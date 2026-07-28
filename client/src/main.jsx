@@ -45,6 +45,7 @@ import './settlement-experience.css';
 import './ink-theme.css';
 import './ink-theme-release.css';
 import './mobile-operability.css';
+import './mobile-scroll-hotfix.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(<><App /><RulesHelpLauncher /></>);
 installGameTableHeaderEnhancer();
