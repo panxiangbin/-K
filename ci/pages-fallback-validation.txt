@@ -1,0 +1,2 @@
+Temporary CI validation marker for the GitHub Pages fallback. This file does not affect runtime behavior.
+Fresh validation against current main.
