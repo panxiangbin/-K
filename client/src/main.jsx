@@ -52,29 +52,27 @@ import './mobile-game-layout-r4-structure.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(<><App /><RulesHelpLauncher /></>);
 
-const startupEnhancers = [
-  ['ink-theme-release', installInkThemeRelease],
-  ['game-table-header', installGameTableHeaderEnhancer],
-  ['hand-interaction', installHandInteractionEnhancer],
-  ['game-hand-controls', installGameHandControlsExperience],
-  ['game-action-guidance', installGameActionGuidance],
-  ['game-action-guard', installGameActionGuard],
-  ['game-action-feedback', installGameActionFeedback],
-  ['ui-feedback-governor', installUiFeedbackGovernor],
-  ['lobby-entry-feedback', installLobbyEntryFeedback],
-  ['lobby-action-guidance', installLobbyActionGuidance],
-  ['waiting-room-experience', installWaitingRoomExperience],
-  ['waiting-room-request-lifecycle', installWaitingRoomRequestLifecycle],
-  ['game-table-foundation', installGameTableFoundation],
-  ['game-player-card-experience', installGamePlayerCardExperience],
-  ['game-trick-board-experience', installGameTrickBoardExperience],
-  ['settlement-experience', installSettlementExperience],
-];
-
-for (const [name, install] of startupEnhancers) {
+function installStartupEnhancer(name, install) {
   try {
     install();
   } catch (error) {
     console.error(`[startup:${name}]`, error);
   }
 }
+
+installStartupEnhancer('ink-theme-release', () => installInkThemeRelease());
+installStartupEnhancer('game-table-header', () => installGameTableHeaderEnhancer());
+installStartupEnhancer('hand-interaction', () => installHandInteractionEnhancer());
+installStartupEnhancer('game-hand-controls', () => installGameHandControlsExperience());
+installStartupEnhancer('game-action-guidance', () => installGameActionGuidance());
+installStartupEnhancer('game-action-guard', () => installGameActionGuard());
+installStartupEnhancer('game-action-feedback', () => installGameActionFeedback());
+installStartupEnhancer('ui-feedback-governor', () => installUiFeedbackGovernor());
+installStartupEnhancer('lobby-entry-feedback', () => installLobbyEntryFeedback());
+installStartupEnhancer('lobby-action-guidance', () => installLobbyActionGuidance());
+installStartupEnhancer('waiting-room-experience', () => installWaitingRoomExperience());
+installStartupEnhancer('waiting-room-request-lifecycle', () => installWaitingRoomRequestLifecycle());
+installStartupEnhancer('game-table-foundation', () => installGameTableFoundation());
+installStartupEnhancer('game-player-card-experience', () => installGamePlayerCardExperience());
+installStartupEnhancer('game-trick-board-experience', () => installGameTrickBoardExperience());
+installStartupEnhancer('settlement-experience', () => installSettlementExperience());
