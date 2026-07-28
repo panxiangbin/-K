@@ -1,0 +1,45 @@
+/* R4 结构映射：手牌区实际包含自我状态、选牌提示、手牌、操作栏四层。 */
+
+@media (max-width: 680px) and (orientation: portrait) {
+  html[data-ui-theme="ink-06"] .game-table-hand-dock {
+    grid-template-rows: auto auto minmax(88px, 108px) auto !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-hand-dock > div:first-child:has(.game-player-card--self) {
+    grid-row: 1;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-selection-status {
+    grid-row: 2;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] {
+    grid-row: 3;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-actions {
+    grid-row: 4;
+  }
+}
+
+@media (max-width: 680px) and (orientation: portrait) and (max-height: 740px) {
+  html[data-ui-theme="ink-06"] .game-table-hand-dock {
+    grid-template-rows: auto auto minmax(82px, 96px) auto !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  html[data-ui-theme="ink-06"] .game-table-hand-dock {
+    grid-template-rows: minmax(56px, 72px) auto !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] {
+    grid-row: 1;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-actions {
+    grid-row: 2;
+  }
+}
