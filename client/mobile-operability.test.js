@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 const css = fs.readFileSync(new URL('./src/mobile-operability.css', import.meta.url), 'utf8');
 const scrollHotfix = fs.readFileSync(new URL('./src/mobile-scroll-hotfix.css', import.meta.url), 'utf8');
+const overlayCss = fs.readFileSync(new URL('./src/mobile-game-overlay.css', import.meta.url), 'utf8');
 const main = fs.readFileSync(new URL('./src/main.jsx', import.meta.url), 'utf8');
 const packageJson = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
@@ -38,13 +39,26 @@ for (const required of [
   assert(scrollHotfix.includes(required), `mobile scroll and controls hotfix must include ${required}`);
 }
 
+for (const required of [
+  'body:has(.game-table-shell) button[aria-label^="炸弹人声"]',
+  '.rules-help-launcher[data-surface="game"]',
+  'top: max(66px',
+  'width: 40px !important',
+  '@media (orientation: landscape) and (max-height: 430px)',
+]) {
+  assert(overlayCss.includes(required), `mobile overlay safeguards must include ${required}`);
+}
+
 assert.equal((css.match(/{/g) || []).length, (css.match(/}/g) || []).length, 'mobile operability CSS braces must balance');
 assert.equal((scrollHotfix.match(/{/g) || []).length, (scrollHotfix.match(/}/g) || []).length, 'mobile scroll hotfix CSS braces must balance');
+assert.equal((overlayCss.match(/{/g) || []).length, (overlayCss.match(/}/g) || []).length, 'mobile overlay CSS braces must balance');
 assert(!scrollHotfix.includes('grid-template-columns: repeat(5, minmax(0, 1fr))'), 'last-loaded mobile layer must not force five actions into one cramped row');
 assert(!scrollHotfix.includes('height: auto !important'), 'mobile lobby scroll container must have a bounded viewport height');
 assert(main.includes("import './mobile-operability.css';"), 'main entry must load mobile operability CSS');
 assert(main.includes("import './mobile-scroll-hotfix.css';"), 'main entry must load mobile scroll hotfix CSS');
+assert(main.includes("import './mobile-game-overlay.css';"), 'main entry must load mobile overlay safeguards');
 assert(main.indexOf("import './mobile-scroll-hotfix.css';") > main.indexOf("import './mobile-operability.css';"), 'mobile scroll hotfix must load after mobile layout CSS');
+assert(main.indexOf("import './mobile-game-overlay.css';") > main.indexOf("import './mobile-scroll-hotfix.css';"), 'overlay safeguards must load last');
 assert(main.indexOf("import './mobile-operability.css';") > main.indexOf("import './ink-theme-release.css';"), 'mobile operability CSS must load after the visible theme release');
 assert(packageJson.scripts.test.includes('mobile-operability.test.js'), 'client test chain must include mobile operability regression');
 
