@@ -63,11 +63,22 @@ function appendVary(res, value) {
   res.setHeader('Vary', Array.from(values).join(', '));
 }
 
-function applyHtmlNoStoreHeaders(res) {
+function getRuntimeCommit(environment = process.env) {
+  const value = environment?.RENDER_GIT_COMMIT || environment?.GITHUB_SHA || '';
+  return String(value).trim();
+}
+
+function applyReleaseHeaders(res, environment = process.env) {
+  res.setHeader('X-Henan50K-Release', UI_RELEASE);
+  const commit = getRuntimeCommit(environment);
+  if (commit) res.setHeader('X-Henan50K-Commit', commit);
+}
+
+function applyHtmlNoStoreHeaders(res, environment = process.env) {
   res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
-  res.setHeader('X-Henan50K-Release', UI_RELEASE);
+  applyReleaseHeaders(res, environment);
 }
 
 function applyCompressedHeaders(res, originalPath, encoding) {
@@ -137,8 +148,16 @@ function configureHttpDelivery(app, express, path, dirname) {
   app.use(express.static(distDir, createStaticOptions()));
   app.get('/healthz', (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.setHeader('X-Henan50K-Release', UI_RELEASE);
+    applyReleaseHeaders(res);
     res.status(200).type('text/plain').send('ok');
+  });
+  app.get('/release.json', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    applyReleaseHeaders(res);
+    res.status(200).type('application/json').send(JSON.stringify({
+      release: UI_RELEASE,
+      commit: getRuntimeCommit() || null,
+    }));
   });
   app.get('*', (req, res) => {
     const requestPath = req.path || req.originalUrl || req.url || '';
@@ -162,9 +181,11 @@ function configureHttpDelivery(app, express, path, dirname) {
 module.exports = {
   UI_RELEASE,
   applyHtmlNoStoreHeaders,
+  applyReleaseHeaders,
   createPrecompressedMiddleware,
   createStaticOptions,
   configureHttpDelivery,
+  getRuntimeCommit,
   isCompressibleFile,
   isMediaFile,
   isStaticAssetRequest,
