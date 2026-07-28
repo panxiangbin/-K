@@ -38,6 +38,39 @@ jobs:
           cat full-client-test.log
           exit 0
 
+      - name: Run every client test independently
+        working-directory: client
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const commands = String(pkg.scripts.test || '').split(/\s*&&\s*/).filter(Boolean);
+          const failures = [];
+          const report = [];
+
+          for (const command of commands) {
+            const match = command.match(/^node\s+(.+)$/);
+            if (!match) {
+              failures.push(command);
+              report.push(`FAIL ${command}\nUnsupported diagnostic command\n`);
+              continue;
+            }
+            const file = match[1].trim();
+            const result = spawnSync(process.execPath, [file], { encoding: 'utf8' });
+            const status = result.status === 0 ? 'PASS' : 'FAIL';
+            report.push(`${status} ${file}\n${result.stdout || ''}${result.stderr || ''}\n`);
+            if (result.status !== 0) failures.push(file);
+          }
+
+          report.push(`SUMMARY failures=${failures.length}\n${failures.join('\n')}\n`);
+          fs.writeFileSync('individual-client-tests.log', report.join('\n'));
+          fs.writeFileSync('individual-client-tests.exit', failures.length ? '1\n' : '0\n');
+          console.log(report.at(-1));
+          NODE
+
       - name: Run targeted fallback test
         working-directory: client
         shell: bash
@@ -77,6 +110,8 @@ jobs:
           path: |
             client/full-client-test.log
             client/full-client-test.exit
+            client/individual-client-tests.log
+            client/individual-client-tests.exit
             client/targeted-test.log
             client/targeted-test.exit
             client/render-build.log
