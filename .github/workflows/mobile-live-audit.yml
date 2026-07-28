@@ -45,12 +45,12 @@ jobs:
         working-directory: client
         run: npx playwright install --with-deps chromium
 
-      - name: Wait for Render and audit four phone sizes
+      - name: Wait briefly for Render and audit four phone sizes
         working-directory: client
         env:
           MOBILE_AUDIT_URL: https://henan-50k.onrender.com
           EXPECTED_UI_RELEASE: ink-06-mobile-r4
-          RELEASE_TIMEOUT_MS: 720000
+          RELEASE_TIMEOUT_MS: 180000
         run: node mobile-live-audit.mjs
 
       - name: Upload phone screenshots and report
