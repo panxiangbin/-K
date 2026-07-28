@@ -28,6 +28,16 @@ jobs:
         working-directory: client
         run: npm ci --include=dev --no-audit --no-fund
 
+      - name: Run full client tests
+        working-directory: client
+        shell: bash
+        run: |
+          set +e
+          npm test > full-client-test.log 2>&1
+          echo $? > full-client-test.exit
+          cat full-client-test.log
+          exit 0
+
       - name: Run targeted fallback test
         working-directory: client
         shell: bash
@@ -65,6 +75,8 @@ jobs:
         with:
           name: pages-release-diagnostic
           path: |
+            client/full-client-test.log
+            client/full-client-test.exit
             client/targeted-test.log
             client/targeted-test.exit
             client/render-build.log
