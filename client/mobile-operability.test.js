@@ -14,7 +14,6 @@ for (const required of [
   '.lobby-action-grid',
   'grid-template-columns: repeat(2, minmax(0, 1fr))',
   '.game-table-hand-dock > div:last-child',
-  'grid-template-columns: repeat(5, minmax(0, 1fr))',
   'max-width: 100vw',
   'env(safe-area-inset-bottom)',
   '@media (orientation: landscape) and (max-height: 430px)',
@@ -28,13 +27,20 @@ for (const required of [
   'overflow-y: auto !important',
   'overscroll-behavior-y: contain',
   'touch-action: pan-y',
+  'overflow-x: auto !important',
+  'touch-action: pan-x !important',
+  'grid-template-columns: repeat(6, minmax(0, 1fr)) !important',
+  'grid-column: span 2',
+  'grid-column: span 4',
+  '左右滑动查看全部手牌',
+  'min-height: 52px !important',
 ]) {
-  assert(scrollHotfix.includes(required), `mobile scroll hotfix must include ${required}`);
+  assert(scrollHotfix.includes(required), `mobile scroll and controls hotfix must include ${required}`);
 }
 
 assert.equal((css.match(/{/g) || []).length, (css.match(/}/g) || []).length, 'mobile operability CSS braces must balance');
 assert.equal((scrollHotfix.match(/{/g) || []).length, (scrollHotfix.match(/}/g) || []).length, 'mobile scroll hotfix CSS braces must balance');
-assert(!css.includes('overflow-x: auto'), 'mobile lobby and game must not hide layout mistakes behind horizontal scrolling');
+assert(!scrollHotfix.includes('grid-template-columns: repeat(5, minmax(0, 1fr))'), 'last-loaded mobile layer must not force five actions into one cramped row');
 assert(!scrollHotfix.includes('height: auto !important'), 'mobile lobby scroll container must have a bounded viewport height');
 assert(main.includes("import './mobile-operability.css';"), 'main entry must load mobile operability CSS');
 assert(main.includes("import './mobile-scroll-hotfix.css';"), 'main entry must load mobile scroll hotfix CSS');
