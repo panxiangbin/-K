@@ -19,12 +19,14 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-async function waitForRelease(page) {
+async function waitForRelease(page, auditState) {
   const deadline = Date.now() + releaseTimeoutMs;
   let lastRelease = '';
   let lastError = '';
+  let attempt = 0;
 
   while (Date.now() < deadline) {
+    attempt += 1;
     try {
       const cacheBust = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       await page.goto(`${target}/?mobile-audit=${cacheBust}`, {
@@ -33,11 +35,21 @@ async function waitForRelease(page) {
       });
       await page.waitForSelector('.lobby-shell', { timeout: 30_000 });
       lastRelease = await page.locator('html').getAttribute('data-ui-release') || '';
+      lastError = lastRelease === expectedRelease
+        ? ''
+        : `线上版本仍为 ${lastRelease || '未标记'}`;
+      auditState.lastRelease = lastRelease;
+      auditState.lastError = lastError;
+      auditState.lastUrl = page.url();
+      auditState.releaseAttempts = attempt;
       if (lastRelease === expectedRelease) return;
-      lastError = `线上版本仍为 ${lastRelease || '未标记'}`;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
+      auditState.lastError = lastError;
+      auditState.lastUrl = page.url();
+      auditState.releaseAttempts = attempt;
     }
+    console.log(`[mobile-audit] attempt ${attempt}: ${lastError || `release=${lastRelease || '未标记'}`}`);
     await page.waitForTimeout(15_000);
   }
 
@@ -191,9 +203,22 @@ async function verifyCardTap(page, profile) {
 await fs.mkdir(outputDir, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const report = [];
+const auditState = {
+  target,
+  expectedRelease,
+  startedAt: new Date().toISOString(),
+  activeProfile: null,
+  completedProfiles: [],
+  lastRelease: '',
+  lastError: '',
+  lastUrl: '',
+  releaseAttempts: 0,
+};
+let auditFailure = null;
 
 try {
   for (const profile of profiles) {
+    auditState.activeProfile = profile.name;
     const context = await browser.newContext({
       viewport: { width: profile.width, height: profile.height },
       isMobile: true,
@@ -208,7 +233,7 @@ try {
     });
     page.on('pageerror', error => consoleErrors.push(error.message));
 
-    await waitForRelease(page);
+    await waitForRelease(page, auditState);
     await page.screenshot({ path: path.join(outputDir, `${profile.name}-lobby.png`), fullPage: true });
     await enterSoloGame(page);
 
@@ -219,11 +244,27 @@ try {
     await page.screenshot({ path: path.join(outputDir, `${profile.name}-game.png`), fullPage: true });
 
     report.push({ ...profile, metrics, consoleErrors });
+    auditState.completedProfiles.push(profile.name);
     await context.close();
   }
+} catch (error) {
+  auditFailure = {
+    message: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : '',
+    failedAt: new Date().toISOString(),
+    ...auditState,
+  };
+  throw error;
 } finally {
   await browser.close();
   await fs.writeFile(path.join(outputDir, 'report.json'), JSON.stringify(report, null, 2));
+  await fs.writeFile(path.join(outputDir, 'audit-state.json'), JSON.stringify({
+    ...auditState,
+    finishedAt: new Date().toISOString(),
+  }, null, 2));
+  if (auditFailure) {
+    await fs.writeFile(path.join(outputDir, 'failure.json'), JSON.stringify(auditFailure, null, 2));
+  }
 }
 
 console.log(`mobile live audit passed for ${profiles.length} viewports at ${expectedRelease}`);
