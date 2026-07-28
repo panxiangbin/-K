@@ -1,0 +1,351 @@
+html[data-ui-theme="ink-06"] {
+  --ink-release-red: #9c342d;
+  --ink-release-green: #123b30;
+  --ink-release-paper: #f4eddf;
+  --ink-release-gold: #c7a261;
+}
+
+html[data-ui-theme="ink-06"] body {
+  background: #ede3d3;
+}
+
+/* 让06号方案在手机上也一眼可见，而不是只做轻微换色。 */
+html[data-ui-theme="ink-06"] .lobby-shell {
+  background:
+    radial-gradient(ellipse at 18% 95%, rgba(22, 59, 48, .18), transparent 34%),
+    radial-gradient(ellipse at 88% 10%, rgba(156, 52, 45, .08), transparent 24%),
+    repeating-linear-gradient(0deg, rgba(69, 51, 31, .018) 0 1px, transparent 1px 6px),
+    linear-gradient(135deg, #fbf6ec, #e9dfcf) !important;
+}
+
+html[data-ui-theme="ink-06"] .lobby-brand {
+  overflow: hidden;
+  min-height: 100%;
+  padding: clamp(28px, 5vw, 58px) !important;
+  background:
+    radial-gradient(ellipse at 8% 88%, rgba(14, 57, 43, .20), transparent 34%),
+    linear-gradient(180deg, rgba(255, 252, 245, .92), rgba(232, 221, 202, .90)) !important;
+}
+
+html[data-ui-theme="ink-06"] .lobby-brand::before {
+  content: '墨';
+  position: absolute;
+  right: -18px;
+  bottom: -56px;
+  color: rgba(16, 54, 42, .075);
+  font-family: var(--ink-font-display, serif);
+  font-size: clamp(190px, 30vw, 390px);
+  font-weight: 900;
+  line-height: 1;
+  transform: rotate(-7deg);
+  pointer-events: none;
+}
+
+html[data-ui-theme="ink-06"] .lobby-brand-mark {
+  width: 72px !important;
+  height: 72px !important;
+  border-radius: 6px !important;
+  background: var(--ink-release-red) !important;
+  font-family: var(--ink-font-display, serif) !important;
+  font-size: 18px !important;
+  box-shadow: 0 12px 28px rgba(76, 35, 28, .24) !important;
+}
+
+html[data-ui-theme="ink-06"] .lobby-brand-title {
+  margin-top: 24px !important;
+  font-size: clamp(38px, 6vw, 70px) !important;
+  line-height: 1.05 !important;
+  letter-spacing: .02em !important;
+}
+
+html[data-ui-theme="ink-06"] .lobby-brand-subtitle {
+  margin-top: 14px !important;
+  font-family: var(--ink-font-display, serif);
+  font-size: clamp(16px, 2vw, 22px) !important;
+  letter-spacing: .12em;
+}
+
+html[data-ui-theme="ink-06"] .ink-release-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  margin-top: 22px;
+  padding: 5px 11px;
+  border: 1px solid rgba(156, 52, 45, .54);
+  border-radius: 4px;
+  color: var(--ink-release-red);
+  background: rgba(255, 250, 240, .62);
+  font-family: var(--ink-font-display, serif);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+
+html[data-ui-theme="ink-06"] .lobby-panel {
+  width: min(760px, 100%) !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(70, 56, 37, .28) !important;
+  box-shadow: 0 22px 54px rgba(54, 42, 26, .16) !important;
+}
+
+html[data-ui-theme="ink-06"] .lobby-panel::after {
+  content: '';
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(156, 52, 45, .58);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+html[data-ui-theme="ink-06"] .lobby-solo-button {
+  min-height: 116px !important;
+  display: grid !important;
+  grid-template-columns: 68px minmax(0, 1fr) !important;
+  padding: 20px 24px !important;
+  text-align: left !important;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.05), transparent 42%),
+    linear-gradient(180deg, #214f40, #12372d) !important;
+}
+
+html[data-ui-theme="ink-06"] .lobby-solo-button .lobby-button-icon {
+  width: 58px !important;
+  height: 58px !important;
+  border-radius: 50% !important;
+  border-color: rgba(239, 218, 167, .48) !important;
+  background: rgba(5, 28, 21, .46) !important;
+  color: #f1d99f !important;
+  font-family: var(--ink-font-display, serif);
+  font-size: 20px !important;
+}
+
+html[data-ui-theme="ink-06"] .lobby-solo-button strong,
+html[data-ui-theme="ink-06"] .lobby-action-grid strong {
+  font-family: var(--ink-font-display, serif);
+  font-size: 21px !important;
+  letter-spacing: .04em;
+}
+
+html[data-ui-theme="ink-06"] .lobby-action-grid {
+  gap: 14px !important;
+}
+
+html[data-ui-theme="ink-06"] .lobby-action-grid .lobby-button {
+  position: relative;
+  min-height: 104px !important;
+  padding: 22px 18px 18px 64px !important;
+  text-align: left !important;
+  background:
+    linear-gradient(135deg, rgba(18, 59, 48, .05), transparent 48%),
+    #fffaf0 !important;
+}
+
+html[data-ui-theme="ink-06"] .lobby-action-grid .lobby-button::before {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(18, 59, 48, .32);
+  border-radius: 50%;
+  color: var(--ink-release-green);
+  background: rgba(18, 59, 48, .06);
+  font-family: var(--ink-font-display, serif);
+  font-size: 17px;
+  transform: translateY(-50%);
+}
+
+html[data-ui-theme="ink-06"] .lobby-action-grid .lobby-button:first-child::before { content: '局'; }
+html[data-ui-theme="ink-06"] .lobby-action-grid .lobby-button:last-child::before { content: '入'; }
+
+/* 牌桌增加明确的新中式构图与水墨中心标识。 */
+html[data-ui-theme="ink-06"] .game-table-shell {
+  background:
+    radial-gradient(ellipse at 50% 44%, rgba(62, 113, 88, .24), transparent 36%),
+    radial-gradient(ellipse at 8% 92%, rgba(201, 162, 97, .10), transparent 27%),
+    linear-gradient(145deg, #123c30, #08251d 58%, #051913) !important;
+}
+
+html[data-ui-theme="ink-06"] .game-table-center-column {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-ui-theme="ink-06"] .game-table-center-column::before {
+  content: '河南\A五十K';
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  z-index: -1;
+  white-space: pre;
+  color: rgba(232, 220, 190, .065);
+  font-family: var(--ink-font-display, serif);
+  font-size: clamp(44px, 8vw, 108px);
+  font-weight: 900;
+  line-height: .88;
+  text-align: center;
+  letter-spacing: .08em;
+  transform: translate(-50%, -50%) rotate(-3deg);
+  pointer-events: none;
+}
+
+html[data-ui-theme="ink-06"] .game-table-header {
+  border-bottom: 1px solid rgba(201, 162, 97, .30) !important;
+  background:
+    linear-gradient(90deg, rgba(156, 52, 45, .11), transparent 18%),
+    rgba(4, 22, 17, .98) !important;
+}
+
+html[data-ui-theme="ink-06"] .game-player-card {
+  border-radius: 10px !important;
+  background: linear-gradient(150deg, rgba(18, 62, 48, .94), rgba(6, 31, 24, .94)) !important;
+}
+
+html[data-ui-theme="ink-06"] .game-player-card[data-player-state='current'] {
+  border-color: rgba(225, 190, 116, .90) !important;
+  box-shadow: inset 3px 0 0 #9c342d, 0 0 0 2px rgba(225, 190, 116, .16) !important;
+}
+
+html[data-ui-theme="ink-06"] .trick-board-experience,
+html[data-ui-theme="ink-06"] .game-table-trick-board {
+  border-radius: 12px !important;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.018) 0 1px, transparent 1px 15px),
+    rgba(5, 28, 21, .86) !important;
+}
+
+html[data-ui-theme="ink-06"] .game-table-hand-dock .btn-play {
+  border-radius: 9px !important;
+  border: 1px solid #d3b172 !important;
+  background: linear-gradient(180deg, #d5b778, #b88e4b) !important;
+  color: #17281f !important;
+}
+
+html[data-ui-theme="ink-06"] .game-table-hand-dock .btn-pass,
+html[data-ui-theme="ink-06"] .game-table-hand-dock .btn-lite {
+  border-radius: 9px !important;
+}
+
+/* 结算页从深色面板改为宣纸式成绩单。 */
+html[data-ui-theme="ink-06"] .settlement-experience {
+  background:
+    radial-gradient(ellipse at 90% 12%, rgba(156, 52, 45, .07), transparent 25%),
+    repeating-linear-gradient(0deg, rgba(62, 45, 27, .018) 0 1px, transparent 1px 6px),
+    linear-gradient(135deg, #f8f2e7, #e9dfcf) !important;
+  color: #222a25 !important;
+}
+
+html[data-ui-theme="ink-06"] .settlement-experience-hero,
+html[data-ui-theme="ink-06"] .settlement-experience-card,
+html[data-ui-theme="ink-06"] .settlement-experience-history {
+  color: #252c28 !important;
+  background: rgba(255, 251, 242, .88) !important;
+  border-color: rgba(73, 58, 39, .24) !important;
+  box-shadow: 0 10px 28px rgba(53, 41, 25, .12) !important;
+}
+
+html[data-ui-theme="ink-06"] .settlement-experience .settlement-heading-text,
+html[data-ui-theme="ink-06"] .settlement-experience .settlement-history-heading h2,
+html[data-ui-theme="ink-06"] .settlement-experience .settlement-leader-name {
+  color: #1c332a !important;
+  font-family: var(--ink-font-display, serif);
+}
+
+html[data-ui-theme="ink-06"] .settlement-experience-primary {
+  border-radius: 9px !important;
+  background: #173f31 !important;
+  color: #fff8e8 !important;
+}
+
+@media (max-width: 680px) {
+  html[data-ui-theme="ink-06"] .lobby-shell {
+    display: block !important;
+    overflow-y: auto !important;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-brand {
+    min-height: 252px !important;
+    padding: max(30px, env(safe-area-inset-top)) 22px 30px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid rgba(69, 54, 36, .22) !important;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-brand::before {
+    right: -12px;
+    bottom: -62px;
+    font-size: 230px;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-brand-title {
+    font-size: 43px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-brand-points {
+    display: none !important;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-brand::after {
+    margin-top: 16px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-main {
+    padding: 18px 12px max(26px, env(safe-area-inset-bottom)) !important;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-panel {
+    padding: 20px 16px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-solo-button {
+    min-height: 96px !important;
+    grid-template-columns: 54px minmax(0, 1fr) !important;
+    padding: 16px 18px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-solo-button .lobby-button-icon {
+    width: 46px !important;
+    height: 46px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-action-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  html[data-ui-theme="ink-06"] .lobby-action-grid .lobby-button {
+    min-height: 82px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-center-column::before {
+    font-size: clamp(36px, 16vw, 64px);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  html[data-ui-theme="ink-06"] .game-table-center-column::before {
+    top: 44%;
+    font-size: 46px;
+  }
+}
+
+@media (prefers-contrast: more) {
+  html[data-ui-theme="ink-06"] .lobby-panel,
+  html[data-ui-theme="ink-06"] .lobby-button,
+  html[data-ui-theme="ink-06"] .game-player-card,
+  html[data-ui-theme="ink-06"] .settlement-experience-card {
+    border-width: 2px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-ui-theme="ink-06"] *,
+  html[data-ui-theme="ink-06"] *::before,
+  html[data-ui-theme="ink-06"] *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
