@@ -5,8 +5,8 @@ const css = fs.readFileSync(new URL('./src/pages/Settlement.css', import.meta.ur
 
 const requiredPatterns = [
   ['portrait scrolling', /@media \(max-width: 760px\), \(orientation: portrait\)[\s\S]*overflow-y:\s*auto\s*!important/],
-  ['safe top action placement', /\.settlement-page > button[\s\S]*min-height:\s*44px\s*!important/],
-  ['visible keyboard focus', /\.settlement-page > button:focus-visible[\s\S]*outline:\s*3px solid #fde047/],
+  ['safe top action placement', /\.settlement-top-action\s*\{[\s\S]*min-height:\s*44px\s*!important/],
+  ['visible keyboard focus', /\.settlement-top-action:focus-visible,[\s\S]*outline:\s*3px solid #fde047/],
   ['narrow phone layout', /@media \(max-width: 430px\)[\s\S]*max-width:\s*calc\(50vw - 16px\)/],
   ['low-height landscape layout', /@media \(orientation: landscape\) and \(max-height: 430px\)[\s\S]*padding-top:\s*max\(48px, env\(safe-area-inset-top\)\)/],
   ['landscape history containment', /@media \(orientation: landscape\) and \(max-height: 430px\)[\s\S]*\.settlement-history[\s\S]*max-height:\s*58px/],
