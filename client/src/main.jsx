@@ -46,6 +46,7 @@ import './ink-theme.css';
 import './ink-theme-release.css';
 import './mobile-operability.css';
 import './mobile-scroll-hotfix.css';
+import './mobile-game-overlay.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(<><App /><RulesHelpLauncher /></>);
 installGameTableHeaderEnhancer();
