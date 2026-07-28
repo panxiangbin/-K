@@ -46,7 +46,8 @@ function recentShapePressure(requiredCards, context = {}) {
     const streakBonus = Math.min(30, Math.max(0, streakLength - 1) * 10);
     pressure = Math.min(100, nextScore + tableScore + streakBonus);
   } else {
-    const hasDistanceAwareHistory = context.nextOpponentPlayCounts || context.tableOpponentPlayCounts;
+    const hasDistanceAwareHistory = hasOwnScores(context.nextOpponentPlayCounts)
+      || hasOwnScores(context.tableOpponentPlayCounts);
     if (hasDistanceAwareHistory) {
       const nextCount = boundedShapeCount(context.nextOpponentPlayCounts?.[requiredCards]);
       const tableCount = boundedShapeCount(context.tableOpponentPlayCounts?.[requiredCards]);
