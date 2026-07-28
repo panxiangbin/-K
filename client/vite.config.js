@@ -2,6 +2,13 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const isGitHubPages = process.env.DEPLOY_TARGET === 'github-pages';
+const requestedPagesBase = String(process.env.PAGES_BASE_PATH || '/-K/').trim();
+const githubPagesBase = requestedPagesBase.startsWith('/')
+  ? requestedPagesBase
+  : `/${requestedPagesBase}`;
+const normalizedGitHubPagesBase = githubPagesBase.endsWith('/')
+  ? githubPagesBase
+  : `${githubPagesBase}/`;
 
 const githubPagesRuntimePlugin = {
   name: 'henan-50k-github-pages-runtime',
@@ -29,7 +36,7 @@ const githubPagesRuntimePlugin = {
 };
 
 export default defineConfig({
-  base: isGitHubPages ? '/-K/' : '/',
+  base: isGitHubPages ? normalizedGitHubPagesBase : '/',
   plugins: [react(), githubPagesRuntimePlugin],
   server: {
     proxy: {
