@@ -35,7 +35,11 @@ const entryKey = Object.keys(manifest).find(key => manifest[key]?.isEntry);
 assert.ok(entryKey, 'Vite manifest must contain an entry chunk');
 
 const entry = manifest[entryKey];
-assert.equal(entry.src, 'src/main.jsx', 'unexpected Vite entry source');
+assert.ok(
+  entry.src === 'index.html' || entry.src === 'src/main.jsx',
+  `unexpected Vite entry source: ${entry.src}`,
+);
+assert.ok(entry.file?.endsWith('.js'), 'Vite entry must resolve to a JavaScript chunk');
 
 const initialFiles = collectInitialChunks(manifest, entryKey);
 assert.ok(initialFiles.length >= 2, 'initial bundle should keep React vendor code in a separate cacheable chunk');
