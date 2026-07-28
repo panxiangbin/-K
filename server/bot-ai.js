@@ -189,6 +189,10 @@ function describeCandidate(candidate, hand, groups, protectedIds) {
   const sameRank = cards.every(card => card.rank === cards[0].rank);
   const sourceGroupSize = sameRank ? (groups[cards[0].rank]?.length || cards.length) : cards.length;
   const splitCount = !isBomb && sameRank ? Math.max(0, sourceGroupSize - cards.length) : 0;
+  const completeOrdinaryGroup = !isBomb
+    && sameRank
+    && cards.length >= 2
+    && cards.length === sourceGroupSize;
   const protectedCardCount = !isBomb
     ? cards.filter(card => protectedIds.has(card.id)).length
     : 0;
@@ -201,6 +205,7 @@ function describeCandidate(candidate, hand, groups, protectedIds) {
     ...candidate,
     isBomb,
     splitCount,
+    completeOrdinaryGroup,
     breaksBomb,
     protectedCardCount,
     remaining,
@@ -245,6 +250,7 @@ function scoreLead(candidate, handLength, context) {
   score += candidate.points * (scoreCardUrgency ? -8 : 10);
 
   if (candidate.splitCount > 0) score += 850 + candidate.splitCount * 180;
+  if (candidate.completeOrdinaryGroup) score -= 80;
   if (candidate.breaksBomb) score += 1700 + candidate.protectedCardCount * 1500;
 
   score += candidate.estimatedTurns * 210;
@@ -299,6 +305,7 @@ function scoreFollow(candidate, context) {
     const highValueEmergency = context.minOpponentCards <= 2 && context.pileScore >= 20;
     if (endgameEmergency) score -= 2600;
     else if (highValueEmergency) score -= 1800;
+    else score += 2400;
   }
 
   return score;
