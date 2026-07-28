@@ -32,8 +32,18 @@ assert.ok(transformed.includes("sendError(ws, 'INVALID_PATTERN')"), '非法牌�
 assert.ok(transformed.includes("sendError(ws, 'CANNOT_BEAT')"), '压不过必须使用统一文案');
 assert.ok(transformed.includes("sendError(ws, 'MUST_BEAT')"), '强制压牌必须使用统一文案');
 assert.ok(transformed.includes("sendError(ws, 'ROOM_FULL')"), '房间已满必须使用统一文案');
-assert.ok(!transformed.includes("if (!room || room.status !== 'playing') return;"), '牌桌操作不得静默失败');
-assert.ok(!transformed.includes("if (playerIdx !== room.currentPlayer) return;"), '过牌轮次错误不得静默失败');
+
+const oldPlayGuard = `      const room = rooms.get(clientInfo.roomId);
+      if (!room || room.status !== 'playing') return;
+      const playerIdx = room.players.findIndex(p => p.id === clientInfo.playerId);
+      if (playerIdx !== room.currentPlayer) { sendError(ws, '还没轮到你'); return; }`;
+const oldPassGuard = `      const room = rooms.get(clientInfo.roomId);
+      if (!room || room.status !== 'playing') return;
+      const playerIdx = room.players.findIndex(p => p.id === clientInfo.playerId);
+      if (playerIdx !== room.currentPlayer) return;
+      if (!room.lastPlay) { sendError(ws, '先手不能过牌'); return; }`;
+assert.ok(!transformed.includes(oldPlayGuard), '出牌处理不得静默忽略失效对局');
+assert.ok(!transformed.includes(oldPassGuard), '过牌处理不得静默忽略失效对局或错误轮次');
 assert.ok(transformed.includes("send(ws, { type: 'error', msg });"), '必须保持现有error消息类型和msg字段');
 assert.ok(!transformed.includes("type: 'error', code"), '不得新增WebSocket错误字段');
 
