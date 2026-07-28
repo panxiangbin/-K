@@ -54,15 +54,19 @@ jobs:
         working-directory: server
         run: npm ci --omit=dev --no-audit --no-fund
 
-      - name: Start local backend and Pages preview
+      - name: Start local backend and nested static preview
         shell: bash
         run: |
           set -euo pipefail
+          preview_root="${RUNNER_TEMP}/henan-50k-preview-root"
+          mkdir -p "${preview_root}/pan/50k"
+          cp -R client/dist/. "${preview_root}/pan/50k/"
           (cd server && npm start > "${RUNNER_TEMP}/henan-50k-server.log" 2>&1 & echo $! > "${RUNNER_TEMP}/henan-50k-server.pid")
-          (cd client && npm run preview -- --host 127.0.0.1 --port 4173 > "${RUNNER_TEMP}/henan-50k-preview.log" 2>&1 & echo $! > "${RUNNER_TEMP}/henan-50k-preview.pid")
+          (python3 -m http.server 4173 --bind 127.0.0.1 --directory "${preview_root}" > "${RUNNER_TEMP}/henan-50k-preview.log" 2>&1 & echo $! > "${RUNNER_TEMP}/henan-50k-preview.pid")
           for attempt in $(seq 1 60); do
             if curl --fail --silent http://127.0.0.1:3002/healthz >/dev/null \
-              && curl --fail --silent http://127.0.0.1:4173/pan/50k/ >/dev/null; then
+              && curl --fail --silent http://127.0.0.1:4173/pan/50k/ >/dev/null \
+              && curl --fail --silent http://127.0.0.1:4173/pan/50k/assets/ >/dev/null; then
               exit 0
             fi
             sleep 1
