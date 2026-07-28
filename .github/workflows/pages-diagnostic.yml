@@ -1,0 +1,75 @@
+name: Pages Release Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        working-directory: client
+        run: npm ci --include=dev --no-audit --no-fund
+
+      - name: Run targeted fallback test
+        working-directory: client
+        shell: bash
+        run: |
+          set +e
+          node github-pages-fallback.test.js > targeted-test.log 2>&1
+          echo $? > targeted-test.exit
+          cat targeted-test.log
+          exit 0
+
+      - name: Run normal client build
+        working-directory: client
+        shell: bash
+        run: |
+          set +e
+          npm run build > render-build.log 2>&1
+          echo $? > render-build.exit
+          cat render-build.log
+          exit 0
+
+      - name: Run Pages client build
+        working-directory: client
+        shell: bash
+        env:
+          DEPLOY_TARGET: github-pages
+        run: |
+          set +e
+          npm run build > pages-build.log 2>&1
+          echo $? > pages-build.exit
+          cat pages-build.log
+          exit 0
+
+      - name: Upload diagnostic logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: pages-release-diagnostic
+          path: |
+            client/targeted-test.log
+            client/targeted-test.exit
+            client/render-build.log
+            client/render-build.exit
+            client/pages-build.log
+            client/pages-build.exit
+          if-no-files-found: error
+          retention-days: 1
