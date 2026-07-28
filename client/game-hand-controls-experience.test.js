@@ -6,9 +6,13 @@ const css = fs.readFileSync(new URL('./src/game-hand-controls-experience.css', i
 const main = fs.readFileSync(new URL('./src/main.jsx', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
-assert.match(source, /SLIDE_INTENT_PX = 9/, 'slide selection should require deliberate movement');
-assert.match(source, /Math\.hypot/, 'slide intent should use pointer distance rather than any micro movement');
-assert.match(source, /stopImmediatePropagation/, 'micro movements must not reach the React slide selector');
+assert.match(source, /SLIDE_INTENT_PX = 9/, 'mouse slide selection should require deliberate movement');
+assert.match(source, /Math\.hypot/, 'mouse slide intent should use pointer distance rather than any micro movement');
+assert.match(source, /pointerType: event\.pointerType \|\| 'mouse'/, 'slide guard must remember the input device');
+assert.match(source, /active\.pointerType !== 'mouse'/, 'touch and pen movement must be reserved for hand scrolling');
+assert.match(source, /event\.stopImmediatePropagation\(\)/, 'touch movement must not reach the React slide selector');
+assert.doesNotMatch(source, /preventDefault\(\)/, 'touch guard must not cancel the browser horizontal scroll default');
+assert.match(source, /左右滑动查看全部手牌/, 'mobile accessibility instructions must explain horizontal hand browsing');
 assert.match(source, /pointercancel/, 'pointer cancellation must clear slide intent state');
 assert.match(source, /role', 'group'/, 'hand actions should expose grouped semantics');
 assert.match(source, /aria-label', '手牌操作'/, 'hand action group should have a clear accessible name');
@@ -16,7 +20,7 @@ assert.match(source, /role', 'status'/, 'selection summary should be announced a
 assert.match(source, /aria-live', 'polite'/, 'selection summary should update without stealing focus');
 assert.doesNotMatch(source, /setInterval/, 'enhancer must not use continuous polling');
 
-assert.match(css, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/, 'mobile controls should use a two-row six-column grid');
+assert.match(css, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/, 'base mobile controls should use a two-row six-column grid');
 assert.match(css, /grid-column: span 2/, 'utility and pass controls should occupy stable mobile columns');
 assert.match(css, /grid-column: span 4/, 'primary play action should receive the largest mobile area');
 assert.match(css, /min-height: 50px !important/, 'primary play action should remain at least 50px high');
