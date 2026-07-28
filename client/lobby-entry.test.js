@@ -15,7 +15,9 @@ assert.match(jsx, /document\.getElementById\('player-name'\)\?\.focus\(\)/, '缺
 assert.doesNotMatch(jsx, /alert\(/, '大厅不应使用阻塞式 alert 提示');
 assert.doesNotMatch(jsx, /linear-gradient\(135deg,#f5c842,#d99920\)/, '大厅按钮不应继续使用旧的高饱和渐变');
 assert.doesNotMatch(jsx, /#6d28d9|#0891b2|#9333ea/, '大厅不应继续混入蓝紫色操作按钮');
-assert.match(jsx, /className="lobby-status/, '连接和错误状态应使用统一状态组件');
+assert.match(jsx, /function StatusBox\(\{ children, danger = false \}\)/, '大厅应提供统一状态组件');
+assert.match(jsx, /role="status"/, '统一状态组件应向辅助技术播报状态');
+assert.match(jsx, /className=\{`lobby-status\$\{danger \? ' danger' : ''\}`\}/, '状态组件应支持普通和危险状态样式');
 assert.match(jsx, /className="visually-hidden"/, '房间帮助文本应使用统一视觉隐藏类');
 
 assert.match(css, /grid-template-columns:\s*minmax\(220px, 0\.75fr\) minmax\(320px, 1\.25fr\)/, '桌面首页应使用品牌区和操作区双栏布局');
