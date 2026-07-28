@@ -1,0 +1,555 @@
+:root {
+  --ink-paper: #f1eadc;
+  --ink-paper-strong: #fffaf0;
+  --ink-paper-muted: #dfd3bf;
+  --ink-black: #1d211d;
+  --ink-black-soft: #4d554f;
+  --ink-pine: #173b30;
+  --ink-pine-deep: #0a261e;
+  --ink-pine-soft: #285748;
+  --ink-gold: #c9a66a;
+  --ink-gold-deep: #8d6935;
+  --ink-cinnabar: #9c342d;
+  --ink-line: rgba(67, 55, 40, 0.24);
+  --ink-shadow: 0 16px 42px rgba(38, 31, 22, 0.18);
+  --ink-font-display: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", serif;
+  --ink-font-ui: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --ui-table-900: var(--ink-pine-deep);
+  --ui-table-800: var(--ink-pine);
+  --ui-table-700: var(--ink-pine-soft);
+  --ui-surface: var(--ink-paper);
+  --ui-surface-strong: var(--ink-paper-strong);
+  --ui-surface-muted: var(--ink-paper-muted);
+  --ui-text: var(--ink-black);
+  --ui-text-muted: var(--ink-black-soft);
+  --ui-accent: var(--ink-gold);
+  --ui-accent-strong: var(--ink-gold-deep);
+  --ui-danger: var(--ink-cinnabar);
+  --ui-focus: #d8a93e;
+}
+
+/* 方案06：新中式墨韵。用纯 CSS 纸纹、墨色和印章细节，避免额外图片拖慢首屏。 */
+body {
+  font-family: var(--ink-font-ui);
+}
+
+.lobby-shell,
+.settlement-experience {
+  position: relative;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(43, 76, 58, 0.10), transparent 24%),
+    radial-gradient(circle at 88% 12%, rgba(139, 96, 52, 0.08), transparent 20%),
+    repeating-linear-gradient(0deg, rgba(55, 42, 26, 0.018) 0 1px, transparent 1px 5px),
+    linear-gradient(135deg, #f7f1e6, #ece2d2 58%, #f7f0e5) !important;
+  color: var(--ink-black) !important;
+}
+
+.lobby-shell::before,
+.settlement-experience::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.34;
+  background:
+    radial-gradient(ellipse at 8% 88%, rgba(28, 59, 46, 0.16), transparent 34%),
+    radial-gradient(ellipse at 92% 92%, rgba(42, 42, 36, 0.10), transparent 31%);
+  mix-blend-mode: multiply;
+}
+
+.lobby-brand,
+.lobby-main,
+.settlement-experience > * {
+  position: relative;
+  z-index: 1;
+}
+
+.lobby-brand {
+  border-right: 1px solid var(--ink-line) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, 0.78), rgba(235, 225, 207, 0.76)),
+    repeating-linear-gradient(90deg, rgba(43, 54, 47, 0.025) 0 1px, transparent 1px 13px) !important;
+}
+
+.lobby-brand::after {
+  content: '地道玩法 · 原汁原味';
+  display: block;
+  width: fit-content;
+  margin-top: 30px;
+  padding: 7px 12px;
+  border: 1px solid rgba(156, 52, 45, 0.38);
+  border-radius: 3px;
+  color: var(--ink-cinnabar);
+  font-family: var(--ink-font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.lobby-brand-mark {
+  border-radius: 8px !important;
+  border-color: rgba(156, 52, 45, 0.66) !important;
+  color: #fff7e8 !important;
+  background: var(--ink-cinnabar) !important;
+  box-shadow: 0 8px 18px rgba(80, 35, 29, 0.22) !important;
+  font-family: var(--ink-font-display);
+  letter-spacing: 0.08em !important;
+}
+
+.lobby-brand-title {
+  color: var(--ink-black) !important;
+  font-family: var(--ink-font-display);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-shadow: none !important;
+}
+
+.lobby-brand-subtitle,
+.lobby-brand-points {
+  color: #5c625d !important;
+}
+
+.lobby-brand-points li::before {
+  border-radius: 1px !important;
+  background: var(--ink-cinnabar) !important;
+  transform: rotate(45deg);
+}
+
+.lobby-panel,
+.waiting-room-card {
+  border: 1px solid rgba(68, 57, 42, 0.24) !important;
+  border-radius: 16px !important;
+  background:
+    linear-gradient(rgba(255, 251, 242, 0.96), rgba(247, 239, 225, 0.96)),
+    repeating-linear-gradient(0deg, rgba(63, 48, 29, 0.02) 0 1px, transparent 1px 6px) !important;
+  color: var(--ink-black) !important;
+  box-shadow: var(--ink-shadow) !important;
+}
+
+.lobby-panel::before,
+.waiting-room-card::before {
+  content: '';
+  display: block;
+  width: 42px;
+  height: 3px;
+  margin: 0 0 18px;
+  background: linear-gradient(90deg, var(--ink-cinnabar), transparent);
+}
+
+.lobby-eyebrow {
+  color: var(--ink-cinnabar) !important;
+  font-family: var(--ink-font-display);
+}
+
+.lobby-view-heading h2,
+.waiting-room-code,
+.waiting-player-name {
+  color: var(--ink-black) !important;
+}
+
+.lobby-view-heading h2 {
+  font-family: var(--ink-font-display);
+  font-weight: 800;
+}
+
+.lobby-view-heading p,
+.lobby-field-hint,
+.waiting-room-reason,
+.waiting-room-message,
+.waiting-room-count,
+.waiting-room-copy-status {
+  color: #686b65 !important;
+}
+
+.lobby-field label,
+.waiting-room-header > span {
+  color: #3f4742 !important;
+}
+
+.lobby-field input,
+.room-id-input {
+  border-color: rgba(64, 53, 37, 0.28) !important;
+  background: rgba(255, 253, 247, 0.9) !important;
+  color: var(--ink-black) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8) !important;
+}
+
+.lobby-field input::placeholder {
+  color: #9a978e !important;
+}
+
+.lobby-field input:focus-visible {
+  background: #fffdf8 !important;
+  outline-color: var(--ink-gold-deep) !important;
+}
+
+.lobby-status {
+  border-color: rgba(47, 78, 63, 0.28) !important;
+  border-left-color: var(--ink-pine) !important;
+  background: rgba(224, 235, 226, 0.82) !important;
+  color: #294438 !important;
+}
+
+.lobby-status.danger {
+  border-color: rgba(156, 52, 45, 0.34) !important;
+  border-left-color: var(--ink-cinnabar) !important;
+  background: rgba(246, 226, 219, 0.9) !important;
+  color: #7e2b26 !important;
+}
+
+.lobby-button,
+.lobby-choice-card,
+.lobby-back-button,
+.waiting-room-copy {
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+.lobby-button.primary {
+  border-color: #214b3d !important;
+  background: linear-gradient(180deg, #285947, #173b30) !important;
+  color: #fff9eb !important;
+}
+
+.lobby-button.secondary,
+.lobby-choice-card {
+  border-color: rgba(75, 62, 43, 0.24) !important;
+  background: rgba(255, 252, 244, 0.88) !important;
+  color: var(--ink-black) !important;
+}
+
+.lobby-button.danger {
+  border-color: rgba(156, 52, 45, 0.44) !important;
+  background: #8f332c !important;
+  color: #fff7ef !important;
+}
+
+.lobby-button-icon,
+.waiting-player-avatar {
+  border-color: rgba(53, 66, 56, 0.22) !important;
+  background: var(--ink-pine) !important;
+  color: #fff8e8 !important;
+}
+
+.lobby-choice-card strong {
+  color: var(--ink-black) !important;
+  font-family: var(--ink-font-display);
+}
+
+.lobby-choice-card span {
+  color: #6f716b !important;
+}
+
+.waiting-player {
+  border-color: rgba(70, 59, 42, 0.18) !important;
+  background: rgba(250, 245, 235, 0.72) !important;
+}
+
+.waiting-player.self {
+  border-color: rgba(156, 52, 45, 0.34) !important;
+  background: rgba(156, 52, 45, 0.06) !important;
+}
+
+/* 牌桌：深墨绿为主体，金色只用于轮次与主操作，朱砂红用于危险和印章。 */
+.game-table-shell {
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(49, 100, 78, 0.24), transparent 42%),
+    radial-gradient(circle at 12% 12%, rgba(201, 166, 106, 0.08), transparent 20%),
+    linear-gradient(150deg, #102f26 0%, #09251d 54%, #061b16 100%) !important;
+  color: #f4eddf !important;
+  font-family: var(--ink-font-ui);
+}
+
+.game-table-shell::before {
+  opacity: 0.28 !important;
+  background-image:
+    radial-gradient(circle at 50% 45%, transparent 0 26%, rgba(207, 182, 127, 0.07) 26.5% 27%, transparent 27.5%),
+    linear-gradient(18deg, rgba(255,255,255,.018) 12%, transparent 12.5%, transparent 87%, rgba(255,255,255,.018) 87.5%) !important;
+  background-size: auto, 34px 58px !important;
+}
+
+.game-table-header {
+  background: rgba(6, 24, 19, 0.97) !important;
+  border-bottom-color: rgba(201, 166, 106, 0.24) !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,.24) !important;
+}
+
+.game-table-header__room {
+  font-family: var(--ink-font-display);
+  color: #f4ead6 !important;
+}
+
+.game-table-header__turn[data-turn-state='self'] {
+  border-color: rgba(201, 166, 106, 0.64) !important;
+  background: rgba(201, 166, 106, 0.12) !important;
+  color: #f3dba6 !important;
+}
+
+.game-table-trick-board,
+.trick-board-experience {
+  border-color: rgba(201, 166, 106, 0.24) !important;
+  border-radius: 18px !important;
+  background:
+    linear-gradient(rgba(8, 37, 29, 0.88), rgba(6, 29, 23, 0.9)),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.018) 0 1px, transparent 1px 14px) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025), 0 14px 32px rgba(0,0,0,.24) !important;
+}
+
+.trick-board-summary__title {
+  font-family: var(--ink-font-display);
+  color: #f1e5ca !important;
+}
+
+.trick-board-summary__turn,
+.trick-action-card__header > :last-child,
+.trick-action-card__latest-badge {
+  color: #efd394 !important;
+}
+
+.trick-action-card {
+  border-radius: 10px !important;
+  border-color: rgba(236, 223, 190, 0.12) !important;
+  background: rgba(255, 251, 241, 0.035) !important;
+}
+
+.trick-action-card.is-latest-play {
+  border-color: rgba(201, 166, 106, 0.68) !important;
+  background: rgba(201, 166, 106, 0.10) !important;
+}
+
+.game-player-card {
+  border-radius: 12px !important;
+  border-color: rgba(201, 166, 106, 0.22) !important;
+  background: rgba(5, 28, 22, 0.84) !important;
+  box-shadow: 0 7px 18px rgba(0,0,0,.18) !important;
+}
+
+.game-player-card[data-player-state='current'] {
+  border-color: rgba(201, 166, 106, 0.92) !important;
+  background: rgba(54, 52, 29, 0.9) !important;
+  box-shadow: 0 0 0 2px rgba(201, 166, 106, 0.18), 0 10px 24px rgba(0,0,0,.22) !important;
+}
+
+.game-player-card__avatar {
+  border-color: rgba(242, 222, 178, 0.72) !important;
+  background: #274f40 !important;
+}
+
+.game-player-card__state[data-state='current'] {
+  border-color: var(--ink-gold) !important;
+  background: var(--ink-gold) !important;
+  color: #14271f !important;
+}
+
+.game-table-hand-dock {
+  background: linear-gradient(to top, rgba(3, 17, 13, .98), rgba(7, 31, 24, .82) 72%, transparent) !important;
+  border-top-color: rgba(201, 166, 106, 0.12) !important;
+}
+
+.game-table-hand-dock .btn-lite,
+.game-table-hand-dock .btn-pass,
+.top-action,
+.game-table-room-copy {
+  border-color: rgba(229, 215, 183, .20) !important;
+  border-radius: 10px !important;
+  background: rgba(255, 252, 244, .055) !important;
+  color: #f5ecda !important;
+}
+
+.game-table-hand-dock .btn-lite.hint {
+  color: #efd394 !important;
+  border-color: rgba(201, 166, 106, 0.38) !important;
+}
+
+.game-table-hand-dock .btn-play,
+.btn-play {
+  border: 1px solid #315f4d !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #2f6852, #1b4637) !important;
+  color: #fff9eb !important;
+  box-shadow: 0 5px 14px rgba(0,0,0,.24) !important;
+}
+
+.top-action.danger {
+  border-color: rgba(156, 52, 45, 0.5) !important;
+  color: #f0aaa4 !important;
+}
+
+/* 结算：宣纸底、墨色文字、朱砂结果，和首页形成同一套视觉语言。 */
+.settlement-experience {
+  grid-template-columns: minmax(250px, 32%) minmax(0, 1fr) !important;
+  color: var(--ink-black) !important;
+}
+
+.settlement-experience-hero {
+  border-right-color: var(--ink-line) !important;
+  background: rgba(255, 252, 245, 0.56) !important;
+}
+
+.settlement-experience .settlement-leader-name,
+.settlement-experience .settlement-heading-text,
+.settlement-experience .settlement-history-heading h2 {
+  color: var(--ink-black) !important;
+  font-family: var(--ink-font-display);
+  text-shadow: none !important;
+}
+
+.settlement-experience-score {
+  color: var(--ink-cinnabar) !important;
+}
+
+.settlement-experience .settlement-leader-meta,
+.settlement-experience .settlement-room-id,
+.settlement-experience .settlement-target-summary,
+.settlement-experience-detail,
+.settlement-experience-status {
+  color: #676a64 !important;
+}
+
+.settlement-experience-room,
+.settlement-experience-card,
+.settlement-experience-history,
+.settlement-experience .settlement-content {
+  color: var(--ink-black) !important;
+}
+
+.settlement-experience-card {
+  border-color: rgba(67, 55, 40, 0.20) !important;
+  border-radius: 10px !important;
+  background: rgba(255, 252, 245, 0.82) !important;
+  box-shadow: 0 7px 18px rgba(55, 43, 28, 0.09) !important;
+}
+
+.settlement-experience-card[data-rank='1'] {
+  border-color: rgba(156, 52, 45, 0.34) !important;
+  background: rgba(156, 52, 45, 0.055) !important;
+}
+
+.settlement-experience-card[data-self='true'] {
+  box-shadow: inset 4px 0 0 var(--ink-cinnabar), 0 7px 18px rgba(55, 43, 28, 0.09) !important;
+}
+
+.settlement-experience-history,
+.settlement-experience-room {
+  border-color: rgba(67, 55, 40, 0.18) !important;
+  background: rgba(247, 239, 225, 0.76) !important;
+}
+
+.settlement-experience-action,
+.settlement-experience .settlement-room-copy-button {
+  border-color: rgba(39, 76, 61, 0.34) !important;
+  background: var(--ink-pine) !important;
+  color: #fff9eb !important;
+  border-radius: 9px !important;
+}
+
+.settlement-experience-action:last-child {
+  border-color: rgba(156, 52, 45, 0.48) !important;
+  background: var(--ink-cinnabar) !important;
+  color: #fff7ef !important;
+}
+
+.settlement-experience-primary {
+  border-color: #214b3d !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #2d654f, #173b30) !important;
+  color: #fff9eb !important;
+}
+
+.rules-help-launcher {
+  border-color: rgba(201, 166, 106, 0.58) !important;
+  border-radius: 10px !important;
+  background: var(--ink-pine) !important;
+  color: #fff4dc !important;
+}
+
+.rules-help-dialog,
+.rules-help-header,
+.rules-help-nav,
+.rules-help-section,
+.rules-help-footer {
+  border-color: rgba(67, 55, 40, 0.20) !important;
+  background: var(--ink-paper-strong) !important;
+  color: var(--ink-black) !important;
+}
+
+.rules-help-dialog {
+  border-radius: 14px !important;
+  box-shadow: 0 24px 70px rgba(33, 28, 20, .40) !important;
+}
+
+.rules-help-header h1,
+.rules-help-section h2 {
+  color: var(--ink-black) !important;
+  font-family: var(--ink-font-display);
+}
+
+.rules-help-eyebrow {
+  color: var(--ink-cinnabar) !important;
+}
+
+.rules-help-nav a,
+.rules-help-close {
+  border-color: rgba(67, 55, 40, 0.22) !important;
+  background: #fffdf8 !important;
+  color: #24473a !important;
+}
+
+.rules-help-done,
+.rules-help-section-heading > span {
+  border-color: #214b3d !important;
+  background: var(--ink-pine) !important;
+  color: #fff9eb !important;
+}
+
+@media (max-width: 680px) {
+  .lobby-brand {
+    border-right: 0 !important;
+    border-bottom-color: var(--ink-line) !important;
+  }
+
+  .lobby-brand::after {
+    margin: 16px auto 0;
+  }
+
+  .lobby-panel::before,
+  .waiting-room-card::before {
+    margin-bottom: 14px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  .lobby-brand::after,
+  .lobby-panel::before,
+  .waiting-room-card::before {
+    display: none;
+  }
+
+  .game-table-trick-board,
+  .trick-board-experience,
+  .game-player-card,
+  .settlement-experience-card {
+    border-radius: 8px !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .lobby-panel,
+  .waiting-room-card,
+  .game-table-trick-board,
+  .trick-board-experience,
+  .game-player-card,
+  .settlement-experience-card,
+  .rules-help-dialog,
+  .rules-help-section {
+    border-width: 2px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lobby-shell::before,
+  .settlement-experience::after,
+  .game-table-shell::before {
+    animation: none !important;
+  }
+}
