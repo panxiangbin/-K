@@ -236,17 +236,25 @@ function scoreLead(candidate, handLength, context) {
   score -= candidate.cards.length * 190;
   score += candidate.rankValue * 12;
 
+  const scoreCardUrgency = handLength <= 6 || context.minOpponentCards <= 2;
+  const urgentCompleteScoreGroup = scoreCardUrgency
+    && candidate.completeOrdinaryGroup
+    && candidate.points >= 10;
+
   // 对手只剩1～3张时，尽量不要主动送出与其剩余张数完全相同的普通牌型。
   // 对手剩2张时少领对子、剩3张时少领三张，可降低对方一手压完的机会；
+  // 但完整的高分牌组在残局继续压手会形成更大的失分风险，因此降低封牌惩罚。
   // 若自己本手即可出完，前面的 finishing 分支仍会直接结束，不受此限制。
   if (context.minOpponentCards >= 1 && context.minOpponentCards <= 3 && !candidate.isBomb) {
-    if (candidate.cards.length === context.minOpponentCards) score += 2600;
-    else if (candidate.cards.length > 1) score -= Math.min(candidate.cards.length, 4) * 120;
+    if (candidate.cards.length === context.minOpponentCards) {
+      score += urgentCompleteScoreGroup ? 100 : 2600;
+    } else if (candidate.cards.length > 1) {
+      score -= Math.min(candidate.cards.length, 4) * 120;
+    }
   }
 
   // 中前盘避免过早把10、K等成组分牌直接送出；进入残局或对手牌少时，
   // 则主动处理完整分牌组，避免高分对子/三张拖到最后失去牌权。
-  const scoreCardUrgency = handLength <= 6 || context.minOpponentCards <= 2;
   score += candidate.points * (scoreCardUrgency ? -8 : 10);
 
   if (candidate.splitCount > 0) score += 850 + candidate.splitCount * 180;
