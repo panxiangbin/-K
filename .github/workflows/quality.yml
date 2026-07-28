@@ -1,0 +1,54 @@
+name: Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    name: Test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
+
+      - name: Install client dependencies
+        working-directory: client
+        run: npm ci --include=dev --no-audit --no-fund
+
+      - name: Test client
+        working-directory: client
+        run: npm test
+
+      - name: Build client
+        working-directory: client
+        run: npm run build
+
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci --omit=dev --no-audit --no-fund
+
+      - name: Test server
+        working-directory: server
+        run: npm test
