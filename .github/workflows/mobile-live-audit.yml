@@ -45,10 +45,10 @@ jobs:
         working-directory: client
         run: npx playwright install --with-deps chromium
 
-      - name: Wait briefly for Render and audit four phone sizes
+      - name: Audit GitHub Pages fallback on four phone sizes
         working-directory: client
         env:
-          MOBILE_AUDIT_URL: https://henan-50k.onrender.com
+          MOBILE_AUDIT_URL: https://panxiangbin.github.io/-K
           EXPECTED_UI_RELEASE: ink-06-mobile-r4
           RELEASE_TIMEOUT_MS: 180000
         run: node mobile-live-audit.mjs
