@@ -27,7 +27,7 @@ function sameEight(rank = '9') {
 }
 
 function jokerFour() {
-  return [card('小王', 'JOKER'), card('小王', 'JOKER'), card('大王', 'JOKER'), card('大王', 'JOKER')];
+  return [card('小王', 'joker'), card('小王', 'joker'), card('大王', 'joker'), card('大王', 'joker')];
 }
 
 const exposed = summarizePublicPlays([
