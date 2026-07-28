@@ -8,16 +8,16 @@ export const SERVER_REJECTION_EVENT = 'henan50k-server-rejection';
 export const SERVER_ERROR_BANNER_ID = 'henan50k-server-error-feedback';
 export const SERVER_ERROR_DEDUPE_MS = 1800;
 
-const LEGACY_MESSAGES = new Map([
-  ['房间不存在', '房间不存在或已经关闭，请检查房间号后重新加入。'],
-  ['房间已满', '房间人数已满，请加入其他房间。'],
-  ['还没轮到你', '还没轮到你，请等待当前玩家完成操作。'],
-  ['非法牌型', '所选牌型不合法。只能出单张、对子、三张、四至七张同点牌或合法炸弹。'],
-  ['不够大', '所选牌压不过上一手。请换同类型、同张数的更大牌，或使用合法炸弹。'],
-  ['先手不能过牌', '你是本轮先手，必须出牌，不能过牌。'],
-  ['你有能压的牌，必须出！', '你有合法更大牌，必须压牌，不能直接过牌。'],
-  ['牌不在手中', '手牌状态已经变化，已为你同步最新手牌，请重新选择。'],
-]);
+const LEGACY_MESSAGES = Object.freeze({
+  房间不存在: '房间不存在或已经关闭，请检查房间号后重新加入。',
+  房间已满: '房间人数已满，请加入其他房间。',
+  还没轮到你: '还没轮到你，请等待当前玩家完成操作。',
+  非法牌型: '所选牌型不合法。只能出单张、对子、三张、四至七张同点牌或合法炸弹。',
+  不够大: '所选牌压不过上一手。请换同类型、同张数的更大牌，或使用合法炸弹。',
+  先手不能过牌: '你是本轮先手，必须出牌，不能过牌。',
+  '你有能压的牌，必须出！': '你有合法更大牌，必须压牌，不能直接过牌。',
+  牌不在手中: '手牌状态已经变化，已为你同步最新手牌，请重新选择。',
+});
 
 const TABLE_REJECTION_MARKERS = [
   '还没轮到你',
@@ -42,10 +42,19 @@ const LONG_ERROR_MARKERS = [
 let lastPublished = { key: '', at: 0 };
 let bannerTimer = null;
 
+function cleanServerMessage(message) {
+  return String(message || '')
+    .replace(/^[⚠️\s]+/u, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function normalizeServerError(message) {
-  const raw = String(message || '').trim();
+  const raw = cleanServerMessage(message);
   if (!raw) return '操作没有成功，请等待状态更新后重试。';
-  return LEGACY_MESSAGES.get(raw) || raw;
+  return Object.prototype.hasOwnProperty.call(LEGACY_MESSAGES, raw)
+    ? LEGACY_MESSAGES[raw]
+    : raw;
 }
 
 export function isTableActionRejection(message) {
@@ -60,7 +69,7 @@ export function getServerErrorDuration(message) {
 }
 
 export function getServerErrorKey(message) {
-  return normalizeServerError(message).replace(/^[⚠️\s]+/u, '').replace(/\s+/g, ' ').trim();
+  return normalizeServerError(message);
 }
 
 export function shouldPublishServerError(message, now = Date.now()) {
