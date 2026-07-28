@@ -7,8 +7,9 @@ const main = fs.readFileSync(new URL('./src/main.jsx', import.meta.url), 'utf8')
 const packageJson = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 assert(behavior.includes("INK_THEME_ID = 'ink-06'"), 'runtime must identify the selected 06 theme');
-assert(behavior.includes("INK_THEME_RELEASE = 'ink-06-r2'"), 'runtime must expose a visible release identifier');
+assert(behavior.includes("INK_THEME_RELEASE = 'ink-06-mobile-r3'"), 'runtime must expose the mobile operability release identifier');
 assert(behavior.includes("badge.textContent = '新中式墨韵 · 06'"), 'lobby must visibly confirm the selected theme');
+assert(behavior.includes('手机操作优化版'), 'release accessibility label must identify the mobile-ready edition');
 assert(behavior.includes('MutationObserverClass'), 'runtime must reapply theme markers after React page changes');
 
 for (const selector of [
