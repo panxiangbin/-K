@@ -18,6 +18,7 @@ import { installGamePlayerCardExperience } from './game-player-card-experience.j
 import { installGameTrickBoardExperience } from './game-trick-board-experience.js';
 import { installSettlementExperience } from './settlement-experience.js';
 import { installInkThemeRelease } from './ink-theme-release.js';
+import { installRemoteBackendWebSocket } from './remote-backend-bootstrap.js';
 import './index.css';
 import './ui-responsive.css';
 import './ui-polish.css';
@@ -50,6 +51,7 @@ import './mobile-game-overlay.css';
 import './mobile-game-layout-r4.css';
 import './mobile-game-layout-r4-structure.css';
 
+installRemoteBackendWebSocket();
 ReactDOM.createRoot(document.getElementById('root')).render(<><App /><RulesHelpLauncher /></>);
 
 function installStartupEnhancer(name, install) {
