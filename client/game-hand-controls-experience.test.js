@@ -17,7 +17,7 @@ assert.match(source, /Math\.hypot/, 'slide intent should use pointer distance ra
 assert.match(source, /Math\.abs\(dx\) >= Math\.abs\(dy\)/, 'touch guard should only commit horizontal hand browsing');
 assert.match(source, /inputType = event\.pointerType \|\| 'mouse'/, 'slide guard must remember the pointer input device');
 assert.match(source, /pointerActive\.inputType !== 'mouse'/, 'touch and pen pointer movement must be reserved for hand scrolling');
-assert.match(source, /event\.target\?\.closest\?\('\.game-hand-surface'\)/, 'touch browsing must be allowed to start anywhere inside the hand surface');
+assert.match(source, /event\.target\?\.closest\?\.\('\.game-hand-surface'\)/, 'touch browsing must be allowed to start anywhere inside the hand surface');
 assert.match(source, /inputType === 'mouse' && !card/, 'mouse intent protection should still require a card target');
 assert.match(source, /startScrollLeft: Number\(surface\.scrollLeft\) \|\| 0/, 'touch browsing must remember the starting scroll position');
 assert.match(source, /clampHandScroll\(gesture\.surface, gesture\.startScrollLeft, dx\)/, 'pointer and touch paths must share bounded scroll math');
