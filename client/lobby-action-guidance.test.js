@@ -13,6 +13,10 @@ assert.match(js, /服务器尚未连接，返回开始页等待连接/, '子页�
 assert.match(js, /aria-describedby/, '按钮必须关联可见的禁用原因');
 assert.match(js, /aria-live', 'polite'/, '操作可用性变化必须支持读屏播报');
 assert.match(js, /aria-label', '返回开始页'/, '返回按钮必须有明确可访问名称');
+assert.match(js, /element\.textContent !== text/, '提示文字必须只在变化时更新，防止 MutationObserver 死循环');
+assert.match(js, /element\.dataset\.tone !== tone/, '提示状态必须幂等更新');
+assert.doesNotMatch(js, /guidance\.textContent\s*=/, '大厅提示不得无条件重写文本');
+assert.match(js, /return \(\) => observer\.disconnect\(\)/, '大厅增强器必须支持清理观察器');
 
 assert.match(css, /\.lobby-action-guidance/, '必须提供首页操作引导样式');
 assert.match(css, /\.lobby-choice-guidance/, '必须提供选择页禁用原因样式');
