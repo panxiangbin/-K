@@ -107,11 +107,19 @@ function enhanceHeader(root) {
   room.appendChild(status);
 }
 
-export function installGameTableHeaderEnhancer(root = globalThis.document?.getElementById?.('root')) {
-  if (!root || typeof MutationObserver === 'undefined') return () => {};
-  const run = () => enhanceHeader(root);
+function resolveRoot(root) {
+  if (root) return root;
+  const documentObject = globalThis.document;
+  if (!documentObject || typeof documentObject.getElementById !== 'function') return null;
+  return documentObject.getElementById('root');
+}
+
+export function installGameTableHeaderEnhancer(root = null) {
+  const resolvedRoot = resolveRoot(root);
+  if (!resolvedRoot || typeof MutationObserver === 'undefined') return () => {};
+  const run = () => enhanceHeader(resolvedRoot);
   const observer = new MutationObserver(run);
-  observer.observe(root, { childList: true, subtree: true });
+  observer.observe(resolvedRoot, { childList: true, subtree: true });
   run();
   return () => observer.disconnect();
 }
