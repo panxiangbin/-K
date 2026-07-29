@@ -14,10 +14,16 @@ assert.match(logic, /finished:\s*'已出完'/);
 assert.match(logic, /left:\s*'已退出'/);
 assert.match(logic, /setAttribute\('role', 'group'\)/);
 assert.match(logic, /setAttribute\('aria-label'/);
-assert.match(logic, /attributeFilter:\s*\['style', 'class'\]/);
+assert.match(logic, /readPlayerText/);
+assert.match(logic, /game-player-card__state/);
+assert.match(logic, /cardSignatures = new WeakMap/);
+assert.match(logic, /requestAnimationFrame/);
+assert.match(logic, /cancelAnimationFrame/);
 assert.match(logic, /badge\.textContent !== label/);
 assert.match(logic, /element\.dataset\.playerState !== state/);
-assert.doesNotMatch(logic, /badge\.textContent\s*=\s*PLAYER_STATE_LABELS\[state\]/);
+assert.doesNotMatch(logic, /attributeFilter:\s*\['style', 'class'\]/, '不得监听自身会修改的style/class属性');
+assert.doesNotMatch(logic, /attributes:\s*true/, '玩家状态卡只监听结构与文字变化');
+assert.doesNotMatch(logic, /queueMicrotask/, '高频玩家状态更新不得使用微任务自旋');
 assert.doesNotMatch(logic, /setInterval\s*\(/);
 
 assert.match(css, /\.game-player-card\[data-player-state='current'\]/);
