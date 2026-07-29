@@ -63,17 +63,19 @@ function ensureStateBadge(element, state) {
     badge.setAttribute('aria-hidden', 'true');
     element.appendChild(badge);
   }
-  badge.dataset.state = state;
-  badge.textContent = PLAYER_STATE_LABELS[state];
+  const label = PLAYER_STATE_LABELS[state];
+  if (badge.dataset.state !== state) badge.dataset.state = state;
+  if (badge.textContent !== label) badge.textContent = label;
 }
 
 function enhancePlayerCard({ element, position, label }) {
   if (!element) return;
   const state = readPlayerState(element);
   element.classList.add('game-player-card', `game-player-card--${position}`);
-  element.dataset.playerState = state;
+  if (element.dataset.playerState !== state) element.dataset.playerState = state;
   element.setAttribute('role', 'group');
-  element.setAttribute('aria-label', extractPlayerSummary(element, label));
+  const summary = extractPlayerSummary(element, label);
+  if (element.getAttribute('aria-label') !== summary) element.setAttribute('aria-label', summary);
   ensureStateBadge(element, state);
 
   const avatar = element.firstElementChild;
