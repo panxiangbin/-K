@@ -71,6 +71,12 @@
 }
 
 @media (pointer: coarse) {
+  [data-hand-interaction='true'],
+  [data-card-id],
+  [data-card-id] * {
+    touch-action: pan-x !important;
+  }
+
   [data-card-id] {
     min-width: 48px;
     min-height: 48px;
@@ -87,6 +93,12 @@
 @media (orientation: portrait) and (max-width: 680px) {
   [data-hand-interaction='true'] {
     padding-inline: max(6px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
+  }
+
+  [data-hand-interaction='true'],
+  [data-card-id],
+  [data-card-id] * {
+    touch-action: pan-x !important;
   }
 
   [data-hand-density='comfortable'] {
@@ -130,6 +142,12 @@
 @media (max-height: 430px) and (orientation: landscape) {
   [data-hand-interaction='true'] {
     padding-inline: max(6px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
+  }
+
+  [data-hand-interaction='true'],
+  [data-card-id],
+  [data-card-id] * {
+    touch-action: pan-x !important;
   }
 
   [data-hand-density='comfortable'] {
