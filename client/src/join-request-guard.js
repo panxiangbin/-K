@@ -1,5 +1,6 @@
 export function createJoinRequestGuard({ cooldownMs = 3000, now = () => Date.now() } = {}) {
   let pending = null;
+  let recentlyJoined = null;
 
   function makeKey(message) {
     if (!message || message.type !== 'join_room') return null;
@@ -18,6 +19,13 @@ export function createJoinRequestGuard({ cooldownMs = 3000, now = () => Date.now
 
       const startedAt = now();
       if (
+        recentlyJoined
+        && recentlyJoined.socket === socket
+        && startedAt - recentlyJoined.at < cooldownMs
+      ) {
+        return false;
+      }
+      if (
         pending
         && pending.socket === socket
         && pending.key === key
@@ -31,6 +39,7 @@ export function createJoinRequestGuard({ cooldownMs = 3000, now = () => Date.now
     },
 
     clear(socket) {
+      if (socket) recentlyJoined = { socket, at: now() };
       if (!socket || pending?.socket === socket) pending = null;
     },
   };
