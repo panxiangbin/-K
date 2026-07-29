@@ -52,19 +52,27 @@ function enhanceGameTable(root) {
   return true;
 }
 
-export function installGameTableFoundation(root = globalThis.document?.getElementById?.('root')) {
-  if (!root || typeof MutationObserver === 'undefined') return () => {};
+function resolveRoot(root) {
+  if (root) return root;
+  const documentObject = globalThis.document;
+  if (!documentObject || typeof documentObject.getElementById !== 'function') return null;
+  return documentObject.getElementById('root');
+}
+
+export function installGameTableFoundation(root = null) {
+  const resolvedRoot = resolveRoot(root);
+  if (!resolvedRoot || typeof MutationObserver === 'undefined') return () => {};
   let queued = false;
   const run = () => {
     if (queued) return;
     queued = true;
     queueMicrotask(() => {
       queued = false;
-      enhanceGameTable(root);
+      enhanceGameTable(resolvedRoot);
     });
   };
   const observer = new MutationObserver(run);
-  observer.observe(root, { childList: true, subtree: true, characterData: true });
+  observer.observe(resolvedRoot, { childList: true, subtree: true, characterData: true });
   run();
   return () => observer.disconnect();
 }
