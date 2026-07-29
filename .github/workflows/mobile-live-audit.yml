@@ -1,11 +1,6 @@
 name: Mobile live audit
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'client/**'
-      - '.github/workflows/mobile-live-audit.yml'
   pull_request:
     branches: [main]
     paths:
@@ -35,29 +30,80 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: client/package-lock.json
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
 
-      - name: Install browser audit dependency
+      - name: Install client dependencies
         working-directory: client
-        run: npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.54.1
+        run: npm ci --include=dev --no-audit --no-fund
 
-      - name: Install Chromium
-        working-directory: client
-        run: npx playwright install --with-deps chromium
-
-      - name: Wait for Render and audit four phone sizes
+      - name: Build nested Pages release
         working-directory: client
         env:
-          MOBILE_AUDIT_URL: https://henan-50k.onrender.com
-          EXPECTED_UI_RELEASE: ink-06-mobile-r4
-          RELEASE_TIMEOUT_MS: 720000
-        run: node mobile-live-audit.mjs
+          DEPLOY_TARGET: github-pages
+          PAGES_BASE_PATH: /pan/50k/
+        run: npm run build
 
-      - name: Upload phone screenshots and report
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci --omit=dev --no-audit --no-fund
+
+      - name: Start local backend and nested static preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          preview_root="${RUNNER_TEMP}/henan-50k-preview-root"
+          mkdir -p "${preview_root}/pan/50k"
+          cp -R client/dist/. "${preview_root}/pan/50k/"
+          (cd server && npm start > "${RUNNER_TEMP}/henan-50k-server.log" 2>&1 &)
+          (python3 -m http.server 4173 --bind 127.0.0.1 --directory "${preview_root}" > "${RUNNER_TEMP}/henan-50k-preview.log" 2>&1 &)
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:3002/healthz >/dev/null && curl --fail --silent http://127.0.0.1:4173/pan/50k/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+
+      - name: Install Playwright Chromium
+        working-directory: client
+        run: |
+          npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.54.1
+          npx playwright install --with-deps chromium
+
+      - name: Isolate enhancer groups
+        working-directory: client
+        env:
+          MOBILE_AUDIT_URL: http://127.0.0.1:4173/pan/50k
+        shell: bash
+        run: |
+          set +e
+          failed=0
+          run_case() {
+            name="$1"
+            disabled="$2"
+            echo "===== CASE ${name} ====="
+            DIAGNOSTIC_CASE="$name" DISABLE_ENHANCERS="$disabled" node solo-entry-diagnostic.mjs
+            status=$?
+            echo "${name}:${status}" | tee -a mobile-audit-artifacts/enhancer-outcomes.txt
+            if [ "$status" -ne 0 ]; then failed=1; fi
+          }
+          run_case core-only "game-action-guidance,game-action-guard,game-action-feedback,joker-pair-ui-guard,ui-feedback-governor,lobby-entry-feedback,lobby-action-guidance,waiting-room-experience,waiting-room-request-lifecycle,game-player-card-experience,game-trick-board-experience,settlement-experience"
+          run_case waiting-group "game-action-guidance,game-action-guard,game-action-feedback,joker-pair-ui-guard,game-player-card-experience,game-trick-board-experience,settlement-experience"
+          run_case action-group "lobby-entry-feedback,lobby-action-guidance,waiting-room-experience,waiting-room-request-lifecycle,game-player-card-experience,game-trick-board-experience,settlement-experience"
+          run_case visual-group "game-action-guidance,game-action-guard,game-action-feedback,joker-pair-ui-guard,ui-feedback-governor,lobby-entry-feedback,lobby-action-guidance,waiting-room-experience,waiting-room-request-lifecycle,settlement-experience"
+          exit "$failed"
+
+      - name: Upload diagnostic artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-live-audit-${{ github.run_attempt }}
+          name: enhancer-group-diagnostics-${{ github.run_attempt }}
           path: client/mobile-audit-artifacts
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
+
+      - name: Print service logs on failure
+        if: failure()
+        run: |
+          cat "${RUNNER_TEMP}/henan-50k-server.log" || true
+          cat "${RUNNER_TEMP}/henan-50k-preview.log" || true
