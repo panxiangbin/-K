@@ -53,6 +53,7 @@ import './mobile-scroll-hotfix.css';
 import './mobile-game-overlay.css';
 import './mobile-game-layout-r4.css';
 import './mobile-game-layout-r4-structure.css';
+import './mobile-viewport-lock.css';
 
 installRemoteBackendWebSocket();
 installNestedAudioBase();
