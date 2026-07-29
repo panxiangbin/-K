@@ -15,6 +15,9 @@ assert.match(logic, /left:\s*'已退出'/);
 assert.match(logic, /setAttribute\('role', 'group'\)/);
 assert.match(logic, /setAttribute\('aria-label'/);
 assert.match(logic, /attributeFilter:\s*\['style', 'class'\]/);
+assert.match(logic, /badge\.textContent !== label/);
+assert.match(logic, /element\.dataset\.playerState !== state/);
+assert.doesNotMatch(logic, /badge\.textContent\s*=\s*PLAYER_STATE_LABELS\[state\]/);
 assert.doesNotMatch(logic, /setInterval\s*\(/);
 
 assert.match(css, /\.game-player-card\[data-player-state='current'\]/);
