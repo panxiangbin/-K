@@ -1,6 +1,6 @@
-html[data-layout-mode='landscape-r1'],
-html[data-layout-mode='landscape-r1'] body,
-html[data-layout-mode='landscape-r1'] #root {
+html[data-layout-mode='landscape-r2'],
+html[data-layout-mode='landscape-r2'] body,
+html[data-layout-mode='landscape-r2'] #root {
   width: 100%;
   height: 100%;
   min-width: 100%;
@@ -42,6 +42,52 @@ body.landscape-gate-active #henan50k-landscape-gate {
   background:
     linear-gradient(135deg, rgba(20, 15, 10, 0.97), rgba(45, 24, 12, 0.98)),
     #140f0a;
+}
+
+body.force-landscape-active {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  background: #0d1117 !important;
+}
+
+body.force-landscape-active #henan50k-landscape-gate {
+  display: none !important;
+}
+
+body.force-landscape-active #root {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  width: var(--forced-landscape-width) !important;
+  height: var(--forced-landscape-height) !important;
+  min-width: var(--forced-landscape-width) !important;
+  min-height: var(--forced-landscape-height) !important;
+  max-width: var(--forced-landscape-width) !important;
+  max-height: var(--forced-landscape-height) !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  user-select: auto !important;
+  overflow: hidden !important;
+  transform: translate(-50%, -50%) rotate(90deg) !important;
+  transform-origin: center center !important;
+}
+
+body.force-landscape-active .lobby-shell,
+body.force-landscape-active .game-table-shell,
+body.force-landscape-active .waiting-room-experience,
+body.force-landscape-active .settlement-experience {
+  width: var(--forced-landscape-width) !important;
+  min-width: var(--forced-landscape-width) !important;
+  max-width: var(--forced-landscape-width) !important;
+  height: var(--forced-landscape-height) !important;
+  min-height: var(--forced-landscape-height) !important;
+  max-height: var(--forced-landscape-height) !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
 }
 
 .landscape-gate-card {
@@ -111,7 +157,7 @@ body.landscape-gate-active #henan50k-landscape-gate {
 
 #henan50k-enter-landscape {
   width: min(100%, 340px);
-  min-height: 54px;
+  min-height: 56px;
   margin-top: 24px;
   padding: 0 22px;
   border: 1px solid rgba(255, 247, 237, 0.46);
@@ -137,9 +183,9 @@ body.landscape-gate-active #henan50k-landscape-gate {
 }
 
 @media (orientation: landscape) {
-  html[data-layout-mode='landscape-r1'],
-  html[data-layout-mode='landscape-r1'] body,
-  html[data-layout-mode='landscape-r1'] #root {
+  html[data-layout-mode='landscape-r2'],
+  html[data-layout-mode='landscape-r2'] body,
+  html[data-layout-mode='landscape-r2'] #root {
     width: 100vw !important;
     height: 100dvh !important;
     min-width: 100vw !important;
@@ -148,10 +194,10 @@ body.landscape-gate-active #henan50k-landscape-gate {
     max-height: 100dvh !important;
   }
 
-  html[data-layout-mode='landscape-r1'] .lobby-shell,
-  html[data-layout-mode='landscape-r1'] .game-table-shell,
-  html[data-layout-mode='landscape-r1'] .waiting-room-experience,
-  html[data-layout-mode='landscape-r1'] .settlement-experience {
+  html[data-layout-mode='landscape-r2'] .lobby-shell,
+  html[data-layout-mode='landscape-r2'] .game-table-shell,
+  html[data-layout-mode='landscape-r2'] .waiting-room-experience,
+  html[data-layout-mode='landscape-r2'] .settlement-experience {
     width: 100vw !important;
     min-width: 100vw !important;
     max-width: 100vw !important;
