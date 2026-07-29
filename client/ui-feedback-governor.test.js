@@ -56,6 +56,10 @@ assert.match(governorSource, /role', 'alert'/, '严重错误必须使用即时�
 assert.match(governorSource, /role', 'status'/, '普通状态必须使用礼貌播报语义');
 assert.match(governorSource, /aria-live', 'off'/, '提示容器必须关闭重复播报');
 assert.match(governorSource, /game-table-shell/, '牌桌提示数量必须单独控制');
+assert.match(governorSource, /node\.textContent !== value/, '提示文字必须幂等更新，避免观察器死循环');
+assert.match(governorSource, /desiredText/, '连续过牌提示必须计算稳定的目标文字');
+assert.doesNotMatch(governorSource, /if \(original\) node\.textContent = original/, '不得在每次观察器回调中无条件恢复原文字');
+assert.doesNotMatch(governorSource, /latest\.textContent\s*=/, '不得在每次观察器回调中无条件重写合并提示');
 assert.match(feedbackCss, /data-feedback-tone="error"/, '错误提示必须有独立视觉状态');
 assert.match(feedbackCss, /data-feedback-tone="connection"/, '连接提示必须有独立视觉状态');
 assert.match(feedbackCss, /data-feedback-tone="success"/, '成功提示必须有独立视觉状态');
