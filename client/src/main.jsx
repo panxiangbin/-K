@@ -38,6 +38,7 @@ import './lobby-entry.css';
 import './lobby-entry-feedback.css';
 import './lobby-action-guidance.css';
 import './waiting-room-experience.css';
+import './waiting-room-react-safe.css';
 import './waiting-room-request-lifecycle.css';
 import './game-table-foundation.css';
 import './game-player-card-experience.css';
