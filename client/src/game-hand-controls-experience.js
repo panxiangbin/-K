@@ -19,6 +19,11 @@ function findSelectionStatus(actionBar, handSurface) {
   return null;
 }
 
+export function clampHandScroll(surface, startScrollLeft, dx) {
+  const maxScrollLeft = Math.max(0, Number(surface?.scrollWidth || 0) - Number(surface?.clientWidth || 0));
+  return Math.max(0, Math.min(maxScrollLeft, Number(startScrollLeft || 0) - Number(dx || 0)));
+}
+
 export function enhanceGameHandControls(root = document) {
   const playButton = root.querySelector?.('.btn-play');
   const actionBar = playButton?.parentElement;
@@ -60,7 +65,8 @@ export function enhanceGameHandControls(root = document) {
 }
 
 export function installSlideIntentGuard(root = document) {
-  let active = null;
+  let pointerActive = null;
+  let touchActive = null;
   let suppressClickUntil = 0;
 
   function setScrolling(surface, scrolling) {
@@ -69,80 +75,149 @@ export function installSlideIntentGuard(root = document) {
     else delete surface.dataset.handScrolling;
   }
 
-  root.addEventListener('pointerdown', event => {
-    const card = event.target?.closest?.('[data-card-id]');
-    const surface = card?.closest?.('.game-hand-surface');
-    if (!card || !surface || event.button > 0) return;
-    active = {
-      pointerId: event.pointerId,
-      pointerType: event.pointerType || 'mouse',
-      x: event.clientX,
-      y: event.clientY,
+  function beginGesture({ surface, x, y, id, inputType }) {
+    return {
+      id,
+      inputType,
+      x,
+      y,
       surface,
       startScrollLeft: Number(surface.scrollLeft) || 0,
       committed: false,
     };
-  }, true);
+  }
 
-  root.addEventListener('pointermove', event => {
-    if (!active || active.pointerId !== event.pointerId) return;
-
-    const dx = event.clientX - active.x;
-    const dy = event.clientY - active.y;
+  function moveGesture(gesture, x, y, event) {
+    const dx = x - gesture.x;
+    const dy = y - gesture.y;
     const distance = Math.hypot(dx, dy);
 
-    if (active.pointerType !== 'mouse') {
-      if (!active.committed && distance >= SLIDE_INTENT_PX && Math.abs(dx) >= Math.abs(dy)) {
-        active.committed = true;
-        suppressClickUntil = Date.now() + TOUCH_CLICK_SUPPRESSION_MS;
-        setScrolling(active.surface, true);
+    if (!gesture.committed && distance >= SLIDE_INTENT_PX && Math.abs(dx) >= Math.abs(dy)) {
+      gesture.committed = true;
+      suppressClickUntil = Date.now() + TOUCH_CLICK_SUPPRESSION_MS;
+      setScrolling(gesture.surface, true);
+    }
+    if (!gesture.committed) return false;
+
+    const targetScrollLeft = clampHandScroll(gesture.surface, gesture.startScrollLeft, dx);
+    if (Math.abs(gesture.surface.scrollLeft - targetScrollLeft) > 0.5) {
+      gesture.surface.scrollLeft = targetScrollLeft;
+    }
+    if (event.cancelable) event.preventDefault();
+    event.stopImmediatePropagation();
+    return true;
+  }
+
+  function finishGesture(gesture) {
+    if (!gesture) return;
+    if (gesture.committed) suppressClickUntil = Date.now() + TOUCH_CLICK_SUPPRESSION_MS;
+    const surface = gesture.surface;
+    setTimeout(() => setScrolling(surface, false), 0);
+  }
+
+  const handlePointerDown = event => {
+    const card = event.target?.closest?.('[data-card-id]');
+    const surface = card?.closest?.('.game-hand-surface');
+    if (!card || !surface || event.button > 0) return;
+    pointerActive = beginGesture({
+      surface,
+      x: event.clientX,
+      y: event.clientY,
+      id: event.pointerId,
+      inputType: event.pointerType || 'mouse',
+    });
+  };
+
+  const handlePointerMove = event => {
+    if (!pointerActive || pointerActive.id !== event.pointerId) return;
+
+    if (pointerActive.inputType !== 'mouse') {
+      if (!moveGesture(pointerActive, event.clientX, event.clientY, event)) {
+        // 阻止 React 在触屏微小移动阶段提前进入连续选牌。
+        event.stopImmediatePropagation();
       }
-      if (active.committed) {
-        const maxScrollLeft = Math.max(0, active.surface.scrollWidth - active.surface.clientWidth);
-        const targetScrollLeft = Math.max(0, Math.min(maxScrollLeft, active.startScrollLeft - dx));
-        if (Math.abs(active.surface.scrollLeft - targetScrollLeft) > 0.5) {
-          active.surface.scrollLeft = targetScrollLeft;
-        }
-        // 保留 touch-action: pan-x 给支持原生滚动的浏览器；直接设置 scrollLeft
-        // 作为合成触屏、部分 WebView 和系统手势冲突时的可靠兜底。
-        event.preventDefault();
-      }
-      // 阻止 React 的连续选牌逻辑收到触屏移动事件，避免横滑误选。
-      event.stopImmediatePropagation();
       return;
     }
 
-    if (active.committed) return;
+    const distance = Math.hypot(event.clientX - pointerActive.x, event.clientY - pointerActive.y);
+    if (pointerActive.committed) return;
     if (distance >= SLIDE_INTENT_PX) {
-      active.committed = true;
+      pointerActive.committed = true;
       return;
     }
     event.stopImmediatePropagation();
-  }, true);
-
-  const clear = event => {
-    if (!active || (event.pointerId != null && active.pointerId !== event.pointerId)) return;
-    if (active.committed && active.pointerType !== 'mouse') {
-      suppressClickUntil = Date.now() + TOUCH_CLICK_SUPPRESSION_MS;
-    }
-    const surface = active.surface;
-    active = null;
-    setTimeout(() => setScrolling(surface, false), 0);
   };
-  root.addEventListener('pointerup', clear, true);
-  root.addEventListener('pointercancel', clear, true);
 
-  root.addEventListener('click', event => {
+  const clearPointer = event => {
+    if (!pointerActive || (event.pointerId != null && pointerActive.id !== event.pointerId)) return;
+    finishGesture(pointerActive.inputType === 'mouse' ? null : pointerActive);
+    pointerActive = null;
+  };
+
+  const handleTouchStart = event => {
+    const touch = event.touches?.[0];
+    const card = event.target?.closest?.('[data-card-id]');
+    const surface = card?.closest?.('.game-hand-surface');
+    if (!touch || !card || !surface || event.touches.length !== 1) return;
+    touchActive = beginGesture({
+      surface,
+      x: touch.clientX,
+      y: touch.clientY,
+      id: touch.identifier,
+      inputType: 'touch',
+    });
+  };
+
+  const findActiveTouch = event => [...(event.touches || [])].find(touch => touch.identifier === touchActive?.id);
+
+  const handleTouchMove = event => {
+    if (!touchActive) return;
+    const touch = findActiveTouch(event);
+    if (!touch) return;
+    if (!moveGesture(touchActive, touch.clientX, touch.clientY, event)) {
+      event.stopImmediatePropagation();
+    }
+  };
+
+  const clearTouch = event => {
+    if (!touchActive) return;
+    const ended = [...(event.changedTouches || [])].some(touch => touch.identifier === touchActive.id);
+    if (!ended && event.touches?.length) return;
+    finishGesture(touchActive);
+    touchActive = null;
+  };
+
+  const handleClick = event => {
     if (Date.now() >= suppressClickUntil) return;
     const card = event.target?.closest?.('[data-card-id]');
     if (!card?.closest?.('.game-hand-surface')) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-  }, true);
+  };
+
+  root.addEventListener('pointerdown', handlePointerDown, true);
+  root.addEventListener('pointermove', handlePointerMove, true);
+  root.addEventListener('pointerup', clearPointer, true);
+  root.addEventListener('pointercancel', clearPointer, true);
+  root.addEventListener('touchstart', handleTouchStart, { capture: true, passive: true });
+  root.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
+  root.addEventListener('touchend', clearTouch, true);
+  root.addEventListener('touchcancel', clearTouch, true);
+  root.addEventListener('click', handleClick, true);
 
   return () => {
-    active = null;
+    pointerActive = null;
+    touchActive = null;
     suppressClickUntil = 0;
+    root.removeEventListener('pointerdown', handlePointerDown, true);
+    root.removeEventListener('pointermove', handlePointerMove, true);
+    root.removeEventListener('pointerup', clearPointer, true);
+    root.removeEventListener('pointercancel', clearPointer, true);
+    root.removeEventListener('touchstart', handleTouchStart, true);
+    root.removeEventListener('touchmove', handleTouchMove, true);
+    root.removeEventListener('touchend', clearTouch, true);
+    root.removeEventListener('touchcancel', clearTouch, true);
+    root.removeEventListener('click', handleClick, true);
   };
 }
 
@@ -161,8 +236,11 @@ export function installGameHandControlsExperience(root = document) {
   scan();
   const observer = new MutationObserver(queueScan);
   observer.observe(root.documentElement || root, { childList: true, subtree: true });
-  installSlideIntentGuard(root);
-  return () => observer.disconnect();
+  const cleanupSlideGuard = installSlideIntentGuard(root);
+  return () => {
+    observer.disconnect();
+    cleanupSlideGuard();
+  };
 }
 
 export { SLIDE_INTENT_PX, TOUCH_CLICK_SUPPRESSION_MS };
