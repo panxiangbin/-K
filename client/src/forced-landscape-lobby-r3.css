@@ -5,7 +5,8 @@ body.force-landscape-active {
 
 body.force-landscape-active .lobby-panel::before,
 body.force-landscape-active .lobby-eyebrow,
-body.force-landscape-active .lobby-field label {
+body.force-landscape-active .lobby-field label,
+body.force-landscape-active .lobby-field-hint {
   display: none !important;
 }
 
@@ -41,7 +42,14 @@ body.force-landscape-active .lobby-solo-button {
   margin-bottom: 6px !important;
 }
 
-body.force-landscape-active .lobby-field-hint {
+body.force-landscape-active .lobby-action-guidance,
+body.force-landscape-active .lobby-choice-guidance {
+  min-height: 28px !important;
   margin-top: 4px !important;
+  padding: 5px 8px !important;
+  font-size: 11px !important;
   line-height: 1.2 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
