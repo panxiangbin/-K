@@ -53,38 +53,48 @@ function ensureFeedback(panel) {
   return feedback;
 }
 
+function feedbackKey(feedbackState) {
+  if (!feedbackState) return 'hidden';
+  return [feedbackState.tone, feedbackState.title, feedbackState.detail, feedbackState.showReconnect ? 'reconnect' : 'plain'].join('|');
+}
+
+function createReconnectButton() {
+  const reconnect = document.createElement('button');
+  reconnect.type = 'button';
+  reconnect.className = 'waiting-request-reconnect';
+  reconnect.textContent = '重新连接';
+  reconnect.setAttribute('aria-label', '重新连接游戏服务器');
+  reconnect.addEventListener('click', () => {
+    reconnect.disabled = true;
+    reconnect.setAttribute('aria-busy', 'true');
+    reconnect.textContent = '连接中…';
+    window.dispatchEvent(new CustomEvent('henan50k-reconnect-request'));
+  }, { once: true });
+  return reconnect;
+}
+
 function renderFeedback(panel, feedbackState) {
   const feedback = ensureFeedback(panel);
+  const nextKey = feedbackKey(feedbackState);
+  if (feedback.dataset.renderKey === nextKey) return;
+  feedback.dataset.renderKey = nextKey;
+
   if (!feedbackState) {
-    feedback.hidden = true;
-    feedback.replaceChildren();
-    delete feedback.dataset.tone;
+    if (!feedback.hidden) feedback.hidden = true;
+    if (feedback.childNodes.length) feedback.replaceChildren();
+    if (feedback.hasAttribute('data-tone')) feedback.removeAttribute('data-tone');
     return;
   }
 
-  feedback.hidden = false;
-  feedback.dataset.tone = feedbackState.tone;
-  feedback.replaceChildren();
+  if (feedback.hidden) feedback.hidden = false;
+  if (feedback.dataset.tone !== feedbackState.tone) feedback.dataset.tone = feedbackState.tone;
   const title = document.createElement('strong');
   title.textContent = feedbackState.title;
   const detail = document.createElement('span');
   detail.textContent = feedbackState.detail;
-  feedback.append(title, detail);
-
-  if (feedbackState.showReconnect) {
-    const reconnect = document.createElement('button');
-    reconnect.type = 'button';
-    reconnect.className = 'waiting-request-reconnect';
-    reconnect.textContent = '重新连接';
-    reconnect.setAttribute('aria-label', '重新连接游戏服务器');
-    reconnect.addEventListener('click', () => {
-      reconnect.disabled = true;
-      reconnect.setAttribute('aria-busy', 'true');
-      reconnect.textContent = '连接中…';
-      window.dispatchEvent(new CustomEvent('henan50k-reconnect-request'));
-    }, { once: true });
-    feedback.appendChild(reconnect);
-  }
+  const children = [title, detail];
+  if (feedbackState.showReconnect) children.push(createReconnectButton());
+  feedback.replaceChildren(...children);
 }
 
 function isBusy(button, kind) {
@@ -142,14 +152,14 @@ function syncRequestState(panel, button, kind) {
     timedOut,
     connected: Boolean(window.__henan50kConnected),
   });
-  if (feedback) renderFeedback(panel, feedback);
+  renderFeedback(panel, feedback);
 }
 
 function syncHostStatus(card, panel, startButton) {
   const isHost = Boolean(startButton);
   const previous = hostStates.get(card);
   hostStates.set(card, isHost);
-  card.dataset.hostView = isHost ? 'host' : 'guest';
+  if (card.dataset.hostView !== (isHost ? 'host' : 'guest')) card.dataset.hostView = isHost ? 'host' : 'guest';
   if (previous === undefined || previous === isHost) return;
 
   let roleStatus = panel.querySelector('.waiting-role-status');
@@ -161,10 +171,12 @@ function syncHostStatus(card, panel, startButton) {
     roleStatus.setAttribute('aria-atomic', 'true');
     card.insertAdjacentElement('afterend', roleStatus);
   }
-  roleStatus.dataset.role = isHost ? 'host' : 'guest';
-  roleStatus.textContent = isHost
+  const role = isHost ? 'host' : 'guest';
+  if (roleStatus.dataset.role !== role) roleStatus.dataset.role = role;
+  const text = isHost
     ? '你现在是房主，人员到齐后可以开始游戏。'
     : '房主已经变更，请等待新房主开始游戏。';
+  if (roleStatus.textContent !== text) roleStatus.textContent = text;
 }
 
 function enhanceRoom(card) {
