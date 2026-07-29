@@ -48,12 +48,19 @@ const vendorFile = initialFiles.find(file => /react-vendor/.test(file));
 assert.ok(vendorFile, 'initial bundle must include the dedicated react-vendor chunk');
 
 let initialBytes = 0;
+let initialJavaScript = '';
 for (const file of initialFiles) {
   const size = await fileSize(file);
   assert.ok(size <= SINGLE_INITIAL_CHUNK_BUDGET, `${file} is ${(size / 1024).toFixed(1)} KiB; initial chunks must stay below ${SINGLE_INITIAL_CHUNK_BUDGET / 1024} KiB`);
   initialBytes += size;
+  initialJavaScript += `\n${await readFile(new URL(file, DIST_DIR), 'utf8')}`;
 }
 assert.ok(initialBytes <= INITIAL_JS_BUDGET, `initial JavaScript is ${(initialBytes / 1024).toFixed(1)} KiB; budget is ${INITIAL_JS_BUDGET / 1024} KiB`);
+assert.equal(
+  /globalThis\.document[\s\S]{0,180}\.call\([^)]*,["']root["']\)/.test(initialJavaScript),
+  false,
+  'production bundle must not contain the optional-call default-root transform that crashes startup',
+);
 
 const assetFiles = await readdir(new URL('./dist/assets/', import.meta.url));
 assert.equal(assetFiles.some(file => file.endsWith('.map')), false, 'production build must not publish source maps');
