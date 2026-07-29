@@ -1,4 +1,4 @@
-/* 最终手机视口锁：不再依赖移动浏览器对 svh/dvh 的差异解释。 */
+/* 最终手机视口锁：贴合真实屏幕，并给两排操作按钮分配确定高度。 */
 @media (max-width: 680px) and (orientation: portrait) {
   html[data-ui-theme="ink-06"] .game-table-shell {
     position: fixed !important;
@@ -11,13 +11,60 @@
   }
 
   html[data-ui-theme="ink-06"] .game-table-hand-dock {
-    max-height: min(40dvh, 318px) !important;
+    grid-template-rows: 34px 26px minmax(88px, 96px) 92px !important;
+    max-height: 254px !important;
+    gap: 2px !important;
+    padding-bottom: max(2px, env(safe-area-inset-bottom)) !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] {
+    min-height: 88px !important;
+    max-height: 96px !important;
+    padding-top: 12px !important;
+    padding-bottom: 6px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-actions {
+    height: 92px !important;
+    min-height: 92px !important;
+    max-height: 92px !important;
+    grid-template-rows: repeat(2, 42px) !important;
+    gap: 4px !important;
+    padding: 2px max(6px, env(safe-area-inset-right)) 2px max(6px, env(safe-area-inset-left)) !important;
+    overflow: hidden !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action,
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="utility"],
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="secondary"],
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="primary"] {
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
   }
 }
 
 @media (max-width: 680px) and (orientation: portrait) and (max-height: 740px) {
   html[data-ui-theme="ink-06"] .game-table-hand-dock {
-    max-height: min(43dvh, 286px) !important;
+    grid-template-rows: 30px 24px minmax(82px, 90px) 88px !important;
+    max-height: 238px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] {
+    min-height: 82px !important;
+    max-height: 90px !important;
+    padding-top: 10px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-actions {
+    height: 88px !important;
+    min-height: 88px !important;
+    max-height: 88px !important;
+    grid-template-rows: repeat(2, 42px) !important;
+    gap: 2px !important;
+    padding-block: 1px !important;
   }
 }
 
@@ -33,6 +80,36 @@
   }
 
   html[data-ui-theme="ink-06"] .game-table-hand-dock {
-    max-height: 128px !important;
+    grid-template-rows: 52px 80px !important;
+    max-height: 134px !important;
+    gap: 2px !important;
+    padding-bottom: 0 !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-surface,
+  html[data-ui-theme="ink-06"] [data-hand-interaction="true"] {
+    min-height: 52px !important;
+    max-height: 52px !important;
+    padding-top: 4px !important;
+    padding-bottom: 2px !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-actions {
+    height: 80px !important;
+    min-height: 80px !important;
+    max-height: 80px !important;
+    grid-template-rows: repeat(2, 38px) !important;
+    gap: 2px !important;
+    padding: 1px max(4px, env(safe-area-inset-right)) 1px max(4px, env(safe-area-inset-left)) !important;
+    overflow: hidden !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-hand-action,
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="utility"],
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="secondary"],
+  html[data-ui-theme="ink-06"] .game-hand-action[data-action-priority="primary"] {
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
   }
 }
