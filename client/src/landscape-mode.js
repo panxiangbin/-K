@@ -10,18 +10,27 @@ function getViewport(target) {
   };
 }
 
-function getOrientationAngle(target) {
-  const modernAngle = Number(target?.screen?.orientation?.angle);
-  if (Number.isFinite(modernAngle)) return modernAngle;
-  const legacyAngle = Number(target?.orientation);
-  return Number.isFinite(legacyAngle) ? legacyAngle : 0;
+function hasLandscapeOrientationType(target) {
+  const type = String(target?.screen?.orientation?.type || '').toLowerCase();
+  return type.startsWith('landscape');
+}
+
+function hasLegacyLandscapeAngle(target) {
+  if (typeof target?.orientation !== 'number') return false;
+  return Math.abs(Number(target.orientation)) % 180 === 90;
 }
 
 export function isNativeLandscape(target = globalThis) {
   const { width, height } = getViewport(target);
+  const dimensionsLandscape = width > 0 && height > 0 && width > height;
   const mediaLandscape = target?.matchMedia?.('(orientation: landscape)')?.matches === true;
-  const angle = Math.abs(getOrientationAngle(target)) % 180;
-  return mediaLandscape || angle === 90 || (width > 0 && height > 0 && width > height);
+  const typedLandscape = hasLandscapeOrientationType(target);
+  const legacyLandscape = hasLegacyLandscapeAngle(target);
+
+  // 某些 WebKit/自动化环境会在竖屏时暴露错误的 screen.orientation.angle，
+  // 因此不再单独使用 angle 判定。真实横屏必须由尺寸、媒体查询、方向类型
+  // 或 iOS 旧版 window.orientation 中至少一个可靠信号确认。
+  return dimensionsLandscape || mediaLandscape || typedLandscape || legacyLandscape;
 }
 
 export function shouldRequireLandscape(target = globalThis) {
