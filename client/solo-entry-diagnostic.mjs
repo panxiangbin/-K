@@ -4,13 +4,15 @@ import process from 'node:process';
 import { chromium } from 'playwright';
 
 const target = process.env.MOBILE_AUDIT_URL || 'http://127.0.0.1:4173/pan/50k';
+const caseName = (process.env.DIAGNOSTIC_CASE || 'default').replace(/[^a-zA-Z0-9_-]/g, '-');
+const disabledEnhancers = process.env.DISABLE_ENHANCERS || '';
 const outputDir = path.resolve('mobile-audit-artifacts');
-const outputPath = path.join(outputDir, 'solo-entry-diagnostic.json');
-const result = { target, startedAt: new Date().toISOString(), webSockets: [], console: [], pageErrors: [], checkpoints: [] };
+const outputPath = path.join(outputDir, `solo-entry-${caseName}.json`);
+const result = { target, caseName, disabledEnhancers, startedAt: new Date().toISOString(), webSockets: [], console: [], pageErrors: [], checkpoints: [] };
 
 function checkpoint(name, detail = {}) {
   result.checkpoints.push({ name, at: new Date().toISOString(), ...detail });
-  console.log(`[solo-entry] ${name}`);
+  console.log(`[solo-entry:${caseName}] ${name}`);
 }
 function frameText(payload) {
   const text = Buffer.isBuffer(payload) ? payload.toString('utf8') : String(payload ?? '');
@@ -53,7 +55,10 @@ page.on('websocket', socket => {
 
 let failure = null;
 try {
-  await page.goto(`${target}/?solo-entry=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  const url = new URL(target);
+  url.searchParams.set('solo-entry', String(Date.now()));
+  if (disabledEnhancers) url.searchParams.set('disable-enhancers', disabledEnhancers);
+  await page.goto(url.href, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForSelector('.lobby-shell', { timeout: 30_000 });
   checkpoint('大厅已显示', { connected: await page.locator('body').innerText().then(text => text.includes('游戏服务器已连接')) });
   await page.getByRole('button', { name: /单机练习/ }).click();
@@ -106,10 +111,10 @@ try {
   }
 } finally {
   clearTimeout(watchdog);
-  try { await Promise.race([page.screenshot({ path: path.join(outputDir, 'solo-entry-final.png'), fullPage: true }), timeoutAfter(3500, '保存失败截图')]); } catch {}
+  try { await Promise.race([page.screenshot({ path: path.join(outputDir, `solo-entry-${caseName}.png`), fullPage: true }), timeoutAfter(3500, '保存失败截图')]); } catch {}
   await persist();
   await Promise.race([browser.close(), timeoutAfter(3500, '关闭浏览器')]).catch(() => {});
 }
 
 if (failure) throw new Error(failure.message);
-console.log('solo entry diagnostic passed');
+console.log(`solo entry diagnostic passed: ${caseName}`);
