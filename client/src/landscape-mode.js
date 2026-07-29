@@ -1,4 +1,4 @@
-const LANDSCAPE_LAYOUT_RELEASE = 'landscape-r2';
+const LANDSCAPE_LAYOUT_RELEASE = 'landscape-r3';
 const PORTRAIT_WIDTH_LIMIT = 1100;
 const FORCE_LANDSCAPE_DELAY_MS = 650;
 
