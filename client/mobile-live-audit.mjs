@@ -23,15 +23,61 @@ function keepRecent(items, maximum = 40) {
   if (items.length > maximum) items.splice(0, items.length - maximum);
 }
 
-async function capturePageSnapshot(page, auditState) {
-  try { auditState.pageTitle = await page.title(); } catch { auditState.pageTitle = ''; }
+function withTimeout(task, timeoutMs, label) {
+  let timer;
+  return Promise.race([
+    Promise.resolve(task),
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${label} 超时（${timeoutMs}ms）`)), timeoutMs);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+async function runPhase(auditState, profileName, phaseName, task, timeoutMs) {
+  const startedAt = new Date().toISOString();
+  auditState.activeProfile = profileName;
+  auditState.activePhase = phaseName;
+  auditState.phaseStartedAt = startedAt;
+  auditState.phaseHistory.push({ profile: profileName, phase: phaseName, status: 'started', at: startedAt });
+  console.log(`[mobile-audit] ${profileName} -> ${phaseName}`);
+
   try {
-    auditState.bodyText = (await page.locator('body').innerText({ timeout: 3000 })).slice(0, 2000);
+    const result = await withTimeout(task(), timeoutMs, `${profileName} / ${phaseName}`);
+    const completedAt = new Date().toISOString();
+    auditState.phaseHistory.push({ profile: profileName, phase: phaseName, status: 'completed', at: completedAt });
+    console.log(`[mobile-audit] ${profileName} <- ${phaseName} 完成`);
+    return result;
+  } catch (error) {
+    const failedAt = new Date().toISOString();
+    auditState.phaseHistory.push({
+      profile: profileName,
+      phase: phaseName,
+      status: 'failed',
+      at: failedAt,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
+async function capturePageSnapshot(page, auditState) {
+  if (!page) return;
+  try {
+    auditState.pageTitle = await withTimeout(page.title(), 5000, '读取页面标题');
+  } catch {
+    auditState.pageTitle = '';
+  }
+  try {
+    auditState.bodyText = (await withTimeout(page.locator('body').innerText({ timeout: 3000 }), 5000, '读取页面正文')).slice(0, 2000);
   } catch {
     auditState.bodyText = '';
   }
   try {
-    auditState.documentHtml = (await page.locator('html').evaluate(node => node.outerHTML)).slice(0, 4000);
+    auditState.documentHtml = (await withTimeout(
+      page.locator('html').evaluate(node => node.outerHTML),
+      5000,
+      '读取页面结构',
+    )).slice(0, 4000);
   } catch {
     auditState.documentHtml = '';
   }
@@ -88,9 +134,7 @@ async function waitForRelease(page, auditState) {
       });
       await page.waitForSelector('.lobby-shell', { timeout: 30_000 });
       lastRelease = await page.locator('html').getAttribute('data-ui-release') || '';
-      lastError = lastRelease === expectedRelease
-        ? ''
-        : `线上版本仍为 ${lastRelease || '未标记'}`;
+      lastError = lastRelease === expectedRelease ? '' : `线上版本仍为 ${lastRelease || '未标记'}`;
       auditState.lastRelease = lastRelease;
       auditState.lastError = lastError;
       auditState.lastUrl = page.url();
@@ -104,12 +148,12 @@ async function waitForRelease(page, auditState) {
       auditState.releaseAttempts = attempt;
       await capturePageSnapshot(page, auditState);
       try {
-        await page.screenshot({
+        await withTimeout(page.screenshot({
           path: path.join(outputDir, `${auditState.activeProfile || 'unknown'}-release-wait.png`),
           fullPage: true,
-        });
+        }), 10_000, '保存版本等待截图');
       } catch {
-        // 页面可能已关闭，诊断 JSON 仍会保留其他信息。
+        // 页面可能已经卡死，其他诊断仍会写入 JSON。
       }
     }
     console.log(`[mobile-audit] attempt ${attempt}: ${lastError || `release=${lastRelease || '未标记'}`}`);
@@ -258,9 +302,20 @@ async function verifyCardTap(page, profile) {
   const firstCard = page.locator('[data-card-id]').first();
   await firstCard.scrollIntoViewIfNeeded();
   await firstCard.click();
-  await page.waitForFunction(() => document.querySelector('[data-card-id]')?.getAttribute('aria-pressed') === 'true');
+  await page.waitForFunction(() => document.querySelector('[data-card-id]')?.getAttribute('aria-pressed') === 'true', null, { timeout: 10_000 });
   const selected = await page.locator('[data-card-id][aria-pressed="true"]').count();
   assert(selected >= 1, `${profile.name}: 轻点手牌没有选中`);
+}
+
+async function writeAuditArtifacts(report, auditState, auditFailure) {
+  await fs.writeFile(path.join(outputDir, 'report.json'), JSON.stringify(report, null, 2));
+  await fs.writeFile(path.join(outputDir, 'audit-state.json'), JSON.stringify({
+    ...auditState,
+    finishedAt: new Date().toISOString(),
+  }, null, 2));
+  if (auditFailure) {
+    await fs.writeFile(path.join(outputDir, 'failure.json'), JSON.stringify(auditFailure, null, 2));
+  }
 }
 
 await fs.mkdir(outputDir, { recursive: true });
@@ -271,6 +326,9 @@ const auditState = {
   expectedRelease,
   startedAt: new Date().toISOString(),
   activeProfile: null,
+  activePhase: null,
+  phaseStartedAt: null,
+  phaseHistory: [],
   completedProfiles: [],
   lastRelease: '',
   lastError: '',
@@ -282,35 +340,58 @@ const auditState = {
   profileDiagnostics: {},
 };
 let auditFailure = null;
+let currentPage = null;
+let currentContext = null;
 
 try {
   for (const profile of profiles) {
-    auditState.activeProfile = profile.name;
-    const context = await browser.newContext({
+    currentContext = await browser.newContext({
       viewport: { width: profile.width, height: profile.height },
       isMobile: true,
       hasTouch: true,
       deviceScaleFactor: 1,
       userAgent: 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/126 Mobile Safari/537.36',
     });
-    const page = await context.newPage();
-    const diagnostics = installPageDiagnostics(page, auditState, profile.name);
+    currentPage = await currentContext.newPage();
+    currentPage.setDefaultTimeout(30_000);
+    const diagnostics = installPageDiagnostics(currentPage, auditState, profile.name);
 
-    await waitForRelease(page, auditState);
-    await page.screenshot({ path: path.join(outputDir, `${profile.name}-lobby.png`), fullPage: true });
-    await enterSoloGame(page);
+    try {
+      await runPhase(auditState, profile.name, '等待正确版本', () => waitForRelease(currentPage, auditState), releaseTimeoutMs + 20_000);
+      await runPhase(auditState, profile.name, '保存大厅截图', () => currentPage.screenshot({
+        path: path.join(outputDir, `${profile.name}-lobby.png`),
+        fullPage: true,
+      }), 20_000);
+      await runPhase(auditState, profile.name, '进入三人单机', () => enterSoloGame(currentPage), 160_000);
+      const metrics = await runPhase(auditState, profile.name, '读取牌桌布局', () => collectMetrics(currentPage, profile), 20_000);
+      await runPhase(auditState, profile.name, '校验牌桌布局', async () => validateMetrics(metrics, profile), 10_000);
+      await runPhase(auditState, profile.name, '触屏横滑手牌', () => verifyTouchSwipeDoesNotSelect(currentPage, profile), 30_000);
+      await runPhase(auditState, profile.name, '轻点选择手牌', () => verifyCardTap(currentPage, profile), 30_000);
+      await runPhase(auditState, profile.name, '保存牌桌截图', () => currentPage.screenshot({
+        path: path.join(outputDir, `${profile.name}-game.png`),
+        fullPage: true,
+      }), 20_000);
 
-    const metrics = await collectMetrics(page, profile);
-    validateMetrics(metrics, profile);
-    await verifyTouchSwipeDoesNotSelect(page, profile);
-    await verifyCardTap(page, profile);
-    await page.screenshot({ path: path.join(outputDir, `${profile.name}-game.png`), fullPage: true });
-
-    report.push({ ...profile, metrics, diagnostics });
-    auditState.completedProfiles.push(profile.name);
-    await context.close();
+      report.push({ ...profile, metrics, diagnostics });
+      auditState.completedProfiles.push(profile.name);
+    } finally {
+      await withTimeout(currentContext.close(), 10_000, `${profile.name} / 关闭浏览器上下文`).catch(() => {});
+      currentPage = null;
+      currentContext = null;
+    }
   }
 } catch (error) {
+  await capturePageSnapshot(currentPage, auditState);
+  if (currentPage) {
+    try {
+      await withTimeout(currentPage.screenshot({
+        path: path.join(outputDir, `${auditState.activeProfile || 'unknown'}-${auditState.activePhase || 'failed'}.png`),
+        fullPage: true,
+      }), 10_000, '保存失败截图');
+    } catch {
+      // 页面线程卡死时，失败阶段和控制台记录仍会被保存。
+    }
+  }
   auditFailure = {
     message: error instanceof Error ? error.message : String(error),
     stack: error instanceof Error ? error.stack : '',
@@ -319,15 +400,9 @@ try {
   };
   throw error;
 } finally {
-  await browser.close();
-  await fs.writeFile(path.join(outputDir, 'report.json'), JSON.stringify(report, null, 2));
-  await fs.writeFile(path.join(outputDir, 'audit-state.json'), JSON.stringify({
-    ...auditState,
-    finishedAt: new Date().toISOString(),
-  }, null, 2));
-  if (auditFailure) {
-    await fs.writeFile(path.join(outputDir, 'failure.json'), JSON.stringify(auditFailure, null, 2));
-  }
+  await writeAuditArtifacts(report, auditState, auditFailure);
+  if (currentContext) await withTimeout(currentContext.close(), 10_000, '关闭失败上下文').catch(() => {});
+  await withTimeout(browser.close(), 10_000, '关闭 Chromium').catch(() => {});
 }
 
 console.log(`mobile live audit passed for ${profiles.length} viewports at ${expectedRelease}`);
