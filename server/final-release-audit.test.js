@@ -14,10 +14,7 @@ function read(relativePath) {
 function requireScript(packageJson, scriptName, requiredFragments) {
   const script = packageJson.scripts?.[scriptName] || '';
   for (const fragment of requiredFragments) {
-    assert(
-      script.includes(fragment),
-      `${packageJson.name} ${scriptName} must include ${fragment}`,
-    );
+    assert(script.includes(fragment), `${packageJson.name} ${scriptName} must include ${fragment}`);
   }
 }
 
@@ -39,20 +36,19 @@ async function main() {
     'session-recovery.test.js',
     'game-action-guard.test.js',
     'game-action-feedback.test.js',
+    'joker-pair-ui-guard.test.js',
+    'audio-base-bootstrap.test.js',
     'settlement-semantics.test.js',
     'rules-help.test.js',
     'ui-feedback-governor.test.js',
     'precompress-build.test.js',
   ]);
-  requireScript(clientPackage, 'build', [
-    'vite build',
-    'precompress-build.js',
-    'build-performance-budget.test.js',
-  ]);
+  requireScript(clientPackage, 'build', ['vite build', 'precompress-build.js', 'build-performance-budget.test.js']);
 
   const serverPackage = JSON.parse(read('server/package.json'));
   requireScript(serverPackage, 'test', [
     'error-messages.test.js',
+    'joker-pair-rule.test.js',
     'bot-ai.test.js',
     'bot-ai-minimum-bomb.test.js',
     'bot-public-memory.test.js',
@@ -62,12 +58,13 @@ async function main() {
     'server-reconnect-smoke.test.js',
   ]);
   requireScript(serverPackage, 'start', ['node -r ./bot-ai-hook.js index.js']);
+  assert(read('server/bot-ai-hook.js').includes('installJokerPairRule'), 'server startup must install the no-joker-pair rule');
 
   const rulesModule = await import(pathToFileURL(path.join(ROOT, 'client/src/rules-help-data.js')).href);
   const rulesText = rulesModule.flattenRulesText();
   const requiredRules = [
     '普通牌型只有单张、对子、三张、四至七张同点牌',
-    '小王和大王不能组成普通对子',
+    '任何王都不能组成普通对子，包括两个小王、两个大王或大小王',
     '3 < 4 < 5 < 6 < 7 < 8 < 9 < 10 < J < Q < K < A < 2 < 小王 < 大王',
     '黑桃 > 红桃 > 梅花 > 方块',
     '同点时黑四大于红四',
@@ -85,9 +82,12 @@ async function main() {
 
   const requiredRuntimeFiles = [
     'server/bot-ai-hook.js',
+    'server/joker-pair-rule.js',
     'server/runtime-hook-contract.js',
     'server/error-messages.js',
     'client/src/hooks/useWebSocket.js',
+    'client/src/joker-pair-ui-guard.js',
+    'client/src/audio-base-bootstrap.js',
     'client/src/session-recovery.js',
     'client/src/global-status-priority.js',
   ];
