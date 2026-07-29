@@ -19,6 +19,8 @@ import { installGameTrickBoardExperience } from './game-trick-board-experience.j
 import { installSettlementExperience } from './settlement-experience.js';
 import { installInkThemeRelease } from './ink-theme-release.js';
 import { installRemoteBackendWebSocket } from './remote-backend-bootstrap.js';
+import { installNestedAudioBase } from './audio-base-bootstrap.js';
+import { installJokerPairUiGuard } from './joker-pair-ui-guard.js';
 import './index.css';
 import './ui-responsive.css';
 import './ui-polish.css';
@@ -53,6 +55,7 @@ import './mobile-game-layout-r4.css';
 import './mobile-game-layout-r4-structure.css';
 
 installRemoteBackendWebSocket();
+installNestedAudioBase();
 ReactDOM.createRoot(document.getElementById('root')).render(<><App /><RulesHelpLauncher /></>);
 
 function installStartupEnhancer(name, install) {
@@ -70,6 +73,7 @@ installStartupEnhancer('game-hand-controls', () => installGameHandControlsExperi
 installStartupEnhancer('game-action-guidance', () => installGameActionGuidance());
 installStartupEnhancer('game-action-guard', () => installGameActionGuard());
 installStartupEnhancer('game-action-feedback', () => installGameActionFeedback());
+installStartupEnhancer('joker-pair-ui-guard', () => installJokerPairUiGuard());
 installStartupEnhancer('ui-feedback-governor', () => installUiFeedbackGovernor());
 installStartupEnhancer('lobby-entry-feedback', () => installLobbyEntryFeedback());
 installStartupEnhancer('lobby-action-guidance', () => installLobbyActionGuidance());
