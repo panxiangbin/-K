@@ -116,15 +116,16 @@ export function installSlideIntentGuard(root = document) {
   }
 
   const handlePointerDown = event => {
+    const surface = event.target?.closest?.('.game-hand-surface');
     const card = event.target?.closest?.('[data-card-id]');
-    const surface = card?.closest?.('.game-hand-surface');
-    if (!card || !surface || event.button > 0) return;
+    const inputType = event.pointerType || 'mouse';
+    if (!surface || event.button > 0 || (inputType === 'mouse' && !card)) return;
     pointerActive = beginGesture({
       surface,
       x: event.clientX,
       y: event.clientY,
       id: event.pointerId,
-      inputType: event.pointerType || 'mouse',
+      inputType,
     });
   };
 
@@ -156,9 +157,8 @@ export function installSlideIntentGuard(root = document) {
 
   const handleTouchStart = event => {
     const touch = event.touches?.[0];
-    const card = event.target?.closest?.('[data-card-id]');
-    const surface = card?.closest?.('.game-hand-surface');
-    if (!touch || !card || !surface || event.touches.length !== 1) return;
+    const surface = event.target?.closest?.('.game-hand-surface');
+    if (!touch || !surface || event.touches.length !== 1) return;
     touchActive = beginGesture({
       surface,
       x: touch.clientX,
