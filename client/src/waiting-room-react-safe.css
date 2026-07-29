@@ -1,0 +1,82 @@
+/* React 安全的等待房间座位布局：不搬动组件渲染的玩家节点。 */
+.waiting-room-card--enhanced {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.waiting-room-card--enhanced > .waiting-room-header,
+.waiting-room-card--enhanced > .waiting-room-copy-status,
+.waiting-room-card--enhanced > .waiting-room-count,
+.waiting-room-card--enhanced > .waiting-empty-seat-grid {
+  grid-column: 1 / -1;
+}
+
+.waiting-room-card--enhanced > .waiting-player,
+.waiting-empty-seat-grid > .waiting-player {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 64px;
+  padding: 18px 10px 8px;
+  border: 1px solid color-mix(in srgb, var(--ui-border, #d6c9ad) 18%, transparent);
+  border-radius: var(--ui-radius-card, 14px);
+  background: color-mix(in srgb, var(--ui-panel, #f4efe3) 5%, transparent);
+}
+
+.waiting-room-card--enhanced > .waiting-player::before,
+.waiting-empty-seat-grid > .waiting-player::before {
+  content: attr(data-seat-label);
+  position: absolute;
+  top: 5px;
+  left: 9px;
+  color: var(--ui-text-muted, #d3c8b4);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+.waiting-room-card--enhanced > .waiting-player.self {
+  border-color: color-mix(in srgb, var(--ui-accent, #b89a5e) 64%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ui-accent, #b89a5e) 18%, transparent);
+}
+
+.waiting-room-card--enhanced > .waiting-player[data-connection-state='offline'] {
+  border-style: dashed;
+  opacity: .72;
+}
+
+.waiting-room-card--enhanced > .waiting-player[data-connection-state='recovering'] {
+  border-color: color-mix(in srgb, var(--ui-warning, #c7a15a) 44%, transparent);
+}
+
+.waiting-empty-seat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.waiting-empty-seat-grid[hidden] {
+  display: none;
+}
+
+@media (max-width: 430px) and (orientation: portrait) {
+  .waiting-room-card--enhanced,
+  .waiting-empty-seat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  .waiting-room-card--enhanced,
+  .waiting-empty-seat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .waiting-room-card--enhanced > .waiting-player,
+  .waiting-empty-seat-grid > .waiting-player {
+    min-height: 48px;
+    padding: 15px 8px 5px;
+  }
+}
