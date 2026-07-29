@@ -1,0 +1,87 @@
+name: Public landscape R3 visible lobby audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'client/**'
+      - '.github/workflows/public-landscape-r3-visible-lobby-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Public Chromium and WebKit visible forced lobby
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout validation code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install tests and browsers
+        working-directory: client
+        run: |
+          npm ci --include=dev --no-audit --no-fund
+          npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.54.1
+          npx playwright install --with-deps chromium webkit
+
+      - name: Wait for public R3 assets
+        working-directory: client
+        run: |
+          node --input-type=module <<'NODE'
+          const base = 'https://panxiangbin.github.io/pan/50k/';
+          const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+          let last = '';
+          for (let attempt = 1; attempt <= 90; attempt += 1) {
+            try {
+              const html = await fetch(`${base}?r3-deploy-check=${Date.now()}-${attempt}`, { cache: 'no-store' }).then(response => {
+                if (!response.ok) throw new Error(`index ${response.status}`);
+                return response.text();
+              });
+              const assetPaths = [...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)].map(match => match[1]);
+              const assetTexts = await Promise.all(assetPaths.map(async assetPath => {
+                const url = new URL(assetPath, base);
+                url.searchParams.set('r3-check', `${Date.now()}-${attempt}`);
+                const response = await fetch(url, { cache: 'no-store' });
+                return response.ok ? response.text() : '';
+              }));
+              const joined = assetTexts.join('\n');
+              if (joined.includes('landscape-r3') && joined.includes('r3-visible-home')) {
+                console.log(`public landscape-r3 detected on attempt ${attempt}`);
+                process.exit(0);
+              }
+              last = `assets=${assetPaths.length}, r3=${joined.includes('landscape-r3')}, lobby=${joined.includes('r3-visible-home')}`;
+            } catch (error) {
+              last = String(error);
+            }
+            console.log(`waiting for R3 attempt ${attempt}: ${last}`);
+            await sleep(10000);
+          }
+          throw new Error(`public R3 not deployed: ${last}`);
+          NODE
+
+      - name: Audit public stuck-screen path in Chromium and WebKit
+        working-directory: client
+        env:
+          LANDSCAPE_AUDIT_URL: https://panxiangbin.github.io/pan/50k
+          EXPECTED_UI_RELEASE: ink-06-mobile-r4
+        run: node landscape-live-audit.mjs
+
+      - name: Upload public R3 screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-landscape-r3-visible-lobby-audit-${{ github.run_attempt }}
+          path: client/landscape-audit-artifacts
+          if-no-files-found: warn
+          retention-days: 14
