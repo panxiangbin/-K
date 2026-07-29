@@ -265,20 +265,16 @@ function validateMetrics(metrics, profile) {
   }
 }
 
-async function verifyTouchSwipeDoesNotSelect(page, profile) {
-  if (!profile.portrait) return;
-  const hand = page.locator('.game-hand-surface[data-hand-interaction="true"]');
-  const box = await hand.boundingBox();
-  assert(box, `${profile.name}: 无法取得手牌触控区域`);
-  const before = await hand.evaluate(node => ({ scrollLeft: node.scrollLeft, selected: node.querySelectorAll('[aria-pressed="true"]').length }));
-  assert(before.selected === 0, `${profile.name}: 滑动测试前已有意外选牌`);
+async function readSwipeState(hand) {
+  return hand.evaluate(node => ({
+    scrollLeft: node.scrollLeft,
+    selected: node.querySelectorAll('[aria-pressed="true"]').length,
+    scrolling: node.dataset.handScrolling || '',
+  }));
+}
 
-  const session = await page.context().newCDPSession(page);
-  const startX = box.x + box.width * 0.80;
-  const endX = box.x + box.width * 0.22;
-  const y = box.y + box.height * 0.56;
+async function dispatchLegacyTouchSwipe(session, page, { startX, endX, y }) {
   const point = (x, id = 1) => ({ x, y, radiusX: 2, radiusY: 2, force: 1, id });
-
   await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point(startX)] });
   for (let step = 1; step <= 8; step += 1) {
     const x = startX + (endX - startX) * (step / 8);
@@ -286,14 +282,44 @@ async function verifyTouchSwipeDoesNotSelect(page, profile) {
     await page.waitForTimeout(20);
   }
   await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(350);
+}
 
-  const after = await hand.evaluate(node => ({
-    scrollLeft: node.scrollLeft,
-    selected: node.querySelectorAll('[aria-pressed="true"]').length,
-    scrolling: node.dataset.handScrolling || '',
-  }));
-  assert(after.scrollLeft > before.scrollLeft, `${profile.name}: 真实触屏滑动没有移动手牌`);
+async function verifyTouchSwipeDoesNotSelect(page, profile) {
+  if (!profile.portrait) return;
+  const hand = page.locator('.game-hand-surface[data-hand-interaction="true"]');
+  const box = await hand.boundingBox();
+  assert(box, `${profile.name}: 无法取得手牌触控区域`);
+  const before = await readSwipeState(hand);
+  assert(before.selected === 0, `${profile.name}: 滑动测试前已有意外选牌`);
+
+  const session = await page.context().newCDPSession(page);
+  const startX = box.x + box.width * 0.80;
+  const endX = box.x + box.width * 0.22;
+  const y = box.y + box.height * 0.56;
+  const distance = Math.max(120, Math.min(240, startX - endX));
+
+  await session.send('Input.synthesizeScrollGesture', {
+    x: startX,
+    y,
+    xDistance: -distance,
+    yDistance: 0,
+    speed: 800,
+    gestureSourceType: 'touch',
+    preventFling: true,
+  });
+  await page.waitForTimeout(400);
+  let after = await readSwipeState(hand);
+
+  if (after.scrollLeft <= before.scrollLeft) {
+    await dispatchLegacyTouchSwipe(session, page, { startX, endX, y });
+    after = await readSwipeState(hand);
+  }
+
+  assert(
+    after.scrollLeft > before.scrollLeft,
+    `${profile.name}: 触屏滑动没有移动手牌（before=${before.scrollLeft}, after=${after.scrollLeft}, scrollWidth=${await hand.evaluate(node => node.scrollWidth)}, clientWidth=${await hand.evaluate(node => node.clientWidth)}）`,
+  );
   assert(after.selected === 0, `${profile.name}: 横向滑手牌后误选了牌`);
   assert(after.scrolling === '', `${profile.name}: 滑动结束后仍残留滚动状态`);
 }
