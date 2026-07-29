@@ -1,17 +1,10 @@
-name: Landscape compatibility audit
+name: Public landscape R2 audit
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'client/**'
-      - 'server/**'
-      - '.github/workflows/mobile-live-audit.yml'
   pull_request:
     branches: [main]
     paths:
       - 'client/**'
-      - 'server/**'
       - '.github/workflows/mobile-live-audit.yml'
   workflow_dispatch:
 
@@ -19,17 +12,17 @@ permissions:
   contents: read
 
 concurrency:
-  group: landscape-compatibility-audit-${{ github.event.pull_request.number || github.ref }}
+  group: public-landscape-r2-audit-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   audit:
-    name: Chromium and WebKit forced/native landscape
+    name: Public forced/native landscape and WebSocket
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     steps:
-      - name: Checkout repository
+      - name: Checkout validation code
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -37,83 +30,60 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: |
-            client/package-lock.json
-            server/package-lock.json
+          cache-dependency-path: client/package-lock.json
 
-      - name: Install and test client
+      - name: Install client tests and Playwright
         working-directory: client
         run: |
           npm ci --include=dev --no-audit --no-fund
           npm test
-
-      - name: Build nested Pages release
-        working-directory: client
-        env:
-          DEPLOY_TARGET: github-pages
-          PAGES_BASE_PATH: /pan/50k/
-        run: npm run build
-
-      - name: Install server dependencies
-        working-directory: server
-        run: npm ci --omit=dev --no-audit --no-fund
-
-      - name: Start local backend and nested static preview
-        shell: bash
-        run: |
-          set -euo pipefail
-          preview_root="${RUNNER_TEMP}/henan-50k-landscape-preview"
-          mkdir -p "${preview_root}/pan/50k"
-          cp -R client/dist/. "${preview_root}/pan/50k/"
-          (cd server && npm start > "${RUNNER_TEMP}/henan-50k-server.log" 2>&1 &)
-          (python3 -m http.server 4173 --bind 127.0.0.1 --directory "${preview_root}" > "${RUNNER_TEMP}/henan-50k-preview.log" 2>&1 &)
-          for attempt in $(seq 1 60); do
-            if curl --fail --silent http://127.0.0.1:3002/healthz >/dev/null \
-              && curl --fail --silent http://127.0.0.1:4173/pan/50k/ >/dev/null; then
-              exit 0
-            fi
-            sleep 1
-          done
-          cat "${RUNNER_TEMP}/henan-50k-server.log" || true
-          cat "${RUNNER_TEMP}/henan-50k-preview.log" || true
-          exit 1
-
-      - name: Install Playwright Chromium and WebKit
-        working-directory: client
-        run: |
           npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.54.1
           npx playwright install --with-deps chromium webkit
 
-      - name: Audit failed orientation lock fallback and native rotation
+      - name: Wait for landscape R2 Pages deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          origin="https://panxiangbin.github.io"
+          page="${origin}/pan/50k/"
+          for attempt in $(seq 1 120); do
+            html="$(curl --fail --silent --show-error --location "${page}?deploy-wait=${attempt}-$(date +%s)" || true)"
+            asset="$(printf '%s' "$html" | grep -oE 'src="/pan/50k/assets/[^"]+\.js"' | head -n 1 | cut -d'"' -f2 || true)"
+            if [ -n "$asset" ]; then
+              js="$(curl --fail --silent --show-error --location "${origin}${asset}?deploy-wait=${attempt}-$(date +%s)" || true)"
+              if printf '%s' "$js" | grep -q 'landscape-r2' \
+                && printf '%s' "$js" | grep -q '直接进入横屏' \
+                && printf '%s' "$js" | grep -q 'force-landscape-active'; then
+                echo "Public landscape R2 release is available: ${asset}"
+                exit 0
+              fi
+            fi
+            sleep 5
+          done
+          echo "Timed out waiting for public landscape R2 deployment"
+          exit 1
+
+      - name: Audit public forced fallback and native rotation in Chromium and WebKit
         working-directory: client
         env:
-          LANDSCAPE_AUDIT_URL: http://127.0.0.1:4173/pan/50k
+          LANDSCAPE_AUDIT_URL: https://panxiangbin.github.io/pan/50k
           EXPECTED_UI_RELEASE: ink-06-mobile-r4
         run: node landscape-live-audit.mjs
 
-      - name: Upload landscape screenshots and report
+      - name: Verify real Render WebSocket stability in landscape
+        working-directory: client
+        env:
+          PUBLIC_GAME_URL: https://panxiangbin.github.io/pan/50k
+          WEBSOCKET_STABLE_WINDOW_MS: 8000
+        run: node public-landscape-r2-stability.mjs
+
+      - name: Upload public R2 audit evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: landscape-compatibility-audit-${{ github.run_attempt }}
-          path: client/landscape-audit-artifacts
+          name: public-landscape-r2-audit-${{ github.run_attempt }}
+          path: |
+            client/landscape-audit-artifacts
+            client/public-landscape-r2-stability-artifacts
           if-no-files-found: warn
           retention-days: 14
-
-      - name: Upload deployable Pages build
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pan-50k-landscape-r2-dist-${{ github.run_attempt }}
-          path: client/dist
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Print local service logs on failure
-        if: failure()
-        shell: bash
-        run: |
-          echo "Backend log:"
-          cat "${RUNNER_TEMP}/henan-50k-server.log" || true
-          echo "Preview log:"
-          cat "${RUNNER_TEMP}/henan-50k-preview.log" || true
