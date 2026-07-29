@@ -49,6 +49,7 @@ async function main() {
   requireScript(serverPackage, 'test', [
     'error-messages.test.js',
     'joker-pair-rule.test.js',
+    'duplicate-join-guard.test.js',
     'bot-ai.test.js',
     'bot-ai-minimum-bomb.test.js',
     'bot-public-memory.test.js',
@@ -58,7 +59,9 @@ async function main() {
     'server-reconnect-smoke.test.js',
   ]);
   requireScript(serverPackage, 'start', ['node -r ./bot-ai-hook.js index.js']);
-  assert(read('server/bot-ai-hook.js').includes('installJokerPairRule'), 'server startup must install the no-joker-pair rule');
+  const startupHook = read('server/bot-ai-hook.js');
+  assert(startupHook.includes('installJokerPairRule'), 'server startup must install the no-joker-pair rule');
+  assert(startupHook.includes('transformDuplicateJoinGuard'), 'server startup must suppress duplicate join_room on the same connection');
 
   const rulesModule = await import(pathToFileURL(path.join(ROOT, 'client/src/rules-help-data.js')).href);
   const rulesText = rulesModule.flattenRulesText();
@@ -83,6 +86,7 @@ async function main() {
   const requiredRuntimeFiles = [
     'server/bot-ai-hook.js',
     'server/joker-pair-rule.js',
+    'server/duplicate-join-guard.js',
     'server/runtime-hook-contract.js',
     'server/error-messages.js',
     'client/src/hooks/useWebSocket.js',
