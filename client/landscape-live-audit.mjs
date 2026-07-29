@@ -23,7 +23,7 @@ async function openRelease(page, profile) {
     waitUntil: 'domcontentloaded',
     timeout: 90_000,
   });
-  await page.waitForSelector('.lobby-shell', { timeout: 60_000 });
+  await page.waitForSelector('.lobby-shell', { state: 'attached', timeout: 60_000 });
   await page.waitForFunction(release => document.documentElement.dataset.uiRelease === release, expectedRelease, { timeout: 60_000 });
   await page.waitForFunction(() => document.documentElement.dataset.layoutMode === 'landscape-r1', null, { timeout: 30_000 });
   if (profile.mode === 'gate') {
