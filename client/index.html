@@ -16,29 +16,13 @@
       --hand-overlap:-24px;--hand-x-pad:40px;--hand-y-pad-top:10px;--hand-y-pad-bottom:20px;--hand-row-gap:4px;
       --scorebar-h:48px;--side-col-w:100px;--hand-bottom-pad:8px;
     }
-
-    /* 手机竖屏打开时，不弹提示，直接把游戏画布强制旋转成横屏牌桌。 */
-    body.force-landscape #root{
-      position:fixed;
-      top:0;
-      left:0;
-      width:var(--app-height, 100vh);
-      height:var(--app-width, 100vw);
-      transform:rotate(90deg) translateY(-100%);
-      transform-origin:top left;
-      padding:env(safe-area-inset-left) env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom);
-      --card-w:52px;--card-h:72px;--card-rank-font:11px;--card-suit-font:10px;--card-center-font:22px;--card-selected-offset:-8px;
-      --tiny-card-w:18px;--tiny-card-h:26px;--mini-card-w:26px;--mini-card-h:38px;--mini-rank-font:9px;--mini-suit-font:7px;--mini-center-font:14px;
-      --hand-overlap:-36px;--hand-x-pad:5px;--hand-y-pad-top:2px;--hand-y-pad-bottom:4px;--hand-row-gap:0px;
-      --scorebar-h:34px;--side-col-w:52px;--hand-bottom-pad:3px;
-    }
   </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
   <script>
-    // 旧版本注册过 Service Worker/PWA，容易缓存旧页面。当前先全部清掉，避免旧横屏提示或安装按钮残留。
+    // 旧版本注册过 Service Worker/PWA，容易缓存旧页面。当前先全部清掉，避免旧界面残留。
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(function(regs){
         regs.forEach(function(reg){ reg.unregister(); });
@@ -51,7 +35,6 @@
     }
 
     (function(){
-      function isTouchDevice(){ return ('ontouchstart' in window) || navigator.maxTouchPoints > 0; }
       function syncViewportVars(){
         var vv = window.visualViewport;
         var w = vv ? vv.width : window.innerWidth;
@@ -59,30 +42,10 @@
         document.documentElement.style.setProperty('--app-width', w + 'px');
         document.documentElement.style.setProperty('--app-height', h + 'px');
       }
-      function applyForcedLandscape(){
-        syncViewportVars();
-        var vv = window.visualViewport;
-        var w = vv ? vv.width : window.innerWidth;
-        var h = vv ? vv.height : window.innerHeight;
-        document.body.classList.toggle('force-landscape', isTouchDevice() && h > w);
-      }
-
-      // 尝试锁定系统横屏；普通手机浏览器经常会拒绝，所以同时保留 CSS 强制横屏兜底。
-      function tryLockLandscape(){
-        try {
-          if (screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock('landscape').catch(function(){});
-          }
-        } catch(e) {}
-      }
-
-      window.addEventListener('resize', applyForcedLandscape);
-      if (window.visualViewport) window.visualViewport.addEventListener('resize', applyForcedLandscape);
-      window.addEventListener('orientationchange', function(){ setTimeout(applyForcedLandscape, 300); });
-      document.addEventListener('DOMContentLoaded', function(){ applyForcedLandscape(); tryLockLandscape(); });
-      document.addEventListener('click', tryLockLandscape, { once:true });
-      document.addEventListener('touchstart', tryLockLandscape, { once:true });
-      applyForcedLandscape();
+      window.addEventListener('resize', syncViewportVars);
+      if (window.visualViewport) window.visualViewport.addEventListener('resize', syncViewportVars);
+      window.addEventListener('orientationchange', function(){ setTimeout(syncViewportVars, 200); });
+      syncViewportVars();
     })();
   </script>
 </body>
