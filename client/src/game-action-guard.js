@@ -3,6 +3,7 @@ import { SERVER_REJECTION_EVENT } from './server-error-feedback.js';
 const ACTION_SELECTOR = '.btn-play, .btn-pass';
 const CARD_SELECTOR = '[data-card-id]';
 const CONNECTION_EVENT = 'henan50k-connection-change';
+const CONNECTION_STATUS_KIND = 'connection';
 export const GAME_ACTION_TIMEOUT_MS = 12000;
 export const SLIDE_THRESHOLD_PX = 10;
 
@@ -34,11 +35,20 @@ function ensureStatus(root = document) {
   return node;
 }
 
-function announce(text, root = document, duration = 2600) {
+function announce(text, root = document, duration = 2600, kind = 'general') {
   const node = ensureStatus(root);
   node.textContent = text;
+  node.dataset.actionStatusKind = kind;
   clearTimeout(node.__hideTimer);
   node.__hideTimer = setTimeout(() => node.remove(), duration);
+}
+
+export function dismissConnectionActionStatus(root = document) {
+  const node = root.getElementById?.('henan50k-game-action-status');
+  if (!node || node.dataset?.actionStatusKind !== CONNECTION_STATUS_KIND) return false;
+  clearTimeout(node.__hideTimer);
+  node.remove();
+  return true;
 }
 
 function tableSnapshot(root = document) {
@@ -109,8 +119,10 @@ export function installGameActionGuard(root = document) {
   const handleConnection = (event) => {
     if (event.detail?.connected === false) {
       clearBusy();
-      announce('网络连接已中断，本次操作未确认，请等待重连后再试。', root, 4200);
+      announce('网络连接已中断，本次操作未确认，请等待重连后再试。', root, 4200, CONNECTION_STATUS_KIND);
+      return;
     }
+    if (event.detail?.connected === true) dismissConnectionActionStatus(root);
   };
   const handleServerRejection = (event) => {
     if (!event.detail?.tableAction) return;
@@ -135,6 +147,7 @@ export function installGameActionGuard(root = document) {
 
   const cleanup = () => {
     clearBusy();
+    dismissConnectionActionStatus(root);
     observer.disconnect();
     root.removeEventListener('click', handleActionCapture, true);
     root.removeEventListener('pointerdown', handlePointerDown, true);
