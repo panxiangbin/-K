@@ -48,16 +48,24 @@ function setIfChanged(node, name, value) {
   if (node.getAttribute(name) !== value) node.setAttribute(name, value);
 }
 
+function setTextIfChanged(node, value) {
+  if (node.textContent !== value) node.textContent = value;
+}
+
+function setHiddenIfChanged(node, hidden) {
+  if (node.hidden !== hidden) node.hidden = hidden;
+}
+
 function decorateToast(node) {
   const original = node.dataset.originalToastText || node.textContent;
   if (!node.dataset.originalToastText) node.dataset.originalToastText = original;
   const tone = getToastTone(original, node.dataset.toastType || '');
-  node.dataset.feedbackTone = tone;
+  if (node.dataset.feedbackTone !== tone) node.dataset.feedbackTone = tone;
   node.classList.add('governed-toast');
   setIfChanged(node, 'aria-atomic', 'true');
   if (tone === 'error') {
     setIfChanged(node, 'role', 'alert');
-    node.removeAttribute('aria-live');
+    if (node.hasAttribute('aria-live')) node.removeAttribute('aria-live');
   } else {
     setIfChanged(node, 'role', 'status');
     setIfChanged(node, 'aria-live', 'polite');
@@ -69,21 +77,30 @@ function applyToastPolicy(container, documentObject) {
   if (!nodes.length) return;
 
   nodes.forEach(node => {
-    const original = node.dataset.originalToastText;
-    if (original) node.textContent = original;
-    node.hidden = false;
+    if (!node.dataset.originalToastText) node.dataset.originalToastText = node.textContent;
     decorateToast(node);
   });
 
   const passNodes = nodes.filter(node => isPassToast(node.dataset.originalToastText || node.textContent));
-  if (passNodes.length > 1) {
-    passNodes.slice(0, -1).forEach(node => { node.hidden = true; });
-    const latest = passNodes.at(-1);
-    if (!latest.dataset.originalToastText) latest.dataset.originalToastText = latest.textContent;
-    latest.textContent = `连续${passNodes.length}人过牌`;
-    latest.setAttribute('aria-label', `${passNodes.length}名玩家连续过牌`);
-    latest.dataset.feedbackTone = 'quiet';
-  }
+  const passSummaryNode = passNodes.length > 1 ? passNodes.at(-1) : null;
+  const hiddenPassNodes = new Set(passNodes.length > 1 ? passNodes.slice(0, -1) : []);
+
+  nodes.forEach(node => {
+    const original = node.dataset.originalToastText || '';
+    const desiredText = node === passSummaryNode ? `连续${passNodes.length}人过牌` : original;
+    setTextIfChanged(node, desiredText);
+    setHiddenIfChanged(node, hiddenPassNodes.has(node));
+
+    if (node === passSummaryNode) {
+      setIfChanged(node, 'aria-label', `${passNodes.length}名玩家连续过牌`);
+      if (node.dataset.feedbackTone !== 'quiet') node.dataset.feedbackTone = 'quiet';
+      node.dataset.passSummary = 'true';
+    } else if (node.dataset.passSummary === 'true') {
+      delete node.dataset.passSummary;
+      if (node.hasAttribute('aria-label')) node.removeAttribute('aria-label');
+      decorateToast(node);
+    }
+  });
 
   const candidates = nodes.filter(node => !node.hidden);
   const gameActive = Boolean(documentObject.querySelector('.game-table-shell'));
@@ -92,14 +109,15 @@ function applyToastPolicy(container, documentObject) {
     text: node.dataset.originalToastText || node.textContent,
     type: node.dataset.toastType || '',
   })), maxVisible));
-  candidates.forEach((node, index) => { node.hidden = !visibleIndexes.has(index); });
+  candidates.forEach((node, index) => setHiddenIfChanged(node, !visibleIndexes.has(index)));
 
-  container.dataset.feedbackGoverned = 'true';
-  container.dataset.feedbackSurface = gameActive ? 'game' : 'general';
+  if (container.dataset.feedbackGoverned !== 'true') container.dataset.feedbackGoverned = 'true';
+  const surface = gameActive ? 'game' : 'general';
+  if (container.dataset.feedbackSurface !== surface) container.dataset.feedbackSurface = surface;
   container.classList.add('governed-toast-stack');
-  container.setAttribute('aria-label', '游戏状态提示');
-  container.setAttribute('aria-live', 'off');
-  container.setAttribute('aria-relevant', 'additions text');
+  setIfChanged(container, 'aria-label', '游戏状态提示');
+  setIfChanged(container, 'aria-live', 'off');
+  setIfChanged(container, 'aria-relevant', 'additions text');
 }
 
 export function installUiFeedbackGovernor({ documentObject = globalThis.document, MutationObserverClass = globalThis.MutationObserver } = {}) {
