@@ -14,6 +14,8 @@ assert.equal(shouldRequireLandscape({ innerWidth: 1400, innerHeight: 1800 }), fa
 assert.equal(shouldRequireLandscape({ innerWidth: 900, innerHeight: 1200 }), true, 'narrow portrait desktop or tablet should receive the landscape gate');
 assert.equal(isNativeLandscape({ innerWidth: 390, innerHeight: 844, orientation: 90 }), true, 'legacy iOS orientation angle must reveal landscape even while viewport dimensions lag');
 assert.equal(isNativeLandscape({ innerWidth: 390, innerHeight: 844, matchMedia: () => ({ matches: true }) }), true, 'orientation media query must reveal landscape when visualViewport lags');
+assert.equal(isNativeLandscape({ innerWidth: 390, innerHeight: 844, screen: { orientation: { angle: 90, type: 'portrait-primary' } } }), false, 'an inconsistent WebKit screen angle alone must not hide the portrait gate');
+assert.equal(isNativeLandscape({ innerWidth: 390, innerHeight: 844, screen: { orientation: { angle: 0, type: 'landscape-primary' } } }), true, 'an explicit landscape orientation type may confirm landscape while dimensions lag');
 assert.equal(FORCE_LANDSCAPE_DELAY_MS >= 300 && FORCE_LANDSCAPE_DELAY_MS <= 1000, true, 'fallback must engage quickly without racing native rotation');
 
 assert.match(behavior, /LANDSCAPE_LAYOUT_RELEASE = 'landscape-r2'/, 'runtime must expose the repaired landscape layout release');
@@ -23,6 +25,8 @@ assert.match(behavior, /force-landscape-active/, 'runtime must provide a fallbac
 assert.match(behavior, /直接进入横屏/, 'portrait gate must provide a reliable fallback entry');
 assert.match(behavior, /orientationchange/, 'runtime must update immediately after device rotation');
 assert.match(behavior, /matchMedia\?\.\('\(orientation: landscape\)'\)/, 'runtime must use the orientation media query for Safari viewport lag');
+assert.match(behavior, /startsWith\('landscape'\)/, 'runtime must require an explicit modern orientation type instead of trusting angle alone');
+assert.match(behavior, /typeof target\?\.orientation !== 'number'/, 'runtime must keep the legacy iOS orientation fallback separate');
 assert.match(behavior, /visualViewport/, 'runtime must follow the browser visual viewport');
 assert.match(behavior, /\[80, 250, 600, 1200\]/, 'runtime must resample delayed mobile viewport changes');
 
