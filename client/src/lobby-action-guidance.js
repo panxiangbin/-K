@@ -6,6 +6,19 @@ function findButtonByText(root, text) {
   return [...root.querySelectorAll('button')].find(button => button.textContent.includes(text)) || null;
 }
 
+function setText(element, text) {
+  if (element && element.textContent !== text) element.textContent = text;
+}
+
+function setTone(element, tone) {
+  if (!element) return;
+  if (tone) {
+    if (element.dataset.tone !== tone) element.dataset.tone = tone;
+  } else if (element.hasAttribute('data-tone')) {
+    element.removeAttribute('data-tone');
+  }
+}
+
 function ensureStatusElement(parent, id, className) {
   let element = parent.querySelector(`#${id}`);
   if (!element) {
@@ -23,8 +36,10 @@ function ensureStatusElement(parent, id, className) {
 function describeButton(button, id) {
   if (!button) return;
   const existing = (button.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
-  if (!existing.includes(id)) existing.push(id);
-  button.setAttribute('aria-describedby', existing.join(' '));
+  if (!existing.includes(id)) {
+    existing.push(id);
+    button.setAttribute('aria-describedby', existing.join(' '));
+  }
 }
 
 export function installLobbyActionGuidance() {
@@ -42,14 +57,14 @@ export function installLobbyActionGuidance() {
       const guidance = ensureStatusElement(homeGrid.parentElement, GUIDANCE_ID, 'lobby-action-guidance');
       const hasName = Boolean(nameInput.value.trim());
       if (!connected) {
-        guidance.textContent = '联网入口正在等待服务器连接；你可以先填写昵称，连接后即可创建或加入房间。';
-        guidance.dataset.tone = 'waiting';
+        setText(guidance, '联网入口正在等待服务器连接；你可以先填写昵称，连接后即可创建或加入房间。');
+        setTone(guidance, 'waiting');
       } else if (!hasName) {
-        guidance.textContent = '创建或加入房间前需要填写昵称；单机练习不需要昵称。';
-        guidance.dataset.tone = 'hint';
+        setText(guidance, '创建或加入房间前需要填写昵称；单机练习不需要昵称。');
+        setTone(guidance, 'hint');
       } else {
-        guidance.textContent = '联网功能已可用，可以创建房间或输入房间号加入。';
-        guidance.dataset.tone = 'ready';
+        setText(guidance, '联网功能已可用，可以创建房间或输入房间号加入。');
+        setTone(guidance, 'ready');
       }
       describeButton(findButtonByText(homeGrid, '创建房间'), GUIDANCE_ID);
       describeButton(findButtonByText(homeGrid, '加入房间'), GUIDANCE_ID);
@@ -60,22 +75,22 @@ export function installLobbyActionGuidance() {
       const guidance = ensureStatusElement(choiceGrid.parentElement, CHOICE_GUIDANCE_ID, 'lobby-choice-guidance');
       const disabledChoices = [...choiceGrid.querySelectorAll('button:disabled')];
       if (!connected && disabledChoices.length) {
-        guidance.textContent = '服务器尚未连接，返回开始页等待连接，或稍后重新尝试。';
-        guidance.dataset.tone = 'waiting';
+        setText(guidance, '服务器尚未连接，返回开始页等待连接，或稍后重新尝试。');
+        setTone(guidance, 'waiting');
       } else if (disabledChoices.length) {
-        guidance.textContent = '请求正在处理中，请稍候。';
-        guidance.dataset.tone = 'busy';
+        setText(guidance, '请求正在处理中，请稍候。');
+        setTone(guidance, 'busy');
       } else {
-        guidance.textContent = '';
-        guidance.removeAttribute('data-tone');
+        setText(guidance, '');
+        setTone(guidance, '');
       }
       [...choiceGrid.querySelectorAll('button')].forEach(button => describeButton(button, CHOICE_GUIDANCE_ID));
     }
 
     const backButton = panel.querySelector('.lobby-back-button');
     if (backButton) {
-      backButton.setAttribute('aria-label', '返回开始页');
-      backButton.setAttribute('title', '返回开始页');
+      if (backButton.getAttribute('aria-label') !== '返回开始页') backButton.setAttribute('aria-label', '返回开始页');
+      if (backButton.getAttribute('title') !== '返回开始页') backButton.setAttribute('title', '返回开始页');
     }
   }
 
@@ -93,4 +108,5 @@ export function installLobbyActionGuidance() {
     scheduleUpdate();
   });
   scheduleUpdate();
+  return () => observer.disconnect();
 }
