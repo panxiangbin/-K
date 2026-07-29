@@ -35,7 +35,7 @@ jobs:
           npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.54.1
           npx playwright install --with-deps chromium webkit
 
-      - name: Wait for public R3 assets
+      - name: Wait for public final R3 assets
         working-directory: client
         run: |
           node --input-type=module <<'NODE'
@@ -44,30 +44,33 @@ jobs:
           let last = '';
           for (let attempt = 1; attempt <= 90; attempt += 1) {
             try {
-              const html = await fetch(`${base}?r3-deploy-check=${Date.now()}-${attempt}`, { cache: 'no-store' }).then(response => {
+              const html = await fetch(`${base}?r3-final-deploy-check=${Date.now()}-${attempt}`, { cache: 'no-store' }).then(response => {
                 if (!response.ok) throw new Error(`index ${response.status}`);
                 return response.text();
               });
               const assetPaths = [...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)].map(match => match[1]);
               const assetTexts = await Promise.all(assetPaths.map(async assetPath => {
                 const url = new URL(assetPath, base);
-                url.searchParams.set('r3-check', `${Date.now()}-${attempt}`);
+                url.searchParams.set('r3-final-check', `${Date.now()}-${attempt}`);
                 const response = await fetch(url, { cache: 'no-store' });
                 return response.ok ? response.text() : '';
               }));
               const joined = assetTexts.join('\n');
-              if (joined.includes('landscape-r3') && joined.includes('r3-visible-home')) {
-                console.log(`public landscape-r3 detected on attempt ${attempt}`);
+              const ready = joined.includes('landscape-r3')
+                && joined.includes('r3-visible-home')
+                && joined.includes('compact-guidance-final');
+              if (ready) {
+                console.log(`public final landscape-r3 detected on attempt ${attempt}`);
                 process.exit(0);
               }
-              last = `assets=${assetPaths.length}, r3=${joined.includes('landscape-r3')}, lobby=${joined.includes('r3-visible-home')}`;
+              last = `assets=${assetPaths.length}, r3=${joined.includes('landscape-r3')}, lobby=${joined.includes('r3-visible-home')}, final=${joined.includes('compact-guidance-final')}`;
             } catch (error) {
               last = String(error);
             }
-            console.log(`waiting for R3 attempt ${attempt}: ${last}`);
+            console.log(`waiting for final R3 attempt ${attempt}: ${last}`);
             await sleep(10000);
           }
-          throw new Error(`public R3 not deployed: ${last}`);
+          throw new Error(`public final R3 not deployed: ${last}`);
           NODE
 
       - name: Audit public stuck-screen path in Chromium and WebKit
