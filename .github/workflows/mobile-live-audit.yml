@@ -22,16 +22,31 @@ jobs:
           cache-dependency-path: |
             client/package-lock.json
             server/package-lock.json
-      - name: Build and start local release
+      - name: Install and build client
+        working-directory: client
+        env:
+          DEPLOY_TARGET: github-pages
+          PAGES_BASE_PATH: /pan/50k/
+        run: |
+          npm ci --include=dev --no-audit --no-fund
+          npm run build
+      - name: Install server
+        working-directory: server
+        run: npm ci --omit=dev --no-audit --no-fund
+      - name: Start local release
         shell: bash
         run: |
-          cd client && npm ci --include=dev --no-audit --no-fund && DEPLOY_TARGET=github-pages PAGES_BASE_PATH=/pan/50k/ npm run build && cd ..
-          cd server && npm ci --omit=dev --no-audit --no-fund && npm start > "${RUNNER_TEMP}/server.log" 2>&1 & cd ..
           preview_root="${RUNNER_TEMP}/preview"
           mkdir -p "${preview_root}/pan/50k"
           cp -R client/dist/. "${preview_root}/pan/50k/"
-          python3 -m http.server 4173 --bind 127.0.0.1 --directory "${preview_root}" > "${RUNNER_TEMP}/preview.log" 2>&1 &
-          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3002/healthz >/dev/null && curl -fsS http://127.0.0.1:4173/pan/50k/ >/dev/null && exit 0; sleep 1; done
+          (cd server && npm start > "${RUNNER_TEMP}/server.log" 2>&1 &)
+          (python3 -m http.server 4173 --bind 127.0.0.1 --directory "${preview_root}" > "${RUNNER_TEMP}/preview.log" 2>&1 &)
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3002/healthz >/dev/null && curl -fsS http://127.0.0.1:4173/pan/50k/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat "${RUNNER_TEMP}/server.log" || true
+          cat "${RUNNER_TEMP}/preview.log" || true
           exit 1
       - name: Install Chromium
         working-directory: client
