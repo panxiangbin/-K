@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const Module = require('module');
 const { transformServerSource } = require('./runtime-hook-contract');
+const { transformDuplicateJoinGuard } = require('./duplicate-join-guard');
 const { installJokerPairRule } = require('./joker-pair-rule');
 
 // 在服务器入口和电脑AI加载规则模块前统一安装：任何王都不能组成普通对子。
@@ -19,5 +20,6 @@ Module._extensions['.js'] = function optimizedServerLoader(module, filename) {
   Module._extensions['.js'] = originalJsLoader;
 
   const source = fs.readFileSync(filename, 'utf8');
-  module._compile(transformServerSource(source), filename);
+  const optimizedSource = transformDuplicateJoinGuard(transformServerSource(source));
+  module._compile(optimizedSource, filename);
 };
