@@ -21,10 +21,7 @@ assert.deepEqual(getWaitingRequestFeedback({ kind: 'exit', timedOut: true, conne
   showReconnect: true,
 });
 
-assert.equal(
-  getWaitingRequestFeedback({ kind: 'start', pending: true, connected: false }).title,
-  '正在恢复服务器连接',
-);
+assert.equal(getWaitingRequestFeedback({ kind: 'start', pending: true, connected: false }).title, '正在恢复服务器连接');
 assert.equal(getWaitingRequestFeedback({ kind: 'start' }), null);
 
 const source = fs.readFileSync(new URL('./src/waiting-room-request-lifecycle.js', import.meta.url), 'utf8');
@@ -41,6 +38,11 @@ assert.match(source, /role', 'status'/);
 assert.match(source, /aria-live', 'polite'/);
 assert.match(source, /aria-atomic', 'true'/);
 assert.match(source, /attributeFilter:\s*\['disabled', 'aria-busy'\]/);
+assert.match(source, /feedbackKey\(feedbackState\)/, '等待房间提示必须生成稳定渲染键');
+assert.match(source, /feedback\.dataset\.renderKey === nextKey/, '相同提示不得重复重建 DOM');
+assert.match(source, /if \(feedback\.childNodes\.length\) feedback\.replaceChildren\(\)/, '隐藏提示时只在确有子节点时清空');
+assert.match(source, /roleStatus\.textContent !== text/, '房主状态文字必须幂等更新');
+assert.doesNotMatch(source, /feedback\.replaceChildren\(\);\s*const title/, '不得每次监听回调都无条件清空再重建提示');
 assert.doesNotMatch(source, /setInterval/);
 
 assert.match(css, /min-height:\s*44px/);
