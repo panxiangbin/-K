@@ -57,7 +57,7 @@ for (const file of initialFiles) {
 }
 assert.ok(initialBytes <= INITIAL_JS_BUDGET, `initial JavaScript is ${(initialBytes / 1024).toFixed(1)} KiB; budget is ${INITIAL_JS_BUDGET / 1024} KiB`);
 assert.equal(
-  /globalThis\.document[\s\S]{0,180}\.call\([^)]*,["']root["']\)/.test(initialJavaScript),
+  /getElementById\)\(\)\)==null\?void 0:[A-Za-z_$][\w$]*\.call\([A-Za-z_$][\w$]*,["']root["']\)/.test(initialJavaScript),
   false,
   'production bundle must not contain the optional-call default-root transform that crashes startup',
 );
