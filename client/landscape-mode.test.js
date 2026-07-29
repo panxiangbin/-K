@@ -18,7 +18,7 @@ assert.equal(isNativeLandscape({ innerWidth: 390, innerHeight: 844, screen: { or
 assert.equal(isNativeLandscape({ innerWidth: 390, innerHeight: 844, screen: { orientation: { angle: 0, type: 'landscape-primary' } } }), true, 'an explicit landscape orientation type may confirm landscape while dimensions lag');
 assert.equal(FORCE_LANDSCAPE_DELAY_MS >= 300 && FORCE_LANDSCAPE_DELAY_MS <= 1000, true, 'fallback must engage quickly without racing native rotation');
 
-assert.match(behavior, /LANDSCAPE_LAYOUT_RELEASE = 'landscape-r2'/, 'runtime must expose the repaired landscape layout release');
+assert.match(behavior, /LANDSCAPE_LAYOUT_RELEASE = 'landscape-r3'/, 'runtime must expose the repaired landscape lobby release');
 assert.match(behavior, /screen\.orientation\.lock\('landscape'\)/, 'supported browsers should attempt a real landscape lock');
 assert.match(behavior, /requestFullscreen/, 'orientation lock should be preceded by a user-triggered fullscreen attempt');
 assert.match(behavior, /force-landscape-active/, 'runtime must provide a fallback when browsers reject direction lock');
@@ -34,6 +34,10 @@ assert.match(styles, /body\.landscape-gate-active #root/, 'portrait mode must hi
 assert.match(styles, /body\.force-landscape-active #root/, 'fallback mode must reveal and rotate the actual app');
 assert.match(styles, /rotate\(90deg\)/, 'fallback mode must rotate the landscape canvas when system rotation is locked');
 assert.match(styles, /--forced-landscape-width/, 'fallback mode must swap viewport width and height');
+assert.match(styles, /body\.force-landscape-active \.lobby-shell[\s\S]*grid-template-columns:/, 'forced landscape must override the portrait one-column lobby');
+assert.match(styles, /body\.force-landscape-active \.lobby-main[\s\S]*overflow: hidden !important/, 'forced landscape must keep the main lobby inside the rotated viewport');
+assert.match(styles, /body\.force-landscape-active \.lobby-panel[\s\S]*overflow-y: auto !important/, 'forced landscape must retain a safe inner scroll fallback');
+assert.match(styles, /body\.force-landscape-active \.lobby-action-grid,[\s\S]*grid-template-columns: repeat\(2/, 'forced landscape must keep create and join actions side by side');
 assert.match(styles, /@media \(orientation: landscape\)/, 'native landscape layout must have an explicit viewport rule');
 assert.match(styles, /width: 100vw !important/, 'native landscape shells must fill the full screen width');
 assert.match(styles, /height: 100dvh !important/, 'native landscape shells must fill the dynamic viewport height');
@@ -46,4 +50,4 @@ assert(main.indexOf("import './landscape-mode.css';") > main.indexOf("import './
 assert.equal(manifest.orientation, 'landscape', 'installed/PWA mode must request landscape orientation');
 assert.match(pkg.scripts.test, /landscape-mode\.test\.js/, 'full test suite must include landscape regression');
 
-console.log('landscape fallback mode tests passed');
+console.log('landscape fallback lobby tests passed');
