@@ -21,6 +21,7 @@ import { installInkThemeRelease } from './ink-theme-release.js';
 import { installRemoteBackendWebSocket } from './remote-backend-bootstrap.js';
 import { installNestedAudioBase } from './audio-base-bootstrap.js';
 import { installJokerPairUiGuard } from './joker-pair-ui-guard.js';
+import { installLandscapeMode } from './landscape-mode.js';
 import './index.css';
 import './ui-responsive.css';
 import './ui-polish.css';
@@ -54,9 +55,11 @@ import './mobile-game-overlay.css';
 import './mobile-game-layout-r4.css';
 import './mobile-game-layout-r4-structure.css';
 import './mobile-viewport-lock.css';
+import './landscape-mode.css';
 
 installRemoteBackendWebSocket();
 installNestedAudioBase();
+installLandscapeMode();
 ReactDOM.createRoot(document.getElementById('root')).render(<><App /><RulesHelpLauncher /></>);
 
 const disabledStartupEnhancers = new Set(
