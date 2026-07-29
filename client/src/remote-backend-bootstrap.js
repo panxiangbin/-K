@@ -1,4 +1,5 @@
 const DEFAULT_REMOTE_BACKEND = 'wss://henan-50k.onrender.com';
+const installedTargets = new WeakSet();
 
 export function resolveBackendWebSocketUrl(url, locationObject = globalThis.location) {
   if (!url || !locationObject) return url;
@@ -19,7 +20,7 @@ export function installRemoteBackendWebSocket(target = globalThis) {
   const hostname = String(target?.location?.hostname || '').toLowerCase();
   if (typeof NativeWebSocket !== 'function') return false;
   if (!hostname.endsWith('.github.io')) return true;
-  if (NativeWebSocket.__henan50kRemoteBackend === true) return true;
+  if (installedTargets.has(target)) return true;
 
   try {
     const RemoteBackendWebSocket = new Proxy(NativeWebSocket, {
@@ -31,14 +32,10 @@ export function installRemoteBackendWebSocket(target = globalThis) {
       },
     });
 
-    Object.defineProperty(RemoteBackendWebSocket, '__henan50kRemoteBackend', {
-      value: true,
-      configurable: false,
-      enumerable: false,
-      writable: false,
-    });
     target.WebSocket = RemoteBackendWebSocket;
-    return target.WebSocket === RemoteBackendWebSocket;
+    if (target.WebSocket !== RemoteBackendWebSocket) return false;
+    installedTargets.add(target);
+    return true;
   } catch {
     return false;
   }
