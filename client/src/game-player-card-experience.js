@@ -89,19 +89,27 @@ function enhanceGamePlayerCards(root) {
   return cards.length > 0;
 }
 
-export function installGamePlayerCardExperience(root = globalThis.document?.getElementById?.('root')) {
-  if (!root || typeof MutationObserver === 'undefined') return () => {};
+function resolveRoot(root) {
+  if (root) return root;
+  const documentObject = globalThis.document;
+  if (!documentObject || typeof documentObject.getElementById !== 'function') return null;
+  return documentObject.getElementById('root');
+}
+
+export function installGamePlayerCardExperience(root = null) {
+  const resolvedRoot = resolveRoot(root);
+  if (!resolvedRoot || typeof MutationObserver === 'undefined') return () => {};
   let queued = false;
   const run = () => {
     if (queued) return;
     queued = true;
     queueMicrotask(() => {
       queued = false;
-      enhanceGamePlayerCards(root);
+      enhanceGamePlayerCards(resolvedRoot);
     });
   };
   const observer = new MutationObserver(run);
-  observer.observe(root, {
+  observer.observe(resolvedRoot, {
     childList: true,
     subtree: true,
     characterData: true,
