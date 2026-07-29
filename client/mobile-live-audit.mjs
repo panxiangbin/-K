@@ -386,12 +386,19 @@ async function verifyTouchSwipeDoesNotSelect(page, profile) {
 }
 
 async function verifyCardTap(page, profile) {
-  const firstCard = page.locator('[data-card-id]').first();
-  await firstCard.scrollIntoViewIfNeeded();
-  await firstCard.click();
-  await page.waitForFunction(() => document.querySelector('[data-card-id]')?.getAttribute('aria-pressed') === 'true', null, { timeout: 10_000 });
+  const targetCard = page.locator('[data-card-id]').last();
+  const cardId = await targetCard.getAttribute('data-card-id');
+  assert(cardId, `${profile.name}: 找不到可点击的手牌编号`);
+  await targetCard.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(80);
+  await targetCard.click();
+  await page.waitForFunction(id => {
+    const target = [...document.querySelectorAll('[data-card-id]')].find(node => node.getAttribute('data-card-id') === id);
+    return target?.getAttribute('aria-pressed') === 'true';
+  }, cardId, { timeout: 10_000 });
   const selected = await page.locator('[data-card-id][aria-pressed="true"]').count();
   assert(selected >= 1, `${profile.name}: 轻点手牌没有选中`);
+  return { cardId, selected };
 }
 
 async function writeAuditArtifacts(report, auditState, auditFailure) {
@@ -453,7 +460,7 @@ try {
       const metrics = await runPhase(auditState, profile.name, '读取牌桌布局', () => collectMetrics(currentPage, profile), 20_000);
       await runPhase(auditState, profile.name, '校验牌桌布局', async () => validateMetrics(metrics, profile), 10_000);
       diagnostics.swipe = await runPhase(auditState, profile.name, '触屏横滑手牌', () => verifyTouchSwipeDoesNotSelect(currentPage, profile), 30_000);
-      await runPhase(auditState, profile.name, '轻点选择手牌', () => verifyCardTap(currentPage, profile), 30_000);
+      diagnostics.tap = await runPhase(auditState, profile.name, '轻点选择手牌', () => verifyCardTap(currentPage, profile), 30_000);
       await runPhase(auditState, profile.name, '保存牌桌截图', () => currentPage.screenshot({
         path: path.join(outputDir, `${profile.name}-game.png`),
         fullPage: true,
@@ -476,7 +483,7 @@ try {
         fullPage: true,
       }), 10_000, '保存失败截图');
     } catch {
-      // 页面线程卡死时，失败阶段和控制台记录仍会被保存。
+      // 页面线程卡死时，失败阶段和控制台记录仍会写入 JSON。
     }
   }
   auditFailure = {
