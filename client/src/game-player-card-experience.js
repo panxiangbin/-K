@@ -7,6 +7,8 @@ const PLAYER_STATE_LABELS = {
   ready: '等待中',
 };
 
+const cardSignatures = new WeakMap();
+
 function findPlayerCards(root) {
   const stage = root?.querySelector?.('.game-table-stage');
   const handDock = root?.querySelector?.('.game-table-hand-dock');
@@ -26,8 +28,18 @@ function findPlayerCards(root) {
   return cards;
 }
 
+function readPlayerText(element) {
+  if (!element) return '';
+  return [...element.childNodes]
+    .filter(node => !(node.nodeType === 1 && node.classList?.contains('game-player-card__state')))
+    .map(node => node.textContent || '')
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function readPlayerState(element) {
-  const text = element?.textContent || '';
+  const text = readPlayerText(element);
   const opacity = Number.parseFloat(element?.style?.opacity || '1');
   const current = text.includes('出牌中');
   const left = text.includes('已退出');
@@ -44,7 +56,7 @@ function readPlayerState(element) {
 }
 
 function extractPlayerSummary(element, fallbackLabel) {
-  const text = (element?.textContent || '').replace(/\s+/g, ' ').trim();
+  const text = readPlayerText(element);
   const cardMatch = text.match(/(\d+)张/);
   const scoreMatch = text.match(/(\d+)分/);
   const state = readPlayerState(element);
@@ -68,21 +80,28 @@ function ensureStateBadge(element, state) {
   if (badge.textContent !== label) badge.textContent = label;
 }
 
+function getCardSignature(element, position, label) {
+  return `${position}|${label}|${readPlayerText(element)}|${element?.style?.opacity || ''}`;
+}
+
 function enhancePlayerCard({ element, position, label }) {
   if (!element) return;
+  const signature = getCardSignature(element, position, label);
+  if (cardSignatures.get(element) === signature && element.querySelector(':scope > .game-player-card__state')) return;
+
   const state = readPlayerState(element);
   element.classList.add('game-player-card', `game-player-card--${position}`);
   if (element.dataset.playerState !== state) element.dataset.playerState = state;
-  element.setAttribute('role', 'group');
+  if (element.getAttribute('role') !== 'group') element.setAttribute('role', 'group');
   const summary = extractPlayerSummary(element, label);
   if (element.getAttribute('aria-label') !== summary) element.setAttribute('aria-label', summary);
   ensureStateBadge(element, state);
 
   const avatar = element.firstElementChild;
   if (avatar) avatar.classList.add('game-player-card__avatar');
-
   const textNodes = [...element.children].filter(child => child !== avatar && !child.classList.contains('game-player-card__state'));
   textNodes.forEach((child, index) => child.classList.add(index === 0 ? 'game-player-card__name' : 'game-player-card__meta'));
+  cardSignatures.set(element, getCardSignature(element, position, label));
 }
 
 function enhanceGamePlayerCards(root) {
@@ -101,25 +120,30 @@ function resolveRoot(root) {
 export function installGamePlayerCardExperience(root = null) {
   const resolvedRoot = resolveRoot(root);
   if (!resolvedRoot || typeof MutationObserver === 'undefined') return () => {};
-  let queued = false;
+  const scheduleFrame = globalThis.requestAnimationFrame?.bind(globalThis) || (callback => setTimeout(callback, 16));
+  const cancelFrame = globalThis.cancelAnimationFrame?.bind(globalThis) || clearTimeout;
+  let frameId = 0;
+
   const run = () => {
-    if (queued) return;
-    queued = true;
-    queueMicrotask(() => {
-      queued = false;
+    if (frameId) return;
+    frameId = scheduleFrame(() => {
+      frameId = 0;
       enhanceGamePlayerCards(resolvedRoot);
     });
   };
+
   const observer = new MutationObserver(run);
   observer.observe(resolvedRoot, {
     childList: true,
     subtree: true,
     characterData: true,
-    attributes: true,
-    attributeFilter: ['style', 'class'],
   });
   run();
-  return () => observer.disconnect();
+  return () => {
+    observer.disconnect();
+    if (frameId) cancelFrame(frameId);
+    frameId = 0;
+  };
 }
 
-export { enhanceGamePlayerCards, findPlayerCards, readPlayerState, extractPlayerSummary };
+export { enhanceGamePlayerCards, findPlayerCards, readPlayerState, extractPlayerSummary, readPlayerText }; 
