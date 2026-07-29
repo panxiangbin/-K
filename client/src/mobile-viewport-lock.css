@@ -1,0 +1,38 @@
+/* 最终手机视口锁：不再依赖移动浏览器对 svh/dvh 的差异解释。 */
+@media (max-width: 680px) and (orientation: portrait) {
+  html[data-ui-theme="ink-06"] .game-table-shell {
+    position: fixed !important;
+    inset: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-hand-dock {
+    max-height: min(40dvh, 318px) !important;
+  }
+}
+
+@media (max-width: 680px) and (orientation: portrait) and (max-height: 740px) {
+  html[data-ui-theme="ink-06"] .game-table-hand-dock {
+    max-height: min(43dvh, 286px) !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 430px) {
+  html[data-ui-theme="ink-06"] .game-table-shell {
+    position: fixed !important;
+    inset: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-ui-theme="ink-06"] .game-table-hand-dock {
+    max-height: 128px !important;
+  }
+}
