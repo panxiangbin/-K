@@ -134,6 +134,14 @@ async function enterSoloGame(page) {
   await page.waitForTimeout(500);
 }
 
+async function readSelectedCount(page) {
+  return page.evaluate(() => {
+    const playText = document.querySelector('.btn-play')?.textContent || '';
+    const match = playText.match(/\((\d+)\)/);
+    return Number(match?.[1] || 0);
+  });
+}
+
 async function auditPlayableTable(page, label, expectedPresentation) {
   const metrics = await page.evaluate(() => {
     const rect = selector => {
@@ -173,12 +181,16 @@ async function auditPlayableTable(page, label, expectedPresentation) {
 
   const targetCard = page.locator('[data-card-id]').last();
   const cardId = await targetCard.getAttribute('data-card-id');
+  const selectedBefore = await readSelectedCount(page);
   await targetCard.click();
-  await page.waitForFunction(id => {
-    const card = [...document.querySelectorAll('[data-card-id]')].find(node => node.dataset.cardId === id);
-    return card?.getAttribute('aria-pressed') === 'true';
-  }, cardId, { timeout: 10_000 });
-  return { ...metrics, selectedCardId: cardId };
+  await page.waitForFunction(before => {
+    const playText = document.querySelector('.btn-play')?.textContent || '';
+    const match = playText.match(/\((\d+)\)/);
+    const selectedNow = Number(match?.[1] || 0);
+    return selectedNow !== before;
+  }, selectedBefore, { timeout: 10_000 });
+  const selectedAfter = await readSelectedCount(page);
+  return { ...metrics, selectedCardId: cardId, selectedBefore, selectedAfter };
 }
 
 async function rotateToNativeLandscape(page, label) {
