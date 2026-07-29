@@ -79,7 +79,11 @@ for (const required of [
   'height: auto !important',
   'min-height: 0 !important',
   'max-height: none !important',
-  'max-height: min(40dvh, 318px) !important',
+  'grid-template-rows: 34px 26px minmax(88px, 96px) 92px !important',
+  'grid-template-rows: repeat(2, 42px) !important',
+  'height: 42px !important',
+  'grid-template-rows: 52px 80px !important',
+  'grid-template-rows: repeat(2, 38px) !important',
   '@media (orientation: landscape) and (max-height: 430px)',
 ]) assert(viewportLock.includes(required), `mobile viewport lock must include ${required}`);
 
