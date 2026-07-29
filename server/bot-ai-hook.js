@@ -2,6 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const Module = require('module');
 const { transformServerSource } = require('./runtime-hook-contract');
+const { installJokerPairRule } = require('./joker-pair-rule');
+
+// 在服务器入口和电脑AI加载规则模块前统一安装：任何王都不能组成普通对子。
+installJokerPairRule(require('./game-logic'));
 
 const targetFile = path.resolve(__dirname, 'index.js');
 const originalJsLoader = Module._extensions['.js'];
