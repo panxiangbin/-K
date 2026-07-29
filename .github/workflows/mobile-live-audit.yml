@@ -1,11 +1,6 @@
-name: Mobile live audit
+name: Public Pages stability audit
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'client/**'
-      - '.github/workflows/mobile-live-audit.yml'
   pull_request:
     branches: [main]
     paths:
@@ -17,17 +12,17 @@ permissions:
   contents: read
 
 concurrency:
-  group: mobile-live-audit-${{ github.event.pull_request.number || github.ref }}
+  group: public-pages-stability-audit-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   audit:
-    name: Chromium phone operability
+    name: Public Pages four-phone and WebSocket stability
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
     steps:
-      - name: Checkout repository
+      - name: Checkout verified audit code
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -45,19 +40,29 @@ jobs:
         working-directory: client
         run: npx playwright install --with-deps chromium
 
-      - name: Wait for Render and audit four phone sizes
+      - name: Audit public Pages release on four phone sizes
         working-directory: client
         env:
-          MOBILE_AUDIT_URL: https://henan-50k.onrender.com
+          MOBILE_AUDIT_URL: https://panxiangbin.github.io/pan/50k
           EXPECTED_UI_RELEASE: ink-06-mobile-r4
-          RELEASE_TIMEOUT_MS: 720000
+          RELEASE_TIMEOUT_MS: 180000
         run: node mobile-live-audit.mjs
 
-      - name: Upload phone screenshots and report
+      - name: Verify public Render WebSocket remains stable
+        working-directory: client
+        env:
+          PUBLIC_GAME_URL: https://panxiangbin.github.io/pan/50k
+          EXPECTED_UI_RELEASE: ink-06-mobile-r4
+          WEBSOCKET_STABLE_WINDOW_MS: 8000
+        run: node public-websocket-stability.mjs
+
+      - name: Upload public phone screenshots and report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-live-audit-${{ github.run_attempt }}
-          path: client/mobile-audit-artifacts
+          name: public-pages-stability-audit-${{ github.run_attempt }}
+          path: |
+            client/mobile-audit-artifacts
+            client/public-websocket-stability-artifacts
           if-no-files-found: warn
           retention-days: 14
