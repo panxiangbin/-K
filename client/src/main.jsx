@@ -56,6 +56,7 @@ import './mobile-game-layout-r4.css';
 import './mobile-game-layout-r4-structure.css';
 import './mobile-viewport-lock.css';
 import './landscape-mode.css';
+import './forced-landscape-lobby-r3.css';
 
 installRemoteBackendWebSocket();
 installNestedAudioBase();
