@@ -27,9 +27,14 @@ assert.match(moduleSource, /黑四/, '必须识别黑四炸弹');
 assert.match(moduleSource, /红四/, '必须识别红四炸弹');
 assert.match(moduleSource, /八张/, '必须识别八张同点炸弹');
 assert.match(moduleSource, /四王/, '必须识别四王炸弹');
-assert.match(moduleSource, /dataset\.cardCount\s*=\s*String\(cardCount\)/, '行动卡必须记录实际牌张数');
-assert.match(moduleSource, /dataset\.specialPlay\s*=\s*specialPlay \|\| 'normal'/, '行动卡必须记录特殊牌型');
+assert.match(moduleSource, /cardCountValue = String\(cardCount\)/, '行动卡必须记录实际牌张数');
+assert.match(moduleSource, /specialValue = specialPlay \|\| 'normal'/, '行动卡必须记录特殊牌型');
 assert.match(moduleSource, /共\$\{cardCount\}张牌/, '读屏说明必须包含实际牌张数');
+assert.match(moduleSource, /badge\.textContent !== text|node\.textContent !== text/, '上一手文字必须幂等更新');
+assert.match(moduleSource, /if \(!badge\)/, '上一手徽标只能在缺失时创建');
+assert.match(moduleSource, /if \(badge\) badge\.remove\(\)/, '非上一手状态只在存在徽标时删除');
+assert.doesNotMatch(moduleSource, /removeLatestBadge\(cell\)/, '不得每次扫描都先删除上一手徽标');
+assert.doesNotMatch(moduleSource, /summary\.textContent\s*=/, '不得每次扫描都无条件重写上一手摘要');
 assert.doesNotMatch(moduleSource, /setInterval\s*\(/, '中央牌桌增强不得使用持续轮询');
 
 assert.match(css, /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/, '行动记录必须使用稳定两列布局');
