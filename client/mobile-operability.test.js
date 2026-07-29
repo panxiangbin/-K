@@ -6,6 +6,7 @@ const scrollHotfix = fs.readFileSync(new URL('./src/mobile-scroll-hotfix.css', i
 const overlayCss = fs.readFileSync(new URL('./src/mobile-game-overlay.css', import.meta.url), 'utf8');
 const layoutR4 = fs.readFileSync(new URL('./src/mobile-game-layout-r4.css', import.meta.url), 'utf8');
 const structureR4 = fs.readFileSync(new URL('./src/mobile-game-layout-r4-structure.css', import.meta.url), 'utf8');
+const viewportLock = fs.readFileSync(new URL('./src/mobile-viewport-lock.css', import.meta.url), 'utf8');
 const main = fs.readFileSync(new URL('./src/main.jsx', import.meta.url), 'utf8');
 const packageJson = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
@@ -72,11 +73,22 @@ for (const required of [
   'clip-path: inset(50%) !important',
 ]) assert(structureR4.includes(required), `mobile R4 structure map must include ${required}`);
 
+for (const required of [
+  'position: fixed !important',
+  'inset: 0 !important',
+  'height: auto !important',
+  'min-height: 0 !important',
+  'max-height: none !important',
+  'max-height: min(40dvh, 318px) !important',
+  '@media (orientation: landscape) and (max-height: 430px)',
+]) assert(viewportLock.includes(required), `mobile viewport lock must include ${required}`);
+
 assert.equal((css.match(/{/g) || []).length, (css.match(/}/g) || []).length, 'mobile operability CSS braces must balance');
 assert.equal((scrollHotfix.match(/{/g) || []).length, (scrollHotfix.match(/}/g) || []).length, 'mobile scroll hotfix CSS braces must balance');
 assert.equal((overlayCss.match(/{/g) || []).length, (overlayCss.match(/}/g) || []).length, 'mobile overlay CSS braces must balance');
 assert.equal((layoutR4.match(/{/g) || []).length, (layoutR4.match(/}/g) || []).length, 'mobile R4 layout CSS braces must balance');
 assert.equal((structureR4.match(/{/g) || []).length, (structureR4.match(/}/g) || []).length, 'mobile R4 structure CSS braces must balance');
+assert.equal((viewportLock.match(/{/g) || []).length, (viewportLock.match(/}/g) || []).length, 'mobile viewport lock CSS braces must balance');
 assert(!scrollHotfix.includes('grid-template-columns: repeat(5, minmax(0, 1fr))'), 'portrait hotfix must not force five actions into one cramped row');
 assert(!/(^|\n)\s*height:\s*auto\s*!important/.test(scrollHotfix), 'mobile lobby scroll container must have a bounded viewport height');
 assert(main.includes("import './mobile-operability.css';"), 'main entry must load mobile operability CSS');
@@ -84,10 +96,12 @@ assert(main.includes("import './mobile-scroll-hotfix.css';"), 'main entry must l
 assert(main.includes("import './mobile-game-overlay.css';"), 'main entry must load mobile overlay safeguards');
 assert(main.includes("import './mobile-game-layout-r4.css';"), 'main entry must load the stable mobile R4 layout');
 assert(main.includes("import './mobile-game-layout-r4-structure.css';"), 'main entry must load the four-row hand structure map');
+assert(main.includes("import './mobile-viewport-lock.css';"), 'main entry must load the final real viewport lock');
 assert(main.indexOf("import './mobile-scroll-hotfix.css';") > main.indexOf("import './mobile-operability.css';"), 'mobile scroll hotfix must load after mobile layout CSS');
 assert(main.indexOf("import './mobile-game-overlay.css';") > main.indexOf("import './mobile-scroll-hotfix.css';"), 'overlay safeguards must load after scroll hotfix');
 assert(main.indexOf("import './mobile-game-layout-r4.css';") > main.indexOf("import './mobile-game-overlay.css';"), 'mobile R4 layout must load after legacy mobile layers');
-assert(main.indexOf("import './mobile-game-layout-r4-structure.css';") > main.indexOf("import './mobile-game-layout-r4.css';"), 'four-row hand structure map must load last');
+assert(main.indexOf("import './mobile-game-layout-r4-structure.css';") > main.indexOf("import './mobile-game-layout-r4.css';"), 'four-row hand structure map must load after the base R4 layout');
+assert(main.indexOf("import './mobile-viewport-lock.css';") > main.indexOf("import './mobile-game-layout-r4-structure.css';"), 'real viewport lock must load last');
 assert(main.indexOf("import './mobile-operability.css';") > main.indexOf("import './ink-theme-release.css';"), 'mobile operability CSS must load after the visible theme release');
 assert(packageJson.scripts.test.includes('mobile-operability.test.js'), 'client test chain must include mobile operability regression');
 
