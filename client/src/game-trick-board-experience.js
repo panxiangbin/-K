@@ -8,6 +8,14 @@ function normalizeText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+function setTextIfChanged(node, text) {
+  if (node && node.textContent !== text) node.textContent = text;
+}
+
+function setAttributeIfChanged(node, name, value) {
+  if (node && node.getAttribute(name) !== value) node.setAttribute(name, value);
+}
+
 function findBoard() {
   return [...document.querySelectorAll('div')].find(element => {
     if (element.getAttribute(ENHANCED_ATTR) === 'true') return true;
@@ -53,8 +61,20 @@ function getCellSignature(cell, state) {
   return `${state}|${normalizeText(body?.textContent)}|${body?.children?.length || 0}`;
 }
 
-function removeLatestBadge(cell) {
-  cell.querySelector('.trick-action-card__latest-badge')?.remove();
+function syncLatestBadge(cell, isLatest) {
+  const header = cell.firstElementChild;
+  let badge = cell.querySelector(':scope > :first-child > .trick-action-card__latest-badge');
+  if (!isLatest) {
+    if (badge) badge.remove();
+    return;
+  }
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.className = 'trick-action-card__latest-badge';
+    badge.setAttribute('aria-hidden', 'true');
+    header?.appendChild(badge);
+  }
+  setTextIfChanged(badge, '上一手');
 }
 
 function setLatestCell(cells, latestKey) {
@@ -64,18 +84,10 @@ function setLatestCell(cells, latestKey) {
     cell.toggleAttribute(LATEST_ATTR, isLatest);
     cell.classList.toggle('is-latest-play', isLatest);
     cell.classList.toggle('is-history-play', cell.dataset.trickState === 'played' && !isLatest);
-
-    removeLatestBadge(cell);
-    if (isLatest) {
-      const badge = document.createElement('span');
-      badge.className = 'trick-action-card__latest-badge';
-      badge.textContent = '上一手';
-      badge.setAttribute('aria-hidden', 'true');
-      cell.firstElementChild?.appendChild(badge);
-    }
+    syncLatestBadge(cell, isLatest);
 
     const baseLabel = cell.dataset.trickAriaLabel || cell.getAttribute('aria-label') || key;
-    cell.setAttribute('aria-label', isLatest ? `${baseLabel}，这是上一手牌` : baseLabel);
+    setAttributeIfChanged(cell, 'aria-label', isLatest ? `${baseLabel}，这是上一手牌` : baseLabel);
   });
 }
 
@@ -93,8 +105,8 @@ function enhanceCell(cell, index) {
     'is-bomb',
   );
   cell.classList.add('trick-action-card', `is-${state}`);
-  cell.dataset.trickState = state;
-  cell.setAttribute('role', 'listitem');
+  if (cell.dataset.trickState !== state) cell.dataset.trickState = state;
+  setAttributeIfChanged(cell, 'role', 'listitem');
 
   const header = cell.firstElementChild;
   const body = cell.children[1];
@@ -111,14 +123,16 @@ function enhanceCell(cell, index) {
   const specialPlay = state === 'played' ? classifySpecialPlay(actionText) : '';
   const specialLabel = specialPlayLabel(specialPlay);
 
-  cell.dataset.cardCount = String(cardCount);
-  cell.dataset.specialPlay = specialPlay || 'normal';
+  const cardCountValue = String(cardCount);
+  if (cell.dataset.cardCount !== cardCountValue) cell.dataset.cardCount = cardCountValue;
+  const specialValue = specialPlay || 'normal';
+  if (cell.dataset.specialPlay !== specialValue) cell.dataset.specialPlay = specialValue;
   if (specialPlay) cell.classList.add(`is-${specialPlay}`);
 
   const cardCountText = cardCount > 0 ? `，共${cardCount}张牌` : '';
   const ariaLabel = `${seatText}，${specialLabel || actionText}${cardCountText}`;
-  cell.dataset.trickAriaLabel = ariaLabel;
-  cell.setAttribute('aria-label', ariaLabel);
+  if (cell.dataset.trickAriaLabel !== ariaLabel) cell.dataset.trickAriaLabel = ariaLabel;
+  setAttributeIfChanged(cell, 'aria-label', ariaLabel);
 
   const key = getCellKey(cell, index);
   const signature = getCellSignature(cell, state);
@@ -151,11 +165,11 @@ function updateLatestPlay(board, cellResults) {
   const summary = ensureLatestSummary(board);
   if (latest) {
     const label = latest.cell.dataset.trickAriaLabel || latest.key;
-    summary.textContent = `上一手：${label}`;
-    board.dataset.latestPlay = 'available';
+    setTextIfChanged(summary, `上一手：${label}`);
+    if (board.dataset.latestPlay !== 'available') board.dataset.latestPlay = 'available';
   } else {
-    summary.textContent = '本轮还没有玩家出牌';
-    board.dataset.latestPlay = 'empty';
+    setTextIfChanged(summary, '本轮还没有玩家出牌');
+    if (board.dataset.latestPlay !== 'empty') board.dataset.latestPlay = 'empty';
   }
 }
 
@@ -166,8 +180,8 @@ function enhanceBoard(board) {
   if (!header || !grid) return false;
 
   board.classList.add('trick-board-experience');
-  board.setAttribute(ENHANCED_ATTR, 'true');
-  board.setAttribute('aria-label', '本轮出牌与牌堆状态');
+  if (board.getAttribute(ENHANCED_ATTR) !== 'true') board.setAttribute(ENHANCED_ATTR, 'true');
+  setAttributeIfChanged(board, 'aria-label', '本轮出牌与牌堆状态');
 
   header.classList.add('trick-board-summary');
   const summaryItems = [...header.children];
@@ -180,19 +194,20 @@ function enhanceBoard(board) {
   meta?.classList.add('trick-board-summary__meta');
 
   if (turn) {
-    turn.setAttribute('role', 'status');
-    turn.setAttribute('aria-live', 'polite');
-    turn.setAttribute('aria-atomic', 'true');
+    setAttributeIfChanged(turn, 'role', 'status');
+    setAttributeIfChanged(turn, 'aria-live', 'polite');
+    setAttributeIfChanged(turn, 'aria-atomic', 'true');
   }
 
   grid.classList.add('trick-action-grid');
-  grid.setAttribute('role', 'list');
-  grid.setAttribute('aria-label', '本轮四位玩家行动');
+  setAttributeIfChanged(grid, 'role', 'list');
+  setAttributeIfChanged(grid, 'aria-label', '本轮四位玩家行动');
   const cellResults = [...grid.children].map(enhanceCell);
   updateLatestPlay(board, cellResults);
 
   const hasPlayed = cellResults.some(result => result.state === 'played');
-  board.dataset.trickPhase = hasPlayed ? 'active' : 'empty';
+  const phase = hasPlayed ? 'active' : 'empty';
+  if (board.dataset.trickPhase !== phase) board.dataset.trickPhase = phase;
   return true;
 }
 
@@ -219,6 +234,7 @@ function installGameTrickBoardExperience() {
 }
 
 export {
+  BOARD_SELECTOR,
   classifyCell,
   classifySpecialPlay,
   enhanceBoard,
