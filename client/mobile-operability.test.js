@@ -20,9 +20,7 @@ for (const required of [
   'max-width: 100vw',
   'env(safe-area-inset-bottom)',
   '@media (orientation: landscape) and (max-height: 430px)',
-]) {
-  assert(css.includes(required), `mobile operability CSS must include ${required}`);
-}
+]) assert(css.includes(required), `mobile operability CSS must include ${required}`);
 
 for (const required of [
   'height: 100vh !important',
@@ -37,9 +35,7 @@ for (const required of [
   'grid-column: span 4',
   '左右滑动查看全部手牌',
   'min-height: 52px !important',
-]) {
-  assert(scrollHotfix.includes(required), `mobile scroll and controls hotfix must include ${required}`);
-}
+]) assert(scrollHotfix.includes(required), `mobile scroll and controls hotfix must include ${required}`);
 
 for (const required of [
   'body:has(.game-table-shell) button[aria-label^="炸弹人声"]',
@@ -47,9 +43,7 @@ for (const required of [
   'top: max(66px',
   'width: 40px !important',
   '@media (orientation: landscape) and (max-height: 430px)',
-]) {
-  assert(overlayCss.includes(required), `mobile overlay safeguards must include ${required}`);
-}
+]) assert(overlayCss.includes(required), `mobile overlay safeguards must include ${required}`);
 
 for (const required of [
   'grid-template-rows: auto minmax(0, 1fr) auto !important',
@@ -62,9 +56,7 @@ for (const required of [
   '.game-hand-surface[data-hand-scrolling="true"]',
   '-webkit-touch-callout: none',
   '@media (max-width: 680px) and (orientation: portrait) and (max-height: 740px)',
-]) {
-  assert(layoutR4.includes(required), `mobile R4 layout must include ${required}`);
-}
+]) assert(layoutR4.includes(required), `mobile R4 layout must include ${required}`);
 
 for (const required of [
   'grid-template-rows: auto auto minmax(88px, 108px) auto !important',
@@ -74,9 +66,11 @@ for (const required of [
   'grid-row: 4',
   'grid-template-rows: auto auto minmax(82px, 96px) auto !important',
   'grid-template-rows: minmax(56px, 72px) auto !important',
-]) {
-  assert(structureR4.includes(required), `mobile R4 structure map must include ${required}`);
-}
+  '.game-action-feedback',
+  '.game-action-guidance',
+  'position: absolute !important',
+  'clip-path: inset(50%) !important',
+]) assert(structureR4.includes(required), `mobile R4 structure map must include ${required}`);
 
 assert.equal((css.match(/{/g) || []).length, (css.match(/}/g) || []).length, 'mobile operability CSS braces must balance');
 assert.equal((scrollHotfix.match(/{/g) || []).length, (scrollHotfix.match(/}/g) || []).length, 'mobile scroll hotfix CSS braces must balance');
