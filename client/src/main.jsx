@@ -58,7 +58,19 @@ installRemoteBackendWebSocket();
 installNestedAudioBase();
 ReactDOM.createRoot(document.getElementById('root')).render(<><App /><RulesHelpLauncher /></>);
 
+const disabledStartupEnhancers = new Set(
+  new URLSearchParams(globalThis.location?.search || '')
+    .get('disable-enhancers')
+    ?.split(',')
+    .map(name => name.trim())
+    .filter(Boolean) || [],
+);
+
 function installStartupEnhancer(name, install) {
+  if (disabledStartupEnhancers.has(name)) {
+    console.info(`[startup:${name}] disabled for diagnostic`);
+    return;
+  }
   try {
     install();
   } catch (error) {
