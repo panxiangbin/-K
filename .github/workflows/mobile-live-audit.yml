@@ -1,4 +1,4 @@
-name: Landscape live audit
+name: Landscape compatibility audit
 
 on:
   push:
@@ -19,14 +19,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: landscape-live-audit-${{ github.event.pull_request.number || github.ref }}
+  group: landscape-compatibility-audit-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   audit:
-    name: Portrait gate and landscape table
+    name: Chromium and WebKit forced/native landscape
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -78,13 +78,13 @@ jobs:
           cat "${RUNNER_TEMP}/henan-50k-preview.log" || true
           exit 1
 
-      - name: Install Playwright Chromium
+      - name: Install Playwright Chromium and WebKit
         working-directory: client
         run: |
           npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.54.1
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium webkit
 
-      - name: Audit portrait gate and two landscape tables
+      - name: Audit failed orientation lock fallback and native rotation
         working-directory: client
         env:
           LANDSCAPE_AUDIT_URL: http://127.0.0.1:4173/pan/50k
@@ -95,7 +95,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: landscape-live-audit-${{ github.run_attempt }}
+          name: landscape-compatibility-audit-${{ github.run_attempt }}
           path: client/landscape-audit-artifacts
           if-no-files-found: warn
           retention-days: 14
@@ -104,7 +104,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pan-50k-landscape-dist-${{ github.run_attempt }}
+          name: pan-50k-landscape-r2-dist-${{ github.run_attempt }}
           path: client/dist
           if-no-files-found: error
           retention-days: 14
