@@ -12,7 +12,7 @@ for (const term of FORBIDDEN_RULE_TERMS) assert.equal(rulesText.includes(term), 
 
 for (const required of [
   '单张、对子、三张、四至七张同点牌',
-  '小王和大王不能组成普通对子',
+  '任何王都不能组成普通对子，包括两个小王、两个大王或大小王',
   '3 < 4 < 5 < 6 < 7 < 8 < 9 < 10 < J < Q < K < A < 2 < 小王 < 大王',
   '黑桃 > 红桃 > 梅花 > 方块',
   '同点时黑四大于红四',
