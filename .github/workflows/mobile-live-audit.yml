@@ -1,11 +1,6 @@
-name: Mobile live audit
+name: Public landscape audit
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'client/**'
-      - '.github/workflows/mobile-live-audit.yml'
   pull_request:
     branches: [main]
     paths:
@@ -17,17 +12,17 @@ permissions:
   contents: read
 
 concurrency:
-  group: mobile-live-audit-${{ github.event.pull_request.number || github.ref }}
+  group: public-landscape-audit-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   audit:
-    name: Chromium phone operability
+    name: Public portrait gate, landscape table and WebSocket
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
     steps:
-      - name: Checkout repository
+      - name: Checkout verified audit code
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -37,27 +32,38 @@ jobs:
           cache: npm
           cache-dependency-path: client/package-lock.json
 
-      - name: Install browser audit dependency
+      - name: Install client and browser audit dependency
         working-directory: client
-        run: npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.54.1
+        run: |
+          npm ci --include=dev --no-audit --no-fund
+          npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.54.1
 
       - name: Install Chromium
         working-directory: client
         run: npx playwright install --with-deps chromium
 
-      - name: Wait for Render and audit four phone sizes
+      - name: Audit public portrait gate and landscape tables
         working-directory: client
         env:
-          MOBILE_AUDIT_URL: https://henan-50k.onrender.com
+          LANDSCAPE_AUDIT_URL: https://panxiangbin.github.io/pan/50k
           EXPECTED_UI_RELEASE: ink-06-mobile-r4
-          RELEASE_TIMEOUT_MS: 720000
-        run: node mobile-live-audit.mjs
+        run: node landscape-live-audit.mjs
 
-      - name: Upload phone screenshots and report
+      - name: Verify public landscape WebSocket stability
+        working-directory: client
+        env:
+          PUBLIC_LANDSCAPE_URL: https://panxiangbin.github.io/pan/50k
+          EXPECTED_UI_RELEASE: ink-06-mobile-r4
+          WEBSOCKET_STABLE_WINDOW_MS: 8000
+        run: node public-landscape-stability.mjs
+
+      - name: Upload public landscape screenshots and reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-live-audit-${{ github.run_attempt }}
-          path: client/mobile-audit-artifacts
+          name: public-landscape-audit-${{ github.run_attempt }}
+          path: |
+            client/landscape-audit-artifacts
+            client/public-landscape-stability-artifacts
           if-no-files-found: warn
           retention-days: 14
