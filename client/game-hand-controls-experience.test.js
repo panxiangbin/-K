@@ -12,11 +12,16 @@ assert.match(source, /Math\.hypot/, 'slide intent should use pointer distance ra
 assert.match(source, /Math\.abs\(dx\) >= Math\.abs\(dy\)/, 'touch guard should only commit horizontal hand browsing');
 assert.match(source, /pointerType: event\.pointerType \|\| 'mouse'/, 'slide guard must remember the input device');
 assert.match(source, /active\.pointerType !== 'mouse'/, 'touch and pen movement must be reserved for hand scrolling');
+assert.match(source, /startScrollLeft: Number\(surface\.scrollLeft\) \|\| 0/, 'touch browsing must remember the starting scroll position');
+assert.match(source, /maxScrollLeft = Math\.max\(0, active\.surface\.scrollWidth - active\.surface\.clientWidth\)/, 'manual scroll fallback must stay within the hand bounds');
+assert.match(source, /targetScrollLeft = Math\.max/, 'touch browsing must calculate a bounded horizontal target');
+assert.match(source, /active\.surface\.scrollLeft = targetScrollLeft/, 'touch browsing must provide a direct scroll fallback');
 assert.match(source, /suppressClickUntil/, 'touch swipe guard must remember a short click suppression window');
 assert.match(source, /dataset\.handScrolling = 'true'/, 'hand surface should expose its active scrolling state');
 assert.match(source, /root\.addEventListener\('click'/, 'the guard must intercept the synthetic click after a swipe');
-assert.match(source, /event\.preventDefault\(\)/, 'only the synthetic post-swipe click should be cancelled');
+assert.match(source, /event\.preventDefault\(\)/, 'committed touch browsing and its synthetic click must be cancelled before card selection');
 assert.match(source, /event\.stopImmediatePropagation\(\)/, 'touch movement and synthetic clicks must not reach React card selection');
+assert.match(source, /touch-action: pan-x/, 'native horizontal browser scrolling must remain enabled alongside the fallback');
 assert.match(source, /左右滑动查看全部手牌/, 'mobile accessibility instructions must explain horizontal hand browsing');
 assert.match(source, /pointercancel/, 'pointer cancellation must clear slide intent state');
 assert.match(source, /role', 'group'/, 'hand actions should expose grouped semantics');
