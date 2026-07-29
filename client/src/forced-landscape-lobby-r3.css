@@ -1,0 +1,43 @@
+/* R3: 真实窄屏兼容横屏大厅。只移除装饰与重复标签，确保所有开局按钮无需滚动即可触摸。 */
+body.force-landscape-active .lobby-panel::before,
+body.force-landscape-active .lobby-eyebrow,
+body.force-landscape-active .lobby-field label {
+  display: none !important;
+}
+
+body.force-landscape-active .lobby-panel {
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+body.force-landscape-active .lobby-status {
+  min-height: 30px !important;
+  margin-bottom: 6px !important;
+  padding-top: 5px !important;
+  padding-bottom: 5px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+body.force-landscape-active .lobby-view-heading {
+  margin-bottom: 6px !important;
+}
+
+body.force-landscape-active .lobby-field {
+  margin-bottom: 6px !important;
+}
+
+body.force-landscape-active .lobby-field input,
+body.force-landscape-active .lobby-button {
+  min-height: 38px !important;
+}
+
+body.force-landscape-active .lobby-solo-button {
+  margin-bottom: 6px !important;
+}
+
+body.force-landscape-active .lobby-field-hint {
+  margin-top: 4px !important;
+  line-height: 1.2 !important;
+}
