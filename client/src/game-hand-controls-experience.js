@@ -79,6 +79,7 @@ export function installSlideIntentGuard(root = document) {
       x: event.clientX,
       y: event.clientY,
       surface,
+      startScrollLeft: Number(surface.scrollLeft) || 0,
       committed: false,
     };
   }, true);
@@ -96,8 +97,17 @@ export function installSlideIntentGuard(root = document) {
         suppressClickUntil = Date.now() + TOUCH_CLICK_SUPPRESSION_MS;
         setScrolling(active.surface, true);
       }
-      // 不取消浏览器默认行为，让 touch-action: pan-x 承担真实横向滚动；
-      // 这里只阻止 React 的连续选牌逻辑收到触屏移动事件。
+      if (active.committed) {
+        const maxScrollLeft = Math.max(0, active.surface.scrollWidth - active.surface.clientWidth);
+        const targetScrollLeft = Math.max(0, Math.min(maxScrollLeft, active.startScrollLeft - dx));
+        if (Math.abs(active.surface.scrollLeft - targetScrollLeft) > 0.5) {
+          active.surface.scrollLeft = targetScrollLeft;
+        }
+        // 保留 touch-action: pan-x 给支持原生滚动的浏览器；直接设置 scrollLeft
+        // 作为合成触屏、部分 WebView 和系统手势冲突时的可靠兜底。
+        event.preventDefault();
+      }
+      // 阻止 React 的连续选牌逻辑收到触屏移动事件，避免横滑误选。
       event.stopImmediatePropagation();
       return;
     }
