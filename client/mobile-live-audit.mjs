@@ -285,8 +285,44 @@ async function dispatchLegacyTouchSwipe(session, page, { startX, endX, y }) {
   await page.waitForTimeout(350);
 }
 
+async function dispatchDomTouchSwipe(hand, page, { startX, endX, y }) {
+  await hand.evaluate((node, gesture) => {
+    const makeTouch = x => new Touch({
+      identifier: 41,
+      target: node,
+      clientX: x,
+      clientY: gesture.y,
+      screenX: x,
+      screenY: gesture.y,
+      pageX: x,
+      pageY: gesture.y,
+      radiusX: 2,
+      radiusY: 2,
+      force: 1,
+    });
+    const emit = (type, touches, changedTouches) => node.dispatchEvent(new TouchEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      touches,
+      targetTouches: touches,
+      changedTouches,
+    }));
+
+    let touch = makeTouch(gesture.startX);
+    emit('touchstart', [touch], [touch]);
+    for (let step = 1; step <= 10; step += 1) {
+      const x = gesture.startX + (gesture.endX - gesture.startX) * (step / 10);
+      touch = makeTouch(x);
+      emit('touchmove', [touch], [touch]);
+    }
+    emit('touchend', [], [touch]);
+  }, { startX, endX, y });
+  await page.waitForTimeout(520);
+}
+
 async function verifyTouchSwipeDoesNotSelect(page, profile) {
-  if (!profile.portrait) return;
+  if (!profile.portrait) return { method: 'not-required' };
   const hand = page.locator('.game-hand-surface[data-hand-interaction="true"]');
   const box = await hand.boundingBox();
   assert(box, `${profile.name}: 无法取得手牌触控区域`);
@@ -298,30 +334,55 @@ async function verifyTouchSwipeDoesNotSelect(page, profile) {
   const endX = box.x + box.width * 0.22;
   const y = box.y + box.height * 0.56;
   const distance = Math.max(120, Math.min(240, startX - endX));
+  const attempts = [];
 
-  await session.send('Input.synthesizeScrollGesture', {
-    x: startX,
-    y,
-    xDistance: -distance,
-    yDistance: 0,
-    speed: 800,
-    gestureSourceType: 'touch',
-    preventFling: true,
-  });
-  await page.waitForTimeout(400);
-  let after = await readSwipeState(hand);
+  const synthesize = async (xDistance, method) => {
+    await session.send('Input.synthesizeScrollGesture', {
+      x: startX,
+      y,
+      xDistance,
+      yDistance: 0,
+      speed: 800,
+      gestureSourceType: 'touch',
+      preventFling: true,
+    });
+    await page.waitForTimeout(400);
+    const state = await readSwipeState(hand);
+    attempts.push({ method, scrollLeft: state.scrollLeft });
+    return state;
+  };
+
+  let method = 'cdp-negative';
+  let after = await synthesize(-distance, method);
 
   if (after.scrollLeft <= before.scrollLeft) {
-    await dispatchLegacyTouchSwipe(session, page, { startX, endX, y });
-    after = await readSwipeState(hand);
+    method = 'cdp-positive';
+    after = await synthesize(distance, method);
   }
 
+  if (after.scrollLeft <= before.scrollLeft) {
+    method = 'legacy-touch';
+    await dispatchLegacyTouchSwipe(session, page, { startX, endX, y });
+    after = await readSwipeState(hand);
+    attempts.push({ method, scrollLeft: after.scrollLeft });
+  }
+
+  if (after.scrollLeft <= before.scrollLeft) {
+    method = 'dom-touch-event';
+    await dispatchDomTouchSwipe(hand, page, { startX, endX, y });
+    after = await readSwipeState(hand);
+    attempts.push({ method, scrollLeft: after.scrollLeft });
+  }
+
+  const scrollWidth = await hand.evaluate(node => node.scrollWidth);
+  const clientWidth = await hand.evaluate(node => node.clientWidth);
   assert(
     after.scrollLeft > before.scrollLeft,
-    `${profile.name}: 触屏滑动没有移动手牌（before=${before.scrollLeft}, after=${after.scrollLeft}, scrollWidth=${await hand.evaluate(node => node.scrollWidth)}, clientWidth=${await hand.evaluate(node => node.clientWidth)}）`,
+    `${profile.name}: 触屏滑动没有移动手牌（before=${before.scrollLeft}, after=${after.scrollLeft}, scrollWidth=${scrollWidth}, clientWidth=${clientWidth}, attempts=${JSON.stringify(attempts)}）`,
   );
   assert(after.selected === 0, `${profile.name}: 横向滑手牌后误选了牌`);
   assert(after.scrolling === '', `${profile.name}: 滑动结束后仍残留滚动状态`);
+  return { method, before, after, attempts, scrollWidth, clientWidth };
 }
 
 async function verifyCardTap(page, profile) {
@@ -391,7 +452,7 @@ try {
       await runPhase(auditState, profile.name, '进入三人单机', () => enterSoloGame(currentPage), 160_000);
       const metrics = await runPhase(auditState, profile.name, '读取牌桌布局', () => collectMetrics(currentPage, profile), 20_000);
       await runPhase(auditState, profile.name, '校验牌桌布局', async () => validateMetrics(metrics, profile), 10_000);
-      await runPhase(auditState, profile.name, '触屏横滑手牌', () => verifyTouchSwipeDoesNotSelect(currentPage, profile), 30_000);
+      diagnostics.swipe = await runPhase(auditState, profile.name, '触屏横滑手牌', () => verifyTouchSwipeDoesNotSelect(currentPage, profile), 30_000);
       await runPhase(auditState, profile.name, '轻点选择手牌', () => verifyCardTap(currentPage, profile), 30_000);
       await runPhase(auditState, profile.name, '保存牌桌截图', () => currentPage.screenshot({
         path: path.join(outputDir, `${profile.name}-game.png`),
