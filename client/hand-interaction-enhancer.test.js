@@ -36,7 +36,9 @@ assert.match(css, /data-hand-density='dense'/, '牌多时必须启用密集布�
 assert.match(css, /--hand-overlap:\s*-28px/, '窄屏密集手牌必须减少过度重叠');
 assert.match(css, /env\(safe-area-inset-right\)/, '手牌末端必须避开系统安全区');
 assert.match(css, /forced-colors:\s*active/, '必须支持高对比度模式');
-assert.match(css, /touch-action:\s*none/, '连续滑动选牌必须阻止页面误滚动');
+assert.match(css, /touch-action:\s*none/, '桌面连续拖动选牌仍需阻止页面误滚动');
+assert.match(css, /@media \(pointer: coarse\)[\s\S]*?\[data-card-id\][\s\S]*?touch-action:\s*pan-x\s*!important/, '手指按在牌面上也必须允许横滑手牌');
+assert.match(css, /@media \(orientation: portrait\) and \(max-width: 680px\)[\s\S]*?touch-action:\s*pan-x\s*!important/, '手机竖屏必须保留原生横滑');
 assert.match(css, /prefers-reduced-motion:\s*reduce/, '必须支持减弱动态');
 assert.doesNotMatch(css, /--card-w\s*:/, '本轮不得缩小扑克牌宽度');
 assert.doesNotMatch(css, /--card-h\s*:/, '本轮不得缩小扑克牌高度');
