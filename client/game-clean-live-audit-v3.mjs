@@ -117,7 +117,8 @@ async function playLegalTurn(page, label, number) {
       if (await pass.isEnabled().catch(() => false)) { await pass.tap(); continue; }
       const firstCard = page.locator('[data-card-id]').first();
       assert(await firstCard.count(), `${label}:第${number}次出牌没有可选手牌`);
-      await firstCard.tap();
+      // 手牌采用重叠排布，普通 tap 可能被后一张牌拦截；强制点击当前 DOM 目标只用于审计兜底。
+      await firstCard.click({ force: true });
       await page.waitForFunction(() => /出牌\(\d+\)/.test(document.querySelector('.btn-play')?.textContent || ''), null, { timeout: 5_000 });
     }
     const selectedText = (await page.locator('.game-hand-selection-status').textContent())?.replace(/\s+/g, ' ').trim() || '';
