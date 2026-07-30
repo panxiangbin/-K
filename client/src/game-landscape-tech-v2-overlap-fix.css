@@ -1,0 +1,56 @@
+/* 河南五十K：科技未来感横屏牌桌 V2
+ * 防止旧版 game-hand-actions / game-hand-surface 定位规则穿透，
+ * 确保手牌行与五个操作按钮行互不覆盖，真实触屏可点击最后一张牌。
+ */
+html[data-ui-theme='ink-06'] body.game-screen-tech-v2 .tech-hand-dock {
+  isolation: isolate !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-tech-v2 .tech-hand-dock > .tech-self-row,
+html[data-ui-theme='ink-06'] body.game-screen-tech-v2 .tech-hand-dock > .tech-selection-status,
+html[data-ui-theme='ink-06'] body.game-screen-tech-v2 .tech-hand-dock > .tech-hand-surface,
+html[data-ui-theme='ink-06'] body.game-screen-tech-v2 .tech-hand-dock > .tech-actions {
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  margin: 0 !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-tech-v2 .tech-hand-surface {
+  z-index: 1 !important;
+  grid-row: 3 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  clip-path: inset(0) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-tech-v2 .tech-hand-cards,
+html[data-ui-theme='ink-06'] body.game-screen-tech-v2 .tech-hand-cards [data-card-id] {
+  position: relative !important;
+  inset: auto !important;
+  bottom: auto !important;
+  z-index: 1 !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-tech-v2 .tech-actions {
+  z-index: 2 !important;
+  grid-row: 4 !important;
+  align-self: stretch !important;
+  pointer-events: auto !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-tech-v2 .tech-actions button,
+html[data-ui-theme='ink-06'] body.game-screen-tech-v2 .tech-actions .game-hand-action {
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}

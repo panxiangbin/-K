@@ -59,6 +59,7 @@ import './mobile-viewport-lock.css';
 import './landscape-mode.css';
 import './forced-landscape-lobby-r3.css';
 import './game-landscape-tech-v2.css';
+import './game-landscape-tech-v2-overlap-fix.css';
 
 installRemoteBackendWebSocket();
 installNestedAudioBase();

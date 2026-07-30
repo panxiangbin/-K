@@ -91,12 +91,20 @@ jobs:
           EXPECTED_UI_RELEASE: ink-06-mobile-r4
         run: node landscape-live-audit.mjs
 
-      - name: Upload landscape screenshots and report
+      - name: Audit technology table V2 real play and clipping
+        working-directory: client
+        env:
+          GAME_TECH_AUDIT_URL: http://127.0.0.1:4173/pan/50k
+        run: node game-tech-live-audit-v2.mjs
+
+      - name: Upload landscape screenshots and reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: landscape-compatibility-audit-${{ github.run_attempt }}
-          path: client/landscape-audit-artifacts
+          path: |
+            client/landscape-audit-artifacts
+            client/game-tech-audit-artifacts
           if-no-files-found: warn
           retention-days: 14
 
