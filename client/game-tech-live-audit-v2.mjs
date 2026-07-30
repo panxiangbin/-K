@@ -3,8 +3,12 @@ import path from 'node:path';
 import process from 'node:process';
 import { chromium, webkit } from 'playwright';
 
-const target = process.env.GAME_TECH_AUDIT_URL || 'http://127.0.0.1:4173/pan/50k';
-const outputDir = path.resolve('game-tech-audit-artifacts');
+const target = process.env.GAME_TECH_AUDIT_URL
+  || process.env.GAME_CLEAN_AUDIT_URL
+  || 'http://127.0.0.1:4173/pan/50k';
+const outputDir = path.resolve(
+  process.env.GAME_TECH_AUDIT_OUTPUT_DIR || 'game-tech-audit-artifacts',
+);
 const engines = [
   {
     name: 'chromium-android',
@@ -29,7 +33,6 @@ function diagnosticsFor(page) {
     requestFailures: [],
     httpErrors: [],
   };
-
   page.on('console', message => {
     if (message.type() === 'error') state.consoleErrors.push(message.text());
   });
@@ -45,7 +48,6 @@ function diagnosticsFor(page) {
       state.httpErrors.push({ url: response.url(), status: response.status() });
     }
   });
-
   return state;
 }
 
@@ -55,7 +57,6 @@ async function enterGame(page) {
     waitUntil: 'domcontentloaded',
     timeout: 90_000,
   });
-
   await page.waitForSelector('#henan50k-landscape-gate:not([hidden])', {
     state: 'visible',
     timeout: 60_000,
@@ -66,14 +67,12 @@ async function enterGame(page) {
     null,
     { timeout: 15_000 },
   );
-
   await page.locator('.lobby-solo-button').tap();
   await page.getByRole('heading', { name: '选择参与人数' }).waitFor({
     state: 'visible',
     timeout: 15_000,
   });
   await page.locator('.lobby-choice-grid .lobby-choice-card').first().tap();
-
   await page.waitForSelector('.tech-game-shell', { state: 'visible', timeout: 120_000 });
   await page.waitForSelector('.tech-actions', { state: 'visible', timeout: 30_000 });
   await page.waitForFunction(
@@ -98,7 +97,6 @@ async function inspect(page) {
         height: value.height,
       };
     };
-
     const logical = node => node ? {
       width: node.offsetWidth,
       height: node.offsetHeight,
@@ -107,11 +105,11 @@ async function inspect(page) {
       scrollWidth: node.scrollWidth,
       scrollHeight: node.scrollHeight,
     } : null;
-
     const one = selector => document.querySelector(selector);
     const shell = one('.tech-game-shell');
     const board = one('.tech-trick-board');
     const dock = one('.tech-hand-dock');
+    const hand = one('.tech-hand-surface');
     const actions = one('.tech-actions');
     const cards = [...document.querySelectorAll('[data-card-id]')];
     const buttons = [...document.querySelectorAll('.tech-actions button')].map(node => ({
@@ -124,7 +122,6 @@ async function inspect(page) {
       rect: rect(node),
       logical: logical(node),
     }));
-
     return {
       viewport: { width: innerWidth, height: innerHeight },
       presentation: document.documentElement.dataset.landscapePresentation || '',
@@ -135,9 +132,9 @@ async function inspect(page) {
       boardLogical: logical(board),
       dock: rect(dock),
       dockLogical: logical(dock),
+      hand: rect(hand),
       actions: rect(actions),
       actionsLogical: logical(actions),
-      selectionLogical: logical(one('.tech-selection-status')),
       buttons,
       cells,
       cardCount: cards.length,
@@ -145,7 +142,6 @@ async function inspect(page) {
         const value = node.getBoundingClientRect();
         return value.right > 0 && value.left < innerWidth && value.bottom > 0 && value.top < innerHeight;
       }).length,
-      boardText: board?.textContent?.replace(/\s+/g, ' ').trim() || '',
     };
   });
 }
@@ -164,7 +160,12 @@ function verifyLayout(data, label) {
   inside(data.shell, data.viewport, `${label}:牌桌`);
   inside(data.board, data.viewport, `${label}:中央出牌区`);
   inside(data.dock, data.viewport, `${label}:手牌区`);
+  inside(data.hand, data.viewport, `${label}:手牌滚动行`);
   inside(data.actions, data.viewport, `${label}:操作按钮区`);
+  assert(
+    data.hand.bottom <= data.actions.top + 2,
+    `${label}:操作按钮覆盖手牌 ${data.hand.bottom - data.actions.top}px`,
+  );
   assert(
     data.shellLogical?.width >= 800 && data.shellLogical?.height <= 410,
     `${label}:逻辑画布不是横版 ${JSON.stringify(data.shellLogical)}`,
@@ -206,7 +207,6 @@ function verifyLayout(data, label) {
 async function playLegalTurn(page, label, number) {
   const clear = page.getByRole('button', { name: /^清空$/ });
   if (await clear.isEnabled().catch(() => false)) await clear.tap();
-
   await page.waitForFunction(
     () => (document.querySelector('.game-table-header__turn')?.textContent || '').includes('轮到你'),
     null,
@@ -215,14 +215,17 @@ async function playLegalTurn(page, label, number) {
 
   const before = await page.locator('[data-card-id]').count();
   await page.getByRole('button', { name: /^提示$/ }).tap();
-  await page.waitForFunction(
-    () => /出牌\(\d+\)/.test(document.querySelector('.btn-play')?.textContent || ''),
-    null,
-    { timeout: 10_000 },
-  );
+  await page.waitForFunction(() => {
+    const button = document.querySelector('.btn-play');
+    const selected = document.querySelectorAll('[data-card-id][aria-pressed="true"]').length;
+    return selected > 0 && button && !button.disabled && button.getAttribute('aria-disabled') !== 'true';
+  }, null, { timeout: 15_000 });
+
   const selectedText = (await page.locator('.tech-selection-status').textContent())
     ?.replace(/\s+/g, ' ')
     .trim() || '';
+  const selectedCount = await page.locator('[data-card-id][aria-pressed="true"]').count();
+  assert(selectedCount > 0, `${label}:第${number}次提示后没有选中手牌`);
   await page.locator('.btn-play').tap();
   await page.waitForFunction(
     value => document.querySelectorAll('[data-card-id]').length < value,
@@ -236,7 +239,7 @@ async function playLegalTurn(page, label, number) {
     .trim() || '';
   assert(after < before, `${label}:第${number}次出牌后手牌没有减少`);
   assert(/单张|对子|三张|四张|五张|六张|七张|五十K|炸弹/.test(boardText), `${label}:第${number}次出牌后牌型没有显示`);
-  return { number, before, after, selectedText, boardText };
+  return { number, before, after, selectedCount, selectedText, boardText };
 }
 
 async function stressLabels(page, label) {
@@ -256,11 +259,9 @@ async function stressLabels(page, label) {
         },
       };
     }
-
     meta.innerHTML = '<span class="tech-meta-label">牌型</span><strong>四王炸弹</strong><span class="tech-meta-separator">·</span><span class="tech-meta-label">本墩</span><strong>120分</strong>';
     action.textContent = '八张同点炸弹';
     selectionText.textContent = '已选7张 · 普通七张（可点出牌，由系统判断）';
-
     const box = node => {
       const value = node.getBoundingClientRect();
       return {
@@ -278,7 +279,6 @@ async function stressLabels(page, label) {
       const value = range.getBoundingClientRect();
       return box({ getBoundingClientRect: () => value });
     };
-
     return {
       meta: box(meta),
       metaText: textBox(meta),
@@ -340,7 +340,6 @@ try {
         plays.push(await playLegalTurn(page, engine.name, number));
       }
       await page.waitForTimeout(350);
-
       const afterPlay = await inspect(page);
       debug = { engine: engine.name, initial, plays, afterPlay, diagnostics };
       await page.screenshot({
@@ -360,7 +359,6 @@ try {
       assert(diagnostics.pageErrors.length === 0, `${engine.name}:页面错误 ${diagnostics.pageErrors.join('；')}`);
       assert(diagnostics.requestFailures.length === 0, `${engine.name}:请求失败 ${JSON.stringify(diagnostics.requestFailures)}`);
       assert(diagnostics.httpErrors.length === 0, `${engine.name}:HTTP错误 ${JSON.stringify(diagnostics.httpErrors)}`);
-
       report.push({ engine: engine.name, initial, plays, afterPlay, longLabels, diagnostics });
       debug = null;
       await context.close();
