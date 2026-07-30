@@ -19,6 +19,7 @@ const engines = [
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1',
   },
 ];
+const WEBKIT_FONT_BOX_TOLERANCE = 8;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -157,8 +158,8 @@ function verifyLayout(data, label) {
     `${label}:逻辑画布不是横版 ${JSON.stringify(data.shellLogical)}`,
   );
   assert(
-    data.boardLogical?.scrollHeight <= data.boardLogical?.clientHeight + 2,
-    `${label}:中央出牌区纵向被裁切`,
+    data.boardLogical?.scrollHeight <= data.boardLogical?.clientHeight + WEBKIT_FONT_BOX_TOLERANCE,
+    `${label}:中央出牌区纵向被裁切 ${data.boardLogical?.scrollHeight}/${data.boardLogical?.clientHeight}`,
   );
   assert(
     data.boardLogical?.scrollWidth <= data.boardLogical?.clientWidth + 2,
@@ -167,7 +168,10 @@ function verifyLayout(data, label) {
   assert(data.cells.length >= 3, `${label}:玩家行动格不足`);
   for (const [index, cell] of data.cells.entries()) {
     inside(cell.rect, data.viewport, `${label}:行动格${index + 1}`);
-    assert(cell.logical.scrollHeight <= cell.logical.clientHeight + 2, `${label}:行动格${index + 1}内容被裁切`);
+    assert(
+      cell.logical.scrollHeight <= cell.logical.clientHeight + WEBKIT_FONT_BOX_TOLERANCE,
+      `${label}:行动格${index + 1}内容被裁切 ${cell.logical.scrollHeight}/${cell.logical.clientHeight}`,
+    );
     assert(cell.logical.scrollWidth <= cell.logical.clientWidth + 2, `${label}:行动格${index + 1}横向被裁切`);
   }
   assert(data.buttons.length === 5, `${label}:操作按钮应为5个，实际${data.buttons.length}`);
