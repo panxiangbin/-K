@@ -1,0 +1,187 @@
+/* Wood green table V1: final geometry guard.
+ * Imported last. Keep 36 cards visible while preventing board and dock clipping.
+ */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board *,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock * {
+  box-sizing: border-box !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-shell {
+  --card-h: 68px !important;
+  --card-selected-offset: -7px !important;
+}
+
+/* The experience layer has 58-78px min-height rules. Override them structurally. */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board {
+  width: min(560px, 96%) !important;
+  height: 150px !important;
+  min-height: 150px !important;
+  max-height: 150px !important;
+  padding: 6px 8px !important;
+  overflow: hidden !important;
+  contain: layout paint !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-board-summary {
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
+  margin: 0 0 4px !important;
+  padding: 0 0 4px !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-board-summary__turn,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-board-summary__meta {
+  height: 21px !important;
+  min-height: 21px !important;
+  max-height: 21px !important;
+  padding: 1px 7px !important;
+  line-height: 17px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-action-grid {
+  height: 106px !important;
+  min-height: 106px !important;
+  max-height: 106px !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(2, 50px) !important;
+  grid-auto-rows: 50px !important;
+  align-items: stretch !important;
+  gap: 5px !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-action-grid > .trick-action-card {
+  height: 50px !important;
+  min-height: 0 !important;
+  max-height: 50px !important;
+  padding: 3px 6px !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-action-card__header {
+  height: 14px !important;
+  min-height: 14px !important;
+  max-height: 14px !important;
+  margin: 0 0 2px !important;
+  line-height: 12px !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-action-card__body {
+  height: 27px !important;
+  min-height: 0 !important;
+  max-height: 27px !important;
+  --mini-card-w: 21px !important;
+  --mini-card-h: 27px !important;
+  --mini-rank-font: 8px !important;
+  --mini-suit-font: 6px !important;
+  --mini-center-font: 10px !important;
+  overflow: hidden !important;
+}
+
+/* Bottom dock: all three rows must fit inside its border box. */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock {
+  grid-template-columns: 92px minmax(0, 1fr) !important;
+  grid-template-rows: 22px 74px 42px !important;
+  gap: 1px 5px !important;
+  padding: 2px 7px 3px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock > :first-child {
+  width: 92px !important;
+  min-width: 92px !important;
+  height: 97px !important;
+  min-height: 97px !important;
+  max-height: 97px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-self-seat {
+  width: 88px !important;
+  min-width: 88px !important;
+  max-width: 88px !important;
+  height: 96px !important;
+  min-height: 96px !important;
+  max-height: 96px !important;
+  padding: 36px 4px 4px !important;
+  justify-content: flex-end !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-self-seat::before {
+  top: 5px !important;
+  width: 30px !important;
+  height: 30px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-self-seat > div {
+  flex: 0 0 auto !important;
+  min-height: 12px !important;
+  max-height: 14px !important;
+  line-height: 12px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-selection-status {
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-selection-status > div {
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  padding: 1px 10px !important;
+  line-height: 16px !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-surface,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 [data-hand-interaction='true'] {
+  height: 74px !important;
+  min-height: 74px !important;
+  max-height: 74px !important;
+  padding: 3px 4px 2px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-surface > div,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 [data-hand-interaction='true'] > div {
+  height: 70px !important;
+  min-height: 70px !important;
+  max-height: 70px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-actions {
+  height: 42px !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+  grid-template-rows: 38px !important;
+  padding-top: 2px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-action,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock .btn-lite,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock .btn-pass,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock .btn-play {
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+}
+
+/* Keep transient toast away from the centered title. */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-toast-stack {
+  top: 49px !important;
+  right: 94px !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 190px !important;
+  max-height: 30px !important;
+  transform: none !important;
+  align-items: flex-end !important;
+}
