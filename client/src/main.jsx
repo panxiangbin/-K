@@ -15,6 +15,7 @@ import { installWaitingRoomExperience } from './waiting-room-experience.js';
 import { installWaitingRoomRequestLifecycle } from './waiting-room-request-lifecycle.js';
 import { installGameTableFoundation } from './game-table-foundation.js';
 import { installGamePlayerCardExperience } from './game-player-card-experience.js';
+import { installGameTrickBoardExperience } from './game-trick-board-experience.js';
 import { installSettlementExperience } from './settlement-experience.js';
 import { installInkThemeRelease } from './ink-theme-release.js';
 import { installRemoteBackendWebSocket } from './remote-backend-bootstrap.js';
@@ -103,5 +104,6 @@ installStartupEnhancer('waiting-room-experience', () => installWaitingRoomExperi
 installStartupEnhancer('waiting-room-request-lifecycle', () => installWaitingRoomRequestLifecycle());
 installStartupEnhancer('game-table-foundation', () => installGameTableFoundation());
 installStartupEnhancer('game-player-card-experience', () => installGamePlayerCardExperience());
+installStartupEnhancer('game-trick-board-experience', () => installGameTrickBoardExperience());
 installStartupEnhancer('settlement-experience', () => installSettlementExperience());
 installStartupEnhancer('game-landscape-clean-v1', () => installGameLandscapeCleanV1());
