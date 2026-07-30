@@ -6,12 +6,17 @@ body.game-screen-clean-v1 .game-table-hand-dock {
   box-sizing: border-box !important;
 }
 
-/*
- * In forced landscape the rotated #root is the containing block for fixed
- * descendants. Filling that block avoids the 7px offset produced when an
- * absolutely positioned table is resolved against the intermediate App wrapper.
- */
+/* Fill the rotated root directly, so the forced-landscape canvas has no 7px drift. */
 body.game-screen-clean-v1 .game-table-shell {
+  --clean-header-h: 38px !important;
+  --clean-dock-h: 164px !important;
+  --card-w: 52px !important;
+  --card-h: 70px !important;
+  --card-rank-font: 15px !important;
+  --card-suit-font: 11px !important;
+  --card-center-font: 25px !important;
+  --card-selected-offset: -8px !important;
+  --hand-overlap: -34px !important;
   position: fixed !important;
   inset: 0 !important;
   width: auto !important;
@@ -21,8 +26,175 @@ body.game-screen-clean-v1 .game-table-shell {
   min-height: 0 !important;
   max-height: none !important;
   margin: 0 !important;
+  grid-template-rows: var(--clean-header-h) minmax(0, 1fr) var(--clean-dock-h) !important;
+}
+
+/* Old portrait CSS used 100vw (390px). In forced landscape every game row must use the 842px logical canvas. */
+body.game-screen-clean-v1 .game-table-header,
+body.game-screen-clean-v1 .game-table-stage,
+body.game-screen-clean-v1 .game-table-hand-dock,
+body.game-screen-clean-v1 .game-hand-selection-status,
+body.game-screen-clean-v1 .game-hand-surface,
+body.game-screen-clean-v1 .game-hand-actions {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  justify-self: stretch !important;
+}
+
+body.game-screen-clean-v1 .game-table-stage {
+  min-height: 0 !important;
+  padding: 5px 8px 4px !important;
+}
+
+body.game-screen-clean-v1 .game-table-trick-board {
+  width: min(600px, 96%) !important;
+  max-height: 176px !important;
+  padding: 6px 8px !important;
+}
+
+body.game-screen-clean-v1 .trick-board-summary {
+  min-height: 26px !important;
+  margin-bottom: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+body.game-screen-clean-v1 .trick-action-grid {
+  gap: 5px !important;
+}
+
+body.game-screen-clean-v1 .trick-action-card {
+  min-height: 56px !important;
+  padding: 4px 6px !important;
+  opacity: 1 !important;
+}
+
+body.game-screen-clean-v1 .trick-action-card__header {
+  margin-bottom: 2px !important;
+}
+
+body.game-screen-clean-v1 .trick-action-card__body {
+  min-height: 28px !important;
+  --mini-card-w: 26px !important;
+  --mini-card-h: 37px !important;
+  --mini-rank-font: 9px !important;
+  --mini-suit-font: 7px !important;
+  --mini-center-font: 14px !important;
 }
 
 body.game-screen-clean-v1 .game-table-hand-dock {
+  height: var(--clean-dock-h) !important;
+  min-height: var(--clean-dock-h) !important;
+  max-height: var(--clean-dock-h) !important;
+  grid-template-rows: 22px 20px 78px 44px !important;
+  gap: 0 !important;
+  padding: 0 8px !important;
+  overflow: hidden !important;
+}
+
+body.game-screen-clean-v1 .game-hand-selection-status {
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  overflow: visible !important;
+}
+
+body.game-screen-clean-v1 .game-hand-selection-status > div {
+  max-width: calc(100% - 16px) !important;
+  padding: 1px 10px !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+body.game-screen-clean-v1 .game-hand-surface,
+body.game-screen-clean-v1 [data-hand-interaction='true'] {
+  height: 78px !important;
+  min-height: 78px !important;
+  max-height: 78px !important;
+  padding: 3px 22px 2px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  align-items: flex-end !important;
+}
+
+body.game-screen-clean-v1 .game-hand-surface > div,
+body.game-screen-clean-v1 [data-hand-interaction='true'] > div {
+  width: max-content !important;
+  min-width: max-content !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  justify-content: flex-start !important;
+}
+
+body.game-screen-clean-v1 .game-hand-surface [data-card-id],
+body.game-screen-clean-v1 [data-hand-interaction='true'] [data-card-id] {
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
+}
+
+body.game-screen-clean-v1 .game-hand-actions {
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  display: grid !important;
+  grid-template-columns: minmax(94px, 1fr) repeat(4, 70px) minmax(120px, 1.35fr) !important;
+  grid-template-rows: 40px !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 2px 0 !important;
+  overflow: visible !important;
+}
+
+body.game-screen-clean-v1 .game-hand-sort-legend {
+  display: flex !important;
+  min-width: 0 !important;
+}
+
+body.game-screen-clean-v1 .game-hand-action,
+body.game-screen-clean-v1 .game-hand-action[data-action-priority='utility'],
+body.game-screen-clean-v1 .game-hand-action[data-action-priority='secondary'],
+body.game-screen-clean-v1 .game-hand-action[data-action-priority='primary'] {
+  grid-column: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  padding-inline: 8px !important;
+}
+
+/* Keep temporary feedback in the header instead of covering the table. */
+body.game-screen-clean-v1 .game-clean-toast-stack {
+  top: 3px !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: 50% !important;
+  width: min(300px, 36%) !important;
+  max-height: 32px !important;
+  transform: translateX(-50%) !important;
+  align-items: center !important;
+  overflow: hidden !important;
+}
+
+body.game-screen-clean-v1 .game-clean-toast-stack > div {
+  max-height: 30px !important;
+  padding: 4px 9px !important;
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+}
+
+body.game-screen-clean-v1 .game-clean-connection,
+body.game-screen-clean-v1 .game-clean-sound {
+  display: none !important;
+}
+
+body.game-screen-clean-v1 .game-clean-player-seat {
   overflow: hidden !important;
 }
