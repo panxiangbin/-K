@@ -60,6 +60,7 @@ import './landscape-mode.css';
 import './forced-landscape-lobby-r3.css';
 import './game-landscape-clean-v1.css';
 import './game-landscape-clean-v1-hotfix.css';
+import './game-landscape-clean-v1-board-final.css';
 
 installRemoteBackendWebSocket();
 installNestedAudioBase();
