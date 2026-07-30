@@ -6,15 +6,20 @@ body.game-screen-clean-v1 .game-table-hand-dock {
   box-sizing: border-box !important;
 }
 
+/*
+ * In forced landscape the rotated #root is the containing block for fixed
+ * descendants. Filling that block avoids the 7px offset produced when an
+ * absolutely positioned table is resolved against the intermediate App wrapper.
+ */
 body.game-screen-clean-v1 .game-table-shell {
-  position: absolute !important;
+  position: fixed !important;
   inset: 0 !important;
-  width: var(--app-width, 100%) !important;
+  width: auto !important;
   min-width: 0 !important;
-  max-width: var(--app-width, 100%) !important;
-  height: var(--app-height, 100%) !important;
+  max-width: none !important;
+  height: auto !important;
   min-height: 0 !important;
-  max-height: var(--app-height, 100%) !important;
+  max-height: none !important;
   margin: 0 !important;
 }
 
