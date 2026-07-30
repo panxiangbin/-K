@@ -22,6 +22,7 @@ import { installRemoteBackendWebSocket } from './remote-backend-bootstrap.js';
 import { installNestedAudioBase } from './audio-base-bootstrap.js';
 import { installJokerPairUiGuard } from './joker-pair-ui-guard.js';
 import { installLandscapeMode } from './landscape-mode.js';
+import { installGameLandscapeCleanV1 } from './game-landscape-clean-v1.js';
 import './index.css';
 import './ui-responsive.css';
 import './ui-polish.css';
@@ -57,6 +58,7 @@ import './mobile-game-layout-r4-structure.css';
 import './mobile-viewport-lock.css';
 import './landscape-mode.css';
 import './forced-landscape-lobby-r3.css';
+import './game-landscape-clean-v1.css';
 
 installRemoteBackendWebSocket();
 installNestedAudioBase();
@@ -100,3 +102,4 @@ installStartupEnhancer('game-table-foundation', () => installGameTableFoundation
 installStartupEnhancer('game-player-card-experience', () => installGamePlayerCardExperience());
 installStartupEnhancer('game-trick-board-experience', () => installGameTrickBoardExperience());
 installStartupEnhancer('settlement-experience', () => installSettlementExperience());
+installStartupEnhancer('game-landscape-clean-v1', () => installGameLandscapeCleanV1());
