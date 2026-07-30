@@ -15,7 +15,7 @@ assert.match(behavior, /game-screen-clean-v1/, 'runtime must activate the clean 
 assert.match(behavior, /game-clean-toast-stack/, 'runtime must move toasts away from the table center');
 assert.match(styles, /grid-template-rows: var\(--clean-header-h\) minmax\(0, 1fr\) var\(--clean-dock-h\)/, 'table must use a clear header/stage/hand hierarchy');
 assert.match(styles, /background: #f7f0df !important/, 'hand dock must use a bright readable surface');
-assert.match(styles, /game-clean-trick-board/, 'central trick board must receive a dedicated visual treatment');
+assert.match(styles, /\.game-table-trick-board/, 'central trick board must receive a dedicated visual treatment');
 assert.match(styles, /game-hand-actions/, 'all play controls must be laid out together');
 assert.match(styles, /trick-board-summary__meta/, 'pattern summary must be explicitly styled');
 assert.match(audit, /playOneLegalTurn/, 'audit must perform real game actions');
