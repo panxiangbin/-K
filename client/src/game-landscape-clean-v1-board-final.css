@@ -1,0 +1,63 @@
+/* Final compact board rows: all four action cells and their cards must fit above the hand dock. */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board {
+  height: 176px !important;
+  min-height: 0 !important;
+  max-height: 176px !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-board-summary {
+  height: 27px !important;
+  min-height: 27px !important;
+  max-height: 27px !important;
+  margin: 0 0 4px !important;
+  padding: 0 0 4px !important;
+  box-sizing: border-box !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-grid {
+  height: 131px !important;
+  min-height: 131px !important;
+  max-height: 131px !important;
+  grid-template-rows: repeat(2, 63px) !important;
+  grid-auto-rows: 63px !important;
+  gap: 5px !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card {
+  height: 63px !important;
+  min-height: 63px !important;
+  max-height: 63px !important;
+  padding: 4px 6px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card__header {
+  height: 16px !important;
+  min-height: 16px !important;
+  max-height: 16px !important;
+  margin: 0 0 2px !important;
+  line-height: 1 !important;
+  overflow: visible !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card__body {
+  height: 37px !important;
+  min-height: 37px !important;
+  max-height: 37px !important;
+  --mini-card-w: 25px !important;
+  --mini-card-h: 35px !important;
+  --mini-rank-font: 9px !important;
+  --mini-suit-font: 7px !important;
+  --mini-center-font: 13px !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-board-summary__meta,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card__header > :last-child {
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
