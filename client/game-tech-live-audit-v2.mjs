@@ -27,26 +27,16 @@ function assert(condition, message) {
 }
 
 function diagnosticsFor(page) {
-  const state = {
-    consoleErrors: [],
-    pageErrors: [],
-    requestFailures: [],
-    httpErrors: [],
-  };
+  const state = { consoleErrors: [], pageErrors: [], requestFailures: [], httpErrors: [] };
   page.on('console', message => {
     if (message.type() === 'error') state.consoleErrors.push(message.text());
   });
   page.on('pageerror', error => state.pageErrors.push(error.message));
   page.on('requestfailed', request => {
-    state.requestFailures.push({
-      url: request.url(),
-      error: request.failure()?.errorText || 'unknown',
-    });
+    state.requestFailures.push({ url: request.url(), error: request.failure()?.errorText || 'unknown' });
   });
   page.on('response', response => {
-    if (response.status() >= 400) {
-      state.httpErrors.push({ url: response.url(), status: response.status() });
-    }
+    if (response.status() >= 400) state.httpErrors.push({ url: response.url(), status: response.status() });
   });
   return state;
 }
@@ -100,6 +90,8 @@ async function inspect(page) {
     const logical = node => node ? {
       width: node.offsetWidth,
       height: node.offsetHeight,
+      offsetTop: node.offsetTop,
+      offsetLeft: node.offsetLeft,
       clientWidth: node.clientWidth,
       clientHeight: node.clientHeight,
       scrollWidth: node.scrollWidth,
@@ -133,6 +125,7 @@ async function inspect(page) {
       dock: rect(dock),
       dockLogical: logical(dock),
       hand: rect(hand),
+      handLogical: logical(hand),
       actions: rect(actions),
       actionsLogical: logical(actions),
       buttons,
@@ -163,8 +156,8 @@ function verifyLayout(data, label) {
   inside(data.hand, data.viewport, `${label}:手牌滚动行`);
   inside(data.actions, data.viewport, `${label}:操作按钮区`);
   assert(
-    data.hand.bottom <= data.actions.top + 2,
-    `${label}:操作按钮覆盖手牌 ${data.hand.bottom - data.actions.top}px`,
+    data.handLogical.offsetTop + data.handLogical.height <= data.actionsLogical.offsetTop + 2,
+    `${label}:操作按钮覆盖手牌逻辑行 ${data.handLogical.offsetTop + data.handLogical.height}/${data.actionsLogical.offsetTop}`,
   );
   assert(
     data.shellLogical?.width >= 800 && data.shellLogical?.height <= 410,
@@ -181,14 +174,8 @@ function verifyLayout(data, label) {
   assert(data.cells.length >= 3, `${label}:玩家行动格不足`);
   for (const [index, cell] of data.cells.entries()) {
     inside(cell.rect, data.viewport, `${label}:行动格${index + 1}`);
-    assert(
-      cell.logical.scrollHeight <= cell.logical.clientHeight + 2,
-      `${label}:行动格${index + 1}内容被裁切 ${cell.logical.scrollHeight}/${cell.logical.clientHeight}`,
-    );
-    assert(
-      cell.logical.scrollWidth <= cell.logical.clientWidth + 2,
-      `${label}:行动格${index + 1}横向被裁切 ${cell.logical.scrollWidth}/${cell.logical.clientWidth}`,
-    );
+    assert(cell.logical.scrollHeight <= cell.logical.clientHeight + 2, `${label}:行动格${index + 1}内容被裁切`);
+    assert(cell.logical.scrollWidth <= cell.logical.clientWidth + 2, `${label}:行动格${index + 1}横向被裁切`);
   }
   assert(data.buttons.length === 5, `${label}:操作按钮应为5个，实际${data.buttons.length}`);
   for (const button of data.buttons) {
@@ -198,10 +185,7 @@ function verifyLayout(data, label) {
       `${label}:按钮“${button.text}”触控区域不足 ${button.logical.width}x${button.logical.height}`,
     );
   }
-  assert(
-    data.cardCount > 0 && data.visibleCardCount >= 12,
-    `${label}:可见手牌不足 ${data.visibleCardCount}/${data.cardCount}`,
-  );
+  assert(data.cardCount > 0 && data.visibleCardCount >= 12, `${label}:可见手牌不足 ${data.visibleCardCount}/${data.cardCount}`);
 }
 
 async function playLegalTurn(page, label, number) {
@@ -212,7 +196,6 @@ async function playLegalTurn(page, label, number) {
     null,
     { timeout: 45_000 },
   );
-
   const before = await page.locator('[data-card-id]').count();
   await page.getByRole('button', { name: /^提示$/ }).tap();
   await page.waitForFunction(() => {
@@ -220,10 +203,7 @@ async function playLegalTurn(page, label, number) {
     const selected = document.querySelectorAll('[data-card-id][aria-pressed="true"]').length;
     return selected > 0 && button && !button.disabled && button.getAttribute('aria-disabled') !== 'true';
   }, null, { timeout: 15_000 });
-
-  const selectedText = (await page.locator('.tech-selection-status').textContent())
-    ?.replace(/\s+/g, ' ')
-    .trim() || '';
+  const selectedText = (await page.locator('.tech-selection-status').textContent())?.replace(/\s+/g, ' ').trim() || '';
   const selectedCount = await page.locator('[data-card-id][aria-pressed="true"]').count();
   assert(selectedCount > 0, `${label}:第${number}次提示后没有选中手牌`);
   await page.locator('.btn-play').tap();
@@ -232,11 +212,8 @@ async function playLegalTurn(page, label, number) {
     before,
     { timeout: 20_000 },
   );
-
   const after = await page.locator('[data-card-id]').count();
-  const boardText = (await page.locator('.tech-trick-board').textContent())
-    ?.replace(/\s+/g, ' ')
-    .trim() || '';
+  const boardText = (await page.locator('.tech-trick-board').textContent())?.replace(/\s+/g, ' ').trim() || '';
   assert(after < before, `${label}:第${number}次出牌后手牌没有减少`);
   assert(/单张|对子|三张|四张|五张|六张|七张|五十K|炸弹/.test(boardText), `${label}:第${number}次出牌后牌型没有显示`);
   return { number, before, after, selectedCount, selectedText, boardText };
@@ -250,28 +227,14 @@ async function stressLabels(page, label) {
     const selectionOuter = document.querySelector('.tech-selection-status');
     const selectionText = selectionOuter?.firstElementChild;
     if (!meta || !action || !selectionOuter || !selectionText) {
-      return {
-        missing: {
-          meta: Boolean(meta),
-          action: Boolean(action),
-          selectionOuter: Boolean(selectionOuter),
-          selectionText: Boolean(selectionText),
-        },
-      };
+      return { missing: { meta: Boolean(meta), action: Boolean(action), selectionOuter: Boolean(selectionOuter), selectionText: Boolean(selectionText) } };
     }
     meta.innerHTML = '<span class="tech-meta-label">牌型</span><strong>四王炸弹</strong><span class="tech-meta-separator">·</span><span class="tech-meta-label">本墩</span><strong>120分</strong>';
     action.textContent = '八张同点炸弹';
     selectionText.textContent = '已选7张 · 普通七张（可点出牌，由系统判断）';
     const box = node => {
       const value = node.getBoundingClientRect();
-      return {
-        left: value.left,
-        top: value.top,
-        right: value.right,
-        bottom: value.bottom,
-        width: value.width,
-        height: value.height,
-      };
+      return { left: value.left, top: value.top, right: value.right, bottom: value.bottom, width: value.width, height: value.height };
     };
     const textBox = node => {
       const range = document.createRange();
@@ -280,20 +243,12 @@ async function stressLabels(page, label) {
       return box({ getBoundingClientRect: () => value });
     };
     return {
-      meta: box(meta),
-      metaText: textBox(meta),
-      action: box(action),
-      actionText: textBox(action),
-      selectionOuter: box(selectionOuter),
-      selectionText: textBox(selectionText),
-      labels: {
-        meta: meta.textContent,
-        action: action.textContent,
-        selection: selectionText.textContent,
-      },
+      meta: box(meta), metaText: textBox(meta),
+      action: box(action), actionText: textBox(action),
+      selectionOuter: box(selectionOuter), selectionText: textBox(selectionText),
+      labels: { meta: meta.textContent, action: action.textContent, selection: selectionText.textContent },
     };
   });
-
   assert(!result.missing, `${label}:最长牌型目标缺失 ${JSON.stringify(result.missing)}`);
   const contained = (inner, outer, name) => {
     assert(inner.left >= outer.left - 2, `${label}:${name}左侧被裁切`);
@@ -326,35 +281,20 @@ try {
       const page = await context.newPage();
       const diagnostics = diagnosticsFor(page);
       await enterGame(page);
-
       const initial = await inspect(page);
       debug = { engine: engine.name, initial, diagnostics };
-      await page.screenshot({
-        path: path.join(outputDir, `${engine.name}-01-tech-game.png`),
-        fullPage: false,
-      });
+      await page.screenshot({ path: path.join(outputDir, `${engine.name}-01-tech-game.png`), fullPage: false });
       verifyLayout(initial, `${engine.name}-initial`);
-
       const plays = [];
-      for (let number = 1; number <= 3; number += 1) {
-        plays.push(await playLegalTurn(page, engine.name, number));
-      }
+      for (let number = 1; number <= 3; number += 1) plays.push(await playLegalTurn(page, engine.name, number));
       await page.waitForTimeout(350);
       const afterPlay = await inspect(page);
       debug = { engine: engine.name, initial, plays, afterPlay, diagnostics };
-      await page.screenshot({
-        path: path.join(outputDir, `${engine.name}-02-after-three-plays.png`),
-        fullPage: false,
-      });
+      await page.screenshot({ path: path.join(outputDir, `${engine.name}-02-after-three-plays.png`), fullPage: false });
       verifyLayout(afterPlay, `${engine.name}-after-play`);
-
       const longLabels = await stressLabels(page, engine.name);
       debug = { engine: engine.name, initial, plays, afterPlay, longLabels, diagnostics };
-      await page.screenshot({
-        path: path.join(outputDir, `${engine.name}-03-long-pattern-labels.png`),
-        fullPage: false,
-      });
-
+      await page.screenshot({ path: path.join(outputDir, `${engine.name}-03-long-pattern-labels.png`), fullPage: false });
       assert(diagnostics.consoleErrors.length === 0, `${engine.name}:控制台错误 ${diagnostics.consoleErrors.join('；')}`);
       assert(diagnostics.pageErrors.length === 0, `${engine.name}:页面错误 ${diagnostics.pageErrors.join('；')}`);
       assert(diagnostics.requestFailures.length === 0, `${engine.name}:请求失败 ${JSON.stringify(diagnostics.requestFailures)}`);
@@ -376,9 +316,7 @@ try {
   throw error;
 } finally {
   await fs.writeFile(path.join(outputDir, 'report.json'), JSON.stringify(report, null, 2));
-  if (failure) {
-    await fs.writeFile(path.join(outputDir, 'failure.json'), JSON.stringify(failure, null, 2));
-  }
+  if (failure) await fs.writeFile(path.join(outputDir, 'failure.json'), JSON.stringify(failure, null, 2));
 }
 
 console.log('technology landscape game V2 audit passed: Chromium/WebKit, three real plays, no board clipping, longest labels visible');
