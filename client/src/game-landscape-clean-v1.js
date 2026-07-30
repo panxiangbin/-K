@@ -32,6 +32,17 @@ function enhanceGameVisual(root = document) {
   addClass(stage, 'game-clean-stage');
   addClass(dock, 'game-clean-dock');
 
+  /* Bind the real header children deterministically. Older heuristic enhancers
+   * occasionally assigned the room and turn classes to the wrong nodes. */
+  const headerChildren = [...(header?.children || [])];
+  const actions = headerChildren[0];
+  const room = headerChildren[1];
+  const turn = headerChildren[2];
+  addClass(actions, 'game-table-header__actions', 'wood-header-actions');
+  addClass(room, 'game-table-header__room', 'wood-header-room');
+  addClass(turn, 'game-table-header__turn', 'wood-header-turn');
+  if (turn) turn.dataset.turnState = /轮到你/.test(turn.textContent || '') ? 'self' : 'other';
+
   stage?.querySelectorAll('.game-table-player-rail').forEach(rail => {
     addClass(rail, 'game-clean-player-rail');
     addClass(rail.firstElementChild, 'game-clean-player-seat');
@@ -46,7 +57,16 @@ function enhanceGameVisual(root = document) {
   }
 
   const trickBoard = shell.querySelector('.game-table-trick-board');
-  addClass(trickBoard, 'game-clean-trick-board');
+  addClass(trickBoard, 'game-clean-trick-board', 'wood-trick-board');
+  const boardHeader = trickBoard?.firstElementChild;
+  const boardGrid = trickBoard?.children?.[1];
+  addClass(boardHeader, 'wood-trick-summary');
+  addClass(boardGrid, 'wood-trick-grid');
+  [...(boardGrid?.children || [])].forEach(cell => {
+    addClass(cell, 'wood-trick-seat');
+    addClass(cell.firstElementChild, 'wood-trick-seat__header');
+    addClass(cell.children?.[1], 'wood-trick-seat__body');
+  });
 
   const selfSeat = dock?.firstElementChild?.firstElementChild;
   addClass(selfSeat, 'game-clean-self-seat');
