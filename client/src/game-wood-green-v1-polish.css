@@ -46,34 +46,32 @@ html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-header > :nth
   inset: auto !important;
 }
 
-/* The floating rules tab covered the left opponent in forced landscape. */
 body.game-screen-clean-v1 .rules-help-launcher[data-surface='game'] {
   display: none !important;
 }
 
-/* Longest pattern label stress case: 四王炸弹 + 120分. */
+/* The test runs inside a rotated forced-landscape canvas. Keep both glyph width and line box well inside the pill. */
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :first-child > :last-child,
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-board-summary__meta {
   width: 220px !important;
   min-width: 220px !important;
   max-width: 220px !important;
-  height: 21px !important;
-  min-height: 21px !important;
-  max-height: 21px !important;
+  height: 25px !important;
+  min-height: 25px !important;
+  max-height: 25px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 1px 4px !important;
-  font-size: 10px !important;
-  line-height: 17px !important;
+  padding: 0 4px !important;
+  font-size: 8px !important;
+  line-height: 8px !important;
   text-align: center !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: clip !important;
-  letter-spacing: -0.08em !important;
+  letter-spacing: -0.06em !important;
   word-spacing: -1px !important;
-  transform: scaleX(.82) !important;
-  transform-origin: center center !important;
+  transform: none !important;
 }
 
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(2) > * > :first-child > :last-child,
@@ -88,7 +86,6 @@ html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .wood-trick-seat__header 
   text-overflow: clip !important;
 }
 
-/* Keep the long selection sentence inside its pill on both browser engines. */
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-selection-status > div {
   width: auto !important;
   min-width: 390px !important;
