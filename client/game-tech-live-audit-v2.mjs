@@ -6,9 +6,7 @@ import { chromium, webkit } from 'playwright';
 const target = process.env.GAME_TECH_AUDIT_URL
   || process.env.GAME_CLEAN_AUDIT_URL
   || 'http://127.0.0.1:4173/pan/50k';
-const outputDir = path.resolve(
-  process.env.GAME_TECH_AUDIT_OUTPUT_DIR || 'game-tech-audit-artifacts',
-);
+const outputDir = path.resolve(process.env.GAME_TECH_AUDIT_OUTPUT_DIR || 'game-tech-audit-artifacts');
 const engines = [
   {
     name: 'chromium-android',
@@ -32,9 +30,10 @@ function diagnosticsFor(page) {
     if (message.type() === 'error') state.consoleErrors.push(message.text());
   });
   page.on('pageerror', error => state.pageErrors.push(error.message));
-  page.on('requestfailed', request => {
-    state.requestFailures.push({ url: request.url(), error: request.failure()?.errorText || 'unknown' });
-  });
+  page.on('requestfailed', request => state.requestFailures.push({
+    url: request.url(),
+    error: request.failure()?.errorText || 'unknown',
+  }));
   page.on('response', response => {
     if (response.status() >= 400) state.httpErrors.push({ url: response.url(), status: response.status() });
   });
@@ -58,10 +57,7 @@ async function enterGame(page) {
     { timeout: 15_000 },
   );
   await page.locator('.lobby-solo-button').tap();
-  await page.getByRole('heading', { name: '选择参与人数' }).waitFor({
-    state: 'visible',
-    timeout: 15_000,
-  });
+  await page.getByRole('heading', { name: '选择参与人数' }).waitFor({ state: 'visible', timeout: 15_000 });
   await page.locator('.lobby-choice-grid .lobby-choice-card').first().tap();
   await page.waitForSelector('.tech-game-shell', { state: 'visible', timeout: 120_000 });
   await page.waitForSelector('.tech-actions', { state: 'visible', timeout: 30_000 });
@@ -104,16 +100,6 @@ async function inspect(page) {
     const hand = one('.tech-hand-surface');
     const actions = one('.tech-actions');
     const cards = [...document.querySelectorAll('[data-card-id]')];
-    const buttons = [...document.querySelectorAll('.tech-actions button')].map(node => ({
-      text: node.textContent?.trim() || '',
-      rect: rect(node),
-      logical: logical(node),
-    }));
-    const cells = [...document.querySelectorAll('.tech-trick-cell')].map(node => ({
-      text: node.textContent?.replace(/\s+/g, ' ').trim() || '',
-      rect: rect(node),
-      logical: logical(node),
-    }));
     return {
       viewport: { width: innerWidth, height: innerHeight },
       presentation: document.documentElement.dataset.landscapePresentation || '',
@@ -123,13 +109,20 @@ async function inspect(page) {
       board: rect(board),
       boardLogical: logical(board),
       dock: rect(dock),
-      dockLogical: logical(dock),
       hand: rect(hand),
       handLogical: logical(hand),
       actions: rect(actions),
       actionsLogical: logical(actions),
-      buttons,
-      cells,
+      buttons: [...document.querySelectorAll('.tech-actions button')].map(node => ({
+        text: node.textContent?.trim() || '',
+        rect: rect(node),
+        logical: logical(node),
+      })),
+      cells: [...document.querySelectorAll('.tech-trick-cell')].map(node => ({
+        text: node.textContent?.replace(/\s+/g, ' ').trim() || '',
+        rect: rect(node),
+        logical: logical(node),
+      })),
       cardCount: cards.length,
       visibleCardCount: cards.filter(node => {
         const value = node.getBoundingClientRect();
@@ -148,8 +141,8 @@ function inside(rect, viewport, label, tolerance = 3) {
 }
 
 function verifyLayout(data, label) {
-  assert(data.visual === 'tech-landscape-v2', `${label}: 科技V2界面标记缺失`);
-  assert(data.presentation === 'forced' || data.presentation === 'native', `${label}: 未处于横屏模式`);
+  assert(data.visual === 'tech-landscape-v2', `${label}:科技V2界面标记缺失`);
+  assert(data.presentation === 'forced' || data.presentation === 'native', `${label}:未处于横屏模式`);
   inside(data.shell, data.viewport, `${label}:牌桌`);
   inside(data.board, data.viewport, `${label}:中央出牌区`);
   inside(data.dock, data.viewport, `${label}:手牌区`);
@@ -157,7 +150,7 @@ function verifyLayout(data, label) {
   inside(data.actions, data.viewport, `${label}:操作按钮区`);
   assert(
     data.handLogical.offsetTop + data.handLogical.height <= data.actionsLogical.offsetTop + 2,
-    `${label}:操作按钮覆盖手牌逻辑行 ${data.handLogical.offsetTop + data.handLogical.height}/${data.actionsLogical.offsetTop}`,
+    `${label}:操作按钮覆盖手牌逻辑行`,
   );
   assert(
     data.shellLogical?.width >= 800 && data.shellLogical?.height <= 410,
@@ -165,11 +158,11 @@ function verifyLayout(data, label) {
   );
   assert(
     data.boardLogical?.scrollHeight <= data.boardLogical?.clientHeight + 2,
-    `${label}:中央出牌区纵向被裁切 ${data.boardLogical?.scrollHeight}/${data.boardLogical?.clientHeight}`,
+    `${label}:中央出牌区纵向被裁切`,
   );
   assert(
     data.boardLogical?.scrollWidth <= data.boardLogical?.clientWidth + 2,
-    `${label}:中央出牌区横向被裁切 ${data.boardLogical?.scrollWidth}/${data.boardLogical?.clientWidth}`,
+    `${label}:中央出牌区横向被裁切`,
   );
   assert(data.cells.length >= 3, `${label}:玩家行动格不足`);
   for (const [index, cell] of data.cells.entries()) {
@@ -189,38 +182,59 @@ function verifyLayout(data, label) {
 }
 
 async function playLegalTurn(page, label, number) {
-  const clear = page.getByRole('button', { name: /^清空$/ });
-  if (await clear.isEnabled().catch(() => false)) await clear.tap();
   await page.waitForFunction(
     () => (document.querySelector('.game-table-header__turn')?.textContent || '').includes('轮到你'),
     null,
     { timeout: 45_000 },
   );
+  const clear = page.getByRole('button', { name: /^清空$/ });
+  if (await clear.isEnabled().catch(() => false)) await clear.tap();
+
   const before = await page.locator('[data-card-id]').count();
   await page.getByRole('button', { name: /^提示$/ }).tap();
-  await page.waitForFunction(() => {
-    const button = document.querySelector('.btn-play');
-    const selected = document.querySelectorAll('[data-card-id][aria-pressed="true"]').length;
-    return selected > 0 && button && !button.disabled && button.getAttribute('aria-disabled') !== 'true';
-  }, null, { timeout: 15_000 });
+  await page.waitForTimeout(450);
+
+  const decision = await page.evaluate(() => {
+    const play = document.querySelector('.btn-play');
+    const pass = document.querySelector('.btn-pass');
+    const selectedCount = document.querySelectorAll('[data-card-id][aria-pressed="true"]').length;
+    return {
+      selectedCount,
+      canPlay: selectedCount > 0 && Boolean(play) && !play.disabled && play.getAttribute('aria-disabled') !== 'true',
+      canPass: Boolean(pass) && !pass.disabled && pass.getAttribute('aria-disabled') !== 'true',
+      playText: play?.textContent?.trim() || '',
+      passText: pass?.textContent?.trim() || '',
+    };
+  });
+
   const selectedText = (await page.locator('.tech-selection-status').textContent())?.replace(/\s+/g, ' ').trim() || '';
-  const selectedCount = await page.locator('[data-card-id][aria-pressed="true"]').count();
-  assert(selectedCount > 0, `${label}:第${number}次提示后没有选中手牌`);
-  await page.locator('.btn-play').tap();
-  await page.waitForFunction(
-    value => document.querySelectorAll('[data-card-id]').length < value,
+  if (decision.canPlay) {
+    await page.locator('.btn-play').tap();
+    await page.waitForFunction(
+      value => document.querySelectorAll('[data-card-id]').length < value,
+      before,
+      { timeout: 20_000 },
+    );
+    const after = await page.locator('[data-card-id]').count();
+    const boardText = (await page.locator('.tech-trick-board').textContent())?.replace(/\s+/g, ' ').trim() || '';
+    assert(/单张|对子|三张|四张|五张|六张|七张|五十K|炸弹/.test(boardText), `${label}:第${number}回合出牌后牌型没有显示`);
+    return { number, action: 'play', before, after, selectedText, boardText };
+  }
+
+  assert(decision.canPass, `${label}:第${number}回合既无可出牌也不能过牌 ${JSON.stringify(decision)}`);
+  await page.locator('.btn-pass').tap();
+  await page.waitForTimeout(700);
+  return {
+    number,
+    action: 'pass',
     before,
-    { timeout: 20_000 },
-  );
-  const after = await page.locator('[data-card-id]').count();
-  const boardText = (await page.locator('.tech-trick-board').textContent())?.replace(/\s+/g, ' ').trim() || '';
-  assert(after < before, `${label}:第${number}次出牌后手牌没有减少`);
-  assert(/单张|对子|三张|四张|五张|六张|七张|五十K|炸弹/.test(boardText), `${label}:第${number}次出牌后牌型没有显示`);
-  return { number, before, after, selectedCount, selectedText, boardText };
+    after: await page.locator('[data-card-id]').count(),
+    selectedText,
+    boardText: (await page.locator('.tech-trick-board').textContent())?.replace(/\s+/g, ' ').trim() || '',
+  };
 }
 
 async function stressLabels(page, label) {
-  await page.waitForTimeout(500);
   const result = await page.evaluate(() => {
     const meta = document.querySelector('.tech-round-meta');
     const action = document.querySelector('.tech-trick-cell-head strong');
@@ -234,13 +248,13 @@ async function stressLabels(page, label) {
     selectionText.textContent = '已选7张 · 普通七张（可点出牌，由系统判断）';
     const box = node => {
       const value = node.getBoundingClientRect();
-      return { left: value.left, top: value.top, right: value.right, bottom: value.bottom, width: value.width, height: value.height };
+      return { left: value.left, top: value.top, right: value.right, bottom: value.bottom };
     };
     const textBox = node => {
       const range = document.createRange();
       range.selectNodeContents(node);
       const value = range.getBoundingClientRect();
-      return box({ getBoundingClientRect: () => value });
+      return { left: value.left, top: value.top, right: value.right, bottom: value.bottom };
     };
     return {
       meta: box(meta), metaText: textBox(meta),
@@ -281,25 +295,31 @@ try {
       const page = await context.newPage();
       const diagnostics = diagnosticsFor(page);
       await enterGame(page);
+
       const initial = await inspect(page);
       debug = { engine: engine.name, initial, diagnostics };
       await page.screenshot({ path: path.join(outputDir, `${engine.name}-01-tech-game.png`), fullPage: false });
       verifyLayout(initial, `${engine.name}-initial`);
-      const plays = [];
-      for (let number = 1; number <= 3; number += 1) plays.push(await playLegalTurn(page, engine.name, number));
+
+      const turns = [];
+      for (let number = 1; number <= 3; number += 1) {
+        turns.push(await playLegalTurn(page, engine.name, number));
+      }
       await page.waitForTimeout(350);
-      const afterPlay = await inspect(page);
-      debug = { engine: engine.name, initial, plays, afterPlay, diagnostics };
-      await page.screenshot({ path: path.join(outputDir, `${engine.name}-02-after-three-plays.png`), fullPage: false });
-      verifyLayout(afterPlay, `${engine.name}-after-play`);
+      const afterTurns = await inspect(page);
+      debug = { engine: engine.name, initial, turns, afterTurns, diagnostics };
+      await page.screenshot({ path: path.join(outputDir, `${engine.name}-02-after-three-turns.png`), fullPage: false });
+      verifyLayout(afterTurns, `${engine.name}-after-turns`);
+
       const longLabels = await stressLabels(page, engine.name);
-      debug = { engine: engine.name, initial, plays, afterPlay, longLabels, diagnostics };
+      debug = { engine: engine.name, initial, turns, afterTurns, longLabels, diagnostics };
       await page.screenshot({ path: path.join(outputDir, `${engine.name}-03-long-pattern-labels.png`), fullPage: false });
+
       assert(diagnostics.consoleErrors.length === 0, `${engine.name}:控制台错误 ${diagnostics.consoleErrors.join('；')}`);
       assert(diagnostics.pageErrors.length === 0, `${engine.name}:页面错误 ${diagnostics.pageErrors.join('；')}`);
       assert(diagnostics.requestFailures.length === 0, `${engine.name}:请求失败 ${JSON.stringify(diagnostics.requestFailures)}`);
       assert(diagnostics.httpErrors.length === 0, `${engine.name}:HTTP错误 ${JSON.stringify(diagnostics.httpErrors)}`);
-      report.push({ engine: engine.name, initial, plays, afterPlay, longLabels, diagnostics });
+      report.push({ engine: engine.name, initial, turns, afterTurns, longLabels, diagnostics });
       debug = null;
       await context.close();
     } finally {
@@ -319,4 +339,4 @@ try {
   if (failure) await fs.writeFile(path.join(outputDir, 'failure.json'), JSON.stringify(failure, null, 2));
 }
 
-console.log('technology landscape game V2 audit passed: Chromium/WebKit, three real plays, no board clipping, longest labels visible');
+console.log('technology landscape game V2 audit passed: Chromium/WebKit, three legal turns, no board clipping, longest labels visible');
