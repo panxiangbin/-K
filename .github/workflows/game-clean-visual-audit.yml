@@ -72,7 +72,7 @@ jobs:
         working-directory: client
         env:
           GAME_CLEAN_AUDIT_URL: http://127.0.0.1:4173/pan/50k
-        run: node game-clean-live-audit.mjs
+        run: node game-clean-live-audit-v2.mjs
 
       - name: Upload clean game screenshots and report
         if: always()
