@@ -7,7 +7,7 @@ const BOMB_LEVEL = { '50K': 1, color4: 2, same8: 3, joker4: 4 };
 const SUIT_ORDER = { '♠': 4, '♥': 3, '♣': 2, '♦': 1 };
 const TYPE_LABEL = { single:'单张', pair:'对子', triple:'三张', four:'普通四张', five:'普通五张', six:'普通六张', seven:'普通七张', bomb:'炸弹' };
 const AVATARS = ['龙','虎','狐','狼'];
-const AVATAR_COLORS = ['#13b8c8','#6559e8','#e85d93','#20b878'];
+const AVATAR_COLORS = ['#7c3aed','#0891b2','#d97706','#dc2626'];
 const SCORE_RANKS = new Set(['5', '10', 'K']);
 
 function cardValue(rank) { return CARD_ORDER.indexOf(rank); }
@@ -201,14 +201,6 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
   const lastPlayKey = gameState?.lastPlayCards?.map(c => c.id).join('|') || '';
   const myFinished = myHand.length === 0 && gameState?.status === 'playing';
 
-  useEffect(() => {
-    document.documentElement.dataset.gameVisual = 'tech-landscape-v2';
-    document.body.classList.add('game-screen-tech-v2');
-    return () => {
-      document.body.classList.remove('game-screen-tech-v2');
-      if (document.documentElement.dataset.gameVisual === 'tech-landscape-v2') delete document.documentElement.dataset.gameVisual;
-    };
-  }, []);
   useEffect(() => { if (isMyTurn && navigator.vibrate) navigator.vibrate([100, 50, 100]); }, [isMyTurn]);
   useEffect(() => { setSending(false); }, [myHand, gameState?.currentPlayer]);
   useEffect(() => { hintCursorRef.current = 0; }, [lastPlayKey, myHand.length]);
@@ -316,163 +308,147 @@ export default function Game({ send, gameState, myHand, myInfo, toast, onReturnL
   function confirmExit() { setConfirmAction(null); onExitRoom?.(); }
 
   return (
-    <div className={`tech-game-shell game-table-shell${bombAnim ? ' is-bombing' : ''}`}>
-      {bombAnim && <div className="tech-bomb-flash" />}
-      <div className="tech-score-floats" aria-hidden="true">
-        {floats.map(f => <div key={f.id}>{f.text}</div>)}
+    <div style={{ height:'100%', display:'flex', flexDirection:'column', background:'#0f3a24', animation: bombAnim ? 'shake 0.35s ease' : 'none', position:'relative', overflow:'hidden', fontFamily:"'PingFang SC','Microsoft YaHei',sans-serif" }}>
+      {bombAnim && <div style={{ position:'fixed', inset:0, zIndex:100, background:'rgba(245,158,11,0.12)', pointerEvents:'none' }} />}
+      <div style={{ position:'fixed', top:'40%', left:'50%', transform:'translateX(-50%)', zIndex:110, pointerEvents:'none' }}>
+        {floats.map(f => <div key={f.id} style={{ fontSize:30, fontWeight:900, color:'#fbbf24', textShadow:'0 2px 8px rgba(0,0,0,0.45)', animation:'floatUp 2.5s ease-out forwards' }}>{f.text}</div>)}
       </div>
 
-      <header className="tech-topbar game-table-header">
-        <div className="tech-top-actions game-table-header__actions">
+      <div style={{ height:44, display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, padding:'4px 10px', background:'#0b2417', borderBottom:'1px solid rgba(255,255,255,0.08)', zIndex:20 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
           <button onClick={() => setConfirmAction('return')} className="top-action">返回</button>
           <button onClick={() => setConfirmAction('exit')} className="top-action danger">退出</button>
         </div>
-        <div className="tech-room-title game-table-header__room">
-          <strong>河南五十K</strong>
-          <span>{gameState?.mode === 'solo' ? `${gameState?.maxPlayers || players.length}人单机` : `房间 ${gameState?.id || ''}`}</span>
-        </div>
-        <div className="tech-turn-status game-table-header__turn" data-turn-state={isMyTurn ? 'self' : 'other'}>
-          <span className="tech-turn-dot" />
-          {isMyTurn ? '轮到你出牌' : `等待 ${currentPlayer?.name || '玩家'}`}
-        </div>
-      </header>
+        <div style={{ fontSize:12, color:'#f8fafc', fontWeight:900, whiteSpace:'nowrap' }}>河南五十K <span style={{ color:'#94a3b8', fontWeight:600 }}>· {gameState?.mode === 'solo' ? `${gameState?.maxPlayers || players.length}人单机` : `房间${gameState?.id || ''}`}</span></div>
+        <div style={{ fontSize:12, color:isMyTurn ? '#fbbf24' : '#cbd5e1', fontWeight:900, minWidth:126, textAlign:'right', whiteSpace:'nowrap' }}>{isMyTurn ? '轮到你：请出牌' : `轮到：${currentPlayer?.name || '等待'}`}</div>
+      </div>
 
-      <main className="tech-stage game-table-stage">
-        <aside className="tech-player-rail game-table-player-rail game-table-player-rail--left">
-          {leftOpp && <PlayerHud player={leftOpp} idx={players.indexOf(leftOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(leftOpp)} position="left" />}
-        </aside>
-
-        <section className="tech-center game-table-center-column">
-          <div className="tech-top-seat-slot">
-            {topOpp && <PlayerHud player={topOpp} idx={players.indexOf(topOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(topOpp)} position="top" />}
+      <div style={{ flex:1, display:'flex', position:'relative', zIndex:10, minHeight:0 }}>
+        <div style={{ width:'var(--side-col-w, 96px)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          {leftOpp && <OpponentSide player={leftOpp} idx={players.indexOf(leftOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(leftOpp)} />}
+        </div>
+        <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0 }}>
+          <div style={{ height:'21%', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
+            {topOpp && <OpponentTop player={topOpp} idx={players.indexOf(topOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(topOpp)} />}
           </div>
-          <div className="tech-board-wrap">
+          <div style={{ height:'79%', position:'relative', display:'flex', alignItems:'center', justifyContent:'center', minHeight:0 }}>
+            <div style={{ position:'absolute', width:'86%', height:'90%', borderRadius:'28px', border:'1px solid rgba(255,255,255,0.07)', background:'radial-gradient(circle at center, rgba(255,255,255,0.045), rgba(255,255,255,0.015))', boxShadow: isMyTurn ? 'inset 0 0 26px rgba(245,197,24,0.20)' : 'none' }} />
             <TrickBoard items={trickItems} trickPlays={gameState?.trickPlays || []} pileScore={pileScore} isMyTurn={isMyTurn} currentPlayer={currentPlayer} lastPlay={gameState?.lastPlay} />
           </div>
-        </section>
-
-        <aside className="tech-player-rail game-table-player-rail game-table-player-rail--right">
-          {rightOpp && <PlayerHud player={rightOpp} idx={players.indexOf(rightOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(rightOpp)} position="right" />}
-        </aside>
-      </main>
-
-      <footer className="tech-hand-dock game-table-hand-dock">
-        <div className="tech-self-row">
-          {me && <SelfPanel player={me} isCurrent={isMyTurn} />}
         </div>
+        <div style={{ width:'var(--side-col-w, 96px)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          {rightOpp && <OpponentSide player={rightOpp} idx={players.indexOf(rightOpp)} isCurrent={gameState?.currentPlayer === players.indexOf(rightOpp)} />}
+        </div>
+      </div>
+
+      <div style={{ paddingBottom:'var(--hand-bottom-pad, 8px)', zIndex:30, flexShrink:0, background:'linear-gradient(to top, rgba(0,0,0,0.30), transparent)' }}>
+        {me && <div style={{ display:'flex', justifyContent:'center', marginBottom:1 }}><SelfPanel player={me} isCurrent={isMyTurn} /></div>}
         <StatusBar myFinished={myFinished} selectedCount={selected.size} selectedType={selectedType} canPlaySelected={canPlaySelected} sending={sending} isMyTurn={isMyTurn} arranged={arranged} lastPlay={gameState?.lastPlay} />
-        <div className="tech-hand-surface game-hand-surface" onPointerMove={handleHandPointerMove} onPointerUp={endSlideSelect} onPointerCancel={endSlideSelect} onPointerLeave={endSlideSelect}>
-          <div className="tech-hand-cards" style={{ opacity: myFinished ? 0.35 : 1 }}>
+        <div onPointerMove={handleHandPointerMove} onPointerUp={endSlideSelect} onPointerCancel={endSlideSelect} onPointerLeave={endSlideSelect} style={{ display:'flex', justifyContent:'center', padding:'var(--hand-y-pad-top, 10px) var(--hand-x-pad, 40px) var(--hand-y-pad-bottom, 18px)', overflow:'visible', touchAction:'none' }}>
+          <div style={{ display:'flex', justifyContent:'center', minWidth:0, opacity: myFinished ? 0.35 : 1 }}>
             {sortedHand.map((card, i) => (
-              <div key={card.id} data-card-id={card.id} onPointerDown={() => handleCardPointerDown(card.id)} onClick={() => handleCardClick(card.id)} style={{ marginLeft: i === 0 ? 0 : 'var(--hand-overlap, -34px)', filter:selected.has(card.id) ? 'drop-shadow(0 0 8px rgba(54,225,255,0.72))' : 'none' }}>
+              <div key={card.id} data-card-id={card.id} onPointerDown={() => handleCardPointerDown(card.id)} onClick={() => handleCardClick(card.id)} style={{ marginLeft: i === 0 ? 0 : 'var(--hand-overlap, -24px)', filter:selected.has(card.id) ? 'drop-shadow(0 0 8px rgba(251,191,36,0.8))' : 'none' }}>
                 <Card card={card} selected={selected.has(card.id)} />
               </div>
             ))}
           </div>
         </div>
-        <div className="tech-actions game-hand-actions">
+        <div style={{ display:'flex', alignItems:'center', gap:7, padding:'0 10px 4px' }}>
+          <div style={{ display:'flex', gap:10, fontSize:11, color:'#cbd5e1', flex:1, paddingLeft:6, whiteSpace:'nowrap', overflow:'hidden' }}><span>普通</span><span>分牌</span><span>炸弹</span></div>
           <button disabled={sending || myFinished} onClick={toggleArrange} className="btn-lite">{arranged ? '还原' : '理牌'}</button>
           <button disabled={sending || myFinished || selected.size === 0} onClick={clearSelection} className="btn-lite">清空</button>
           <button disabled={sending || myFinished} onClick={hint} className="btn-lite hint">提示</button>
           <button disabled={!isMyTurn || isFirst || sending || myFinished} onClick={pass} className="btn-pass">过牌</button>
           <button disabled={!isMyTurn || !selected.size || sending || myFinished} onClick={playCards} className="btn-play">出牌{selected.size > 0 ? `(${selected.size})` : ''}</button>
         </div>
-      </footer>
+      </div>
 
       {confirmAction && <ConfirmModal title={confirmAction === 'return' ? '是否返回大厅？' : '是否退出当前房间？'} desc={confirmAction === 'return' ? '当前房间会保留，你可以从大厅继续回来。' : gameState?.mode === 'solo' ? '退出后单机局直接作废，下次不会自动恢复。' : '退出后会清除本机房间记录，下次不会自动回到这局。'} cancelText="取消" okText={confirmAction === 'return' ? '返回大厅' : '确认退出'} danger={confirmAction === 'exit'} onCancel={() => setConfirmAction(null)} onOk={confirmAction === 'return' ? confirmReturn : confirmExit} />}
+
+      <style>{`
+        .top-action { min-height:32px; padding:0 10px; border-radius:11px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:#f8fafc; font-size:12px; font-weight:900; }
+        .top-action.danger { color:#fecaca; border-color:rgba(248,113,113,0.35); }
+        .btn-lite { min-height:44px; padding:0 12px; border-radius:15px; font-size:13px; font-weight:900; background:rgba(255,255,255,0.075); border:1px solid rgba(255,255,255,0.18); color:#f8fafc; }
+        .btn-lite.hint { color:#bfdbfe; border-color:rgba(96,165,250,0.35); }
+        .btn-lite:disabled { opacity:0.35; }
+        .btn-pass { min-height:44px; padding:0 17px; border-radius:15px; font-size:14px; font-weight:900; background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.22); color:#fff; }
+        .btn-pass:disabled { opacity:0.3; }
+        .btn-play { min-height:46px; padding:0 24px; border-radius:16px; font-size:17px; font-weight:900; background:#f5c518; border:none; color:#102016; box-shadow:0 3px 12px rgba(0,0,0,0.32); }
+        .btn-play:disabled { background:#45524a; color:#9ca3af; box-shadow:none; }
+        @keyframes softPulse { 0%,100%{opacity:.85;transform:scale(1)} 50%{opacity:1;transform:scale(1.02)} }
+        @keyframes turnSeatPulse { 0%,100%{box-shadow:0 0 12px rgba(245,197,24,.50),0 0 0 2px rgba(245,197,24,.65); transform:scale(1)} 50%{box-shadow:0 0 26px rgba(245,197,24,.95),0 0 0 4px rgba(245,197,24,.85); transform:scale(1.04)} }
+        @keyframes avatarPulse { 0%,100%{filter:brightness(1); transform:scale(1)} 50%{filter:brightness(1.25); transform:scale(1.09)} }
+      `}</style>
     </div>
   );
 }
 
 function StatusBar({ myFinished, selectedCount, selectedType, canPlaySelected, sending, isMyTurn, arranged, lastPlay }) {
   let text = '';
-  let tone = 'idle';
-  if (myFinished) { text = '你已出完，等待本墩结束'; tone = 'done'; }
+  let color = '#fbbf24';
+  if (myFinished) text = '你已出完，等待本墩结束后再结算分牌';
   else if (selectedCount > 0) {
-    text = `已选${selectedCount}张 · ${selectedType}${canPlaySelected ? '' : ' · 可尝试出牌'}`;
-    tone = canPlaySelected ? 'ready' : 'warning';
-  } else if (sending) { text = '正在出牌…'; tone = 'busy'; }
-  else if (isMyTurn) { text = lastPlay ? `请压过：${patternLabel(lastPlay)}` : '你先出牌，选择任意合法牌型'; tone = 'ready'; }
-  else if (arranged) { text = '已理牌：分牌与炸弹已靠右'; tone = 'idle'; }
-  else { text = '轻点选牌，左右滑动查看全部手牌'; tone = 'idle'; }
-  return <div className="tech-selection-status game-hand-selection-status" data-tone={tone}><div>{text}</div></div>;
+    text = `已选${selectedCount}张 · ${selectedType}${canPlaySelected ? '' : '（可点出牌，由系统判断）'}`;
+    color = canPlaySelected ? '#fbbf24' : '#fb923c';
+  } else if (sending) text = '正在出牌...';
+  else if (isMyTurn) text = lastPlay ? `请出牌，需压过：${patternLabel(lastPlay)}` : '你先出牌，选择任意合法牌型';
+  else if (arranged) text = '已理牌：再点“还原”恢复普通排序';
+  else text = '可点选，也可以按住手牌横向滑动多选';
+  return <div style={{ height:22, display:'flex', justifyContent:'center', alignItems:'center' }}><div style={{ padding:'3px 12px', borderRadius:12, background:'rgba(0,0,0,0.24)', border:`1px solid ${color}33`, fontSize:12, color, fontWeight:900, textShadow:'0 1px 2px rgba(0,0,0,0.8)', animation:isMyTurn && selectedCount === 0 ? 'softPulse 1.3s ease-in-out infinite' : 'none' }}>{text}</div></div>;
 }
 
 function TrickBoard({ items, trickPlays, pileScore, isMyTurn, currentPlayer, lastPlay }) {
   return (
-    <section className="tech-trick-board game-table-trick-board">
-      <div className="tech-round-summary trick-board-summary">
-        <div className="tech-round-title trick-board-summary__title">本轮出牌</div>
-        <div className="tech-round-turn trick-board-summary__turn">{isMyTurn ? '请你操作' : `等待 ${currentPlayer?.name || ''}`}</div>
-        <div className="tech-round-meta trick-board-summary__meta">
-          <span className="tech-meta-label">牌型</span>
-          <strong>{lastPlay ? patternLabel(lastPlay) : '先手'}</strong>
-          <span className="tech-meta-separator">·</span>
-          <span className="tech-meta-label">本墩</span>
-          <strong>{pileScore}分</strong>
-        </div>
+    <div style={{ zIndex:5, width:'min(700px, 96%)', padding:'10px 12px', borderRadius:24, background:'rgba(4,22,14,0.40)', border:'1px solid rgba(255,255,255,0.08)', boxShadow:'0 10px 28px rgba(0,0,0,0.18)' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8, gap:8 }}>
+        <div style={{ fontSize:15, fontWeight:900, color:'#fbbf24', whiteSpace:'nowrap' }}>本轮出牌</div>
+        <div style={{ fontSize:12, color:isMyTurn ? '#fbbf24' : '#cbd5e1', fontWeight:900, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{isMyTurn ? '轮到你操作' : `等待 ${currentPlayer?.name || ''}`}</div>
+        <div style={{ fontSize:12, color:'#e5e7eb', whiteSpace:'nowrap' }}>牌型 <span style={{ color:'#fbbf24', fontWeight:900 }}>{lastPlay ? patternLabel(lastPlay) : '先手'}</span> · 本墩 <span style={{ color:'#fbbf24', fontWeight:900 }}>{pileScore}分</span></div>
       </div>
-      <div className="tech-trick-grid trick-action-grid" style={{ gridTemplateColumns: `repeat(${Math.max(1, items.length)}, minmax(0, 1fr))` }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:7 }}>
         {items.map(({ label, player }) => {
           const entry = trickPlays.find(x => x.playerId === player.id);
           return <TrickCell key={player.id} label={label} player={player} entry={entry} />;
         })}
       </div>
-    </section>
+    </div>
   );
 }
 
 function TrickCell({ label, player, entry }) {
   const hasPlayed = entry?.action === 'play';
   const passed = entry?.action === 'pass';
-  const state = hasPlayed ? 'played' : passed ? 'passed' : 'waiting';
   return (
-    <article className={`tech-trick-cell trick-action-card is-${state}`} data-trick-state={state}>
-      <div className="tech-trick-cell-head trick-action-card__header">
-        <span>{label} · <b>{player.name}</b>{player.isBot ? ' 机' : ''}</span>
-        <strong>{hasPlayed ? patternLabel(entry.pattern) : passed ? '过牌' : '待出'}</strong>
+    <div style={{ minHeight:66, borderRadius:16, background:hasPlayed ? 'rgba(245,197,24,0.075)' : 'rgba(255,255,255,0.045)', border:`1px solid ${hasPlayed ? 'rgba(245,197,24,0.18)' : 'rgba(255,255,255,0.07)'}`, padding:'6px 8px', overflow:'hidden' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6, marginBottom:4 }}>
+        <div style={{ fontSize:11, color:'#94a3b8', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{label} · <span style={{ color:'#fff', fontWeight:900 }}>{player.name}</span>{player.isBot ? <span style={{ color:'#fbbf24' }}> 机</span> : null}</div>
+        <div style={{ fontSize:11, color:hasPlayed ? '#fbbf24' : passed ? '#94a3b8' : '#64748b', fontWeight:900, flexShrink:0 }}>{hasPlayed ? patternLabel(entry.pattern) : passed ? '过牌' : '待出'}</div>
       </div>
-      <div className="tech-trick-cell-body trick-action-card__body">
-        {hasPlayed ? (entry.cards || []).slice(0, 8).map(c => <MiniCard key={c.id} card={c} />) : <span>{passed ? '已过牌' : '等待操作'}</span>}
-      </div>
-    </article>
+      {hasPlayed ? <div style={{ display:'flex', gap:2, alignItems:'center', overflow:'hidden' }}>{(entry.cards || []).slice(0, 8).map(c => <MiniCard key={c.id} card={c} />)}</div> : <div style={{ height:36, display:'flex', alignItems:'center', color:passed ? '#94a3b8' : 'rgba(255,255,255,0.28)', fontSize:13, fontWeight:800 }}>{passed ? '已过牌' : '等待操作'}</div>}
+    </div>
   );
 }
 
 function TurnBadge() {
-  return <span className="tech-player-state">出牌中</span>;
+  return <div style={{ marginTop:2, padding:'2px 8px', borderRadius:999, background:'#f5c518', color:'#102016', fontSize:10, fontWeight:900, boxShadow:'0 0 12px rgba(245,197,24,.65)' }}>出牌中</div>;
 }
 
-function PlayerAvatar({ player, idx, isCurrent = false }) {
-  return <div className={`tech-player-avatar${isCurrent ? ' is-current' : ''}`} style={{ '--avatar-color': AVATAR_COLORS[idx] || '#13b8c8' }}>{player?.isBot ? '机' : (AVATARS[idx] || '玩')}</div>;
+function PlayerAvatar({ player, idx, size = 40, isCurrent = false }) {
+  return <div style={{ width:size, height:size, borderRadius:'50%', background:AVATAR_COLORS[idx] || '#475569', display:'flex', alignItems:'center', justifyContent:'center', fontSize:size > 36 ? 16 : 13, fontWeight:900, color:'#fff', flexShrink:0, border:isCurrent ? '3px solid #f5c518' : '1px solid rgba(255,255,255,.18)', boxShadow:isCurrent ? '0 0 20px rgba(245,197,24,.85)' : 'none', animation:isCurrent ? 'avatarPulse 1s ease-in-out infinite' : 'none' }}>{player?.isBot ? '机' : (AVATARS[idx] || '玩')}</div>;
 }
 
-function PlayerHud({ player, idx, isCurrent, position }) {
-  const stateText = player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`;
-  return (
-    <div className={`tech-player-hud tech-player-hud--${position}${isCurrent ? ' is-current' : ''}`} style={{ opacity: player.isOnline ? 1 : 0.5 }}>
-      <PlayerAvatar player={player} idx={idx} isCurrent={isCurrent} />
-      <div className="tech-player-copy">
-        <strong>{player.name}</strong>
-        <span>{player.score}分 · {stateText}</span>
-      </div>
-      {isCurrent && <TurnBadge />}
-    </div>
-  );
+function OpponentSide({ player, idx, isCurrent }) {
+  return <div style={{ width:82, padding:'10px 5px', borderRadius:20, background:isCurrent?'linear-gradient(180deg, rgba(245,197,24,0.25), rgba(120,53,15,0.20))':'rgba(0,0,0,0.16)', border:`2px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 24px rgba(245,197,24,0.55), inset 0 0 12px rgba(245,197,24,0.18)':'none', animation:isCurrent?'turnSeatPulse 1.1s ease-in-out infinite':'none', display:'flex', flexDirection:'column', alignItems:'center', gap:4, opacity: player.isOnline ? 1 : 0.45, transform:isCurrent?'scale(1.04)':'none' }}><PlayerAvatar player={player} idx={idx} size={isCurrent ? 44 : 38} isCurrent={isCurrent} /><div style={{ fontSize:11, fontWeight:900, color:isCurrent ? '#fef3c7' : '#fff', maxWidth:72, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{player.name}</div><div style={{ fontSize:10, color:'#fbbf24', fontWeight:800 }}>{player.score}分</div><div style={{ fontSize:10, color:'#cbd5e1' }}>{player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div>{isCurrent && <TurnBadge />}</div>;
+}
+
+function OpponentTop({ player, idx, isCurrent }) {
+  return <div style={{ display:'flex', alignItems:'center', gap:8, padding:isCurrent?'7px 14px':'6px 12px', borderRadius:20, background:isCurrent?'linear-gradient(180deg, rgba(245,197,24,0.25), rgba(120,53,15,0.20))':'rgba(0,0,0,0.16)', border:`2px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 24px rgba(245,197,24,0.55), inset 0 0 12px rgba(245,197,24,0.18)':'none', animation:isCurrent?'turnSeatPulse 1.1s ease-in-out infinite':'none', opacity: player.isOnline ? 1 : 0.45, transform:isCurrent?'scale(1.05)':'none' }}><PlayerAvatar player={player} idx={idx} size={isCurrent ? 40 : 34} isCurrent={isCurrent} /><div><div style={{ fontSize:12, color:isCurrent ? '#fef3c7' : '#fff', fontWeight:900 }}>{player.name}</div><div style={{ fontSize:10, color:'#cbd5e1' }}>{player.score}分 · {player.left ? '已退出' : player.cardCount === 0 ? '已出完' : `${player.cardCount}张`}</div>{isCurrent && <TurnBadge />}</div></div>;
 }
 
 function SelfPanel({ player, isCurrent }) {
-  return (
-    <div className={`tech-self-panel${isCurrent ? ' is-current' : ''}`}>
-      <span className="tech-self-tag">我</span>
-      <strong>{player.name}</strong>
-      <span>{player.score}分</span>
-      <span>{player.cardCount}张</span>
-      {isCurrent && <TurnBadge />}
-    </div>
-  );
+  return <div style={{ display:'flex', alignItems:'center', gap:8, padding:isCurrent?'5px 14px':'4px 12px', borderRadius:18, background:isCurrent?'linear-gradient(180deg, rgba(245,197,24,0.26), rgba(120,53,15,0.22))':'rgba(0,0,0,0.22)', border:`2px solid ${isCurrent ? '#f5c518' : 'rgba(255,255,255,0.08)'}`, boxShadow:isCurrent?'0 0 24px rgba(245,197,24,0.55)':'none', animation:isCurrent?'turnSeatPulse 1.1s ease-in-out infinite':'none' }}><div style={{ fontSize:11, color:'#fbbf24', fontWeight:900 }}>我</div><div style={{ fontSize:12, color:isCurrent ? '#fef3c7' : '#fff', fontWeight:900 }}>{player.name}</div><div style={{ fontSize:11, color:'#cbd5e1' }}>{player.score}分 · {player.cardCount}张</div>{isCurrent && <TurnBadge />}</div>;
 }
 
 function ConfirmModal({ title, desc, cancelText, okText, danger, onCancel, onOk }) {
-  return <div className="tech-modal-backdrop"><div className="tech-modal"><h2>{title}</h2><p>{desc}</p><div><button onClick={onCancel}>{cancelText}</button><button className={danger ? 'danger' : 'primary'} onClick={onOk}>{okText}</button></div></div></div>;
+  return <div style={{ position:'fixed', inset:0, zIndex:2000, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}><div style={{ width:330, borderRadius:22, background:'#f8fafc', color:'#0f172a', padding:18, boxShadow:'0 12px 30px rgba(0,0,0,0.35)' }}><div style={{ fontSize:20, fontWeight:900, marginBottom:8 }}>{title}</div><div style={{ fontSize:14, color:'#475569', lineHeight:1.6, marginBottom:18 }}>{desc}</div><div style={{ display:'flex', gap:10 }}><button onClick={onCancel} style={{ flex:1, height:46, borderRadius:14, border:'1px solid #cbd5e1', background:'#fff', color:'#334155', fontSize:15, fontWeight:900 }}>{cancelText}</button><button onClick={onOk} style={{ flex:1, height:46, borderRadius:14, border:'none', background:danger ? '#ef4444' : '#f5c518', color:danger ? '#fff' : '#102016', fontSize:15, fontWeight:900 }}>{okText}</button></div></div></div>;
 }
