@@ -70,6 +70,10 @@ html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: clip !important;
+  letter-spacing: -0.08em !important;
+  word-spacing: -1px !important;
+  transform: scaleX(.82) !important;
+  transform-origin: center center !important;
 }
 
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(2) > * > :first-child > :last-child,
