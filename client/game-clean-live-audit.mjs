@@ -46,32 +46,69 @@ async function enterThreePlayerGame(page) {
 
 async function readLayout(page) {
   return page.evaluate(() => {
-    const rect = selector => {
-      const node = document.querySelector(selector);
+    const getNode = selector => document.querySelector(selector);
+    const rectOf = node => {
       if (!node) return null;
       const r = node.getBoundingClientRect();
       return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
     };
-    const actions = [...document.querySelectorAll('.game-hand-actions button')].map(node => {
-      const r = node.getBoundingClientRect();
-      return { text: node.textContent?.trim() || '', left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
-    });
+    const rect = selector => rectOf(getNode(selector));
+    const logicalOf = node => node ? {
+      clientWidth: node.clientWidth,
+      clientHeight: node.clientHeight,
+      offsetWidth: node.offsetWidth,
+      offsetHeight: node.offsetHeight,
+      scrollWidth: node.scrollWidth,
+      scrollHeight: node.scrollHeight,
+    } : null;
+    const logical = selector => logicalOf(getNode(selector));
+    const actions = [...document.querySelectorAll('.game-hand-actions button')].map(node => ({
+      text: node.textContent?.trim() || '',
+      ...rectOf(node),
+      logical: logicalOf(node),
+    }));
     const visibleCards = [...document.querySelectorAll('[data-card-id]')].filter(node => {
       const r = node.getBoundingClientRect();
       return r.right > 0 && r.left < innerWidth && r.bottom > 0 && r.top < innerHeight;
     }).length;
+    const visualViewport = window.visualViewport;
+    const root = document.getElementById('root');
+    const app = root?.firstElementChild;
+    const shellNode = getNode('.game-table-shell');
     return {
       viewport: { width: innerWidth, height: innerHeight },
+      visualViewport: visualViewport ? {
+        width: visualViewport.width,
+        height: visualViewport.height,
+        offsetLeft: visualViewport.offsetLeft,
+        offsetTop: visualViewport.offsetTop,
+      } : null,
       presentation: document.documentElement.dataset.landscapePresentation || '',
       visual: document.documentElement.dataset.gameVisual || '',
       bodyClass: document.body.className,
-      shell: rect('.game-table-shell'),
+      cssVars: {
+        appWidth: getComputedStyle(document.documentElement).getPropertyValue('--app-width').trim(),
+        appHeight: getComputedStyle(document.documentElement).getPropertyValue('--app-height').trim(),
+      },
+      root: rectOf(root),
+      rootLogical: logicalOf(root),
+      app: rectOf(app),
+      appLogical: logicalOf(app),
+      shell: rectOf(shellNode),
+      shellLogical: logicalOf(shellNode),
+      shellPosition: shellNode ? getComputedStyle(shellNode).position : '',
       header: rect('.game-table-header'),
+      headerLogical: logical('.game-table-header'),
       stage: rect('.game-table-stage'),
+      stageLogical: logical('.game-table-stage'),
       board: rect('.game-table-trick-board'),
+      boardLogical: logical('.game-table-trick-board'),
       dock: rect('.game-table-hand-dock'),
+      dockLogical: logical('.game-table-hand-dock'),
       hand: rect('.game-hand-surface'),
+      handLogical: logical('.game-hand-surface'),
       selection: rect('.game-hand-selection-status'),
+      selectionLogical: logical('.game-hand-selection-status'),
       actions,
       totalCards: document.querySelectorAll('[data-card-id]').length,
       visibleCards,
@@ -92,16 +129,18 @@ function auditLayout(metrics, label) {
   assert(metrics.visual === 'clean-landscape-v1', `${label}: 新牌桌版本未生效`);
   assert(metrics.presentation === 'forced' || metrics.presentation === 'native', `${label}: 横屏状态错误`);
   assert(metrics.bodyClass.includes('game-screen-clean-v1'), `${label}: 新牌桌类名未启用`);
+  assertInside(metrics.root, metrics.viewport, `${label}:root`);
   for (const [name, rect] of Object.entries({ shell: metrics.shell, header: metrics.header, stage: metrics.stage, board: metrics.board, dock: metrics.dock, hand: metrics.hand, selection: metrics.selection })) {
     assertInside(rect, metrics.viewport, `${label}:${name}`);
   }
-  assert(metrics.stage.width > metrics.dock.height * 3, `${label}: 牌桌仍像竖版压缩`);
-  assert(metrics.board.width >= 360, `${label}: 中央出牌区太窄 ${metrics.board.width}px`);
+  assert(metrics.shellLogical?.offsetWidth >= 800 && metrics.shellLogical?.offsetHeight <= 410, `${label}: 逻辑牌桌不是横版 ${JSON.stringify(metrics.shellLogical)}`);
+  assert(metrics.stageLogical?.offsetWidth > (metrics.dockLogical?.offsetHeight || 0) * 3, `${label}: 逻辑牌桌仍像竖版压缩 ${JSON.stringify({ stage: metrics.stageLogical, dock: metrics.dockLogical })}`);
+  assert(metrics.boardLogical?.offsetWidth >= 360, `${label}: 中央出牌区太窄 ${metrics.boardLogical?.offsetWidth}px`);
   assert(metrics.totalCards > 0 && metrics.visibleCards >= 8, `${label}: 手牌可见数量不足 ${metrics.visibleCards}/${metrics.totalCards}`);
   assert(metrics.actions.length >= 5, `${label}: 操作按钮不完整`);
   for (const action of metrics.actions) {
     assertInside(action, metrics.viewport, `${label}:按钮“${action.text}”`);
-    assert(action.height >= 38, `${label}:按钮“${action.text}”高度不足`);
+    assert(Math.max(action.width, action.height) >= 38 && Math.min(action.width, action.height) >= 36, `${label}:按钮“${action.text}”触控区域不足 ${action.width}x${action.height}`);
   }
 }
 
@@ -187,6 +226,7 @@ async function stressLongestPatternLabels(page, label) {
 await fs.mkdir(outputDir, { recursive: true });
 const report = [];
 let failure = null;
+let activeDebug = null;
 
 try {
   for (const engine of engines) {
@@ -203,18 +243,22 @@ try {
       const diagnostics = attachDiagnostics(page);
       await enterThreePlayerGame(page);
       const initial = await readLayout(page);
-      auditLayout(initial, `${engine.name}-initial`);
+      activeDebug = { engine: engine.name, initial, diagnostics };
+      await fs.writeFile(path.join(outputDir, `${engine.name}-initial-layout.json`), JSON.stringify(initial, null, 2));
       await page.screenshot({ path: path.join(outputDir, `${engine.name}-01-clean-game.png`), fullPage: false });
+      auditLayout(initial, `${engine.name}-initial`);
 
       const plays = [];
       for (let index = 1; index <= 3; index += 1) {
         plays.push(await playOneLegalTurn(page, engine.name, index));
       }
       const afterPlay = await readLayout(page);
-      auditLayout(afterPlay, `${engine.name}-after-play`);
+      activeDebug = { engine: engine.name, initial, plays, afterPlay, diagnostics };
       await page.screenshot({ path: path.join(outputDir, `${engine.name}-02-after-three-plays.png`), fullPage: false });
+      auditLayout(afterPlay, `${engine.name}-after-play`);
 
       const longLabels = await stressLongestPatternLabels(page, engine.name);
+      activeDebug = { engine: engine.name, initial, plays, afterPlay, longLabels, diagnostics };
       await page.screenshot({ path: path.join(outputDir, `${engine.name}-03-long-pattern-labels.png`), fullPage: false });
 
       assert(diagnostics.consoleErrors.length === 0, `${engine.name}: 控制台错误 ${diagnostics.consoleErrors.join('；')}`);
@@ -222,13 +266,19 @@ try {
       assert(diagnostics.requestFailures.length === 0, `${engine.name}: 请求失败 ${JSON.stringify(diagnostics.requestFailures)}`);
       assert(diagnostics.httpErrors.length === 0, `${engine.name}: HTTP错误 ${JSON.stringify(diagnostics.httpErrors)}`);
       report.push({ engine: engine.name, initial, plays, afterPlay, longLabels, diagnostics });
+      activeDebug = null;
       await context.close();
     } finally {
       await browser.close();
     }
   }
 } catch (error) {
-  failure = { message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : '', at: new Date().toISOString() };
+  failure = {
+    message: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : '',
+    at: new Date().toISOString(),
+    debug: activeDebug,
+  };
   throw error;
 } finally {
   await fs.writeFile(path.join(outputDir, 'report.json'), JSON.stringify(report, null, 2));
