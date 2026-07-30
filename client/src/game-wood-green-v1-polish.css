@@ -50,8 +50,8 @@ body.game-screen-clean-v1 .rules-help-launcher[data-surface='game'] {
   display: none !important;
 }
 
-/* Forced-landscape font rasterization can overhang a glyph by a few pixels.
-   Give the longest summary a deliberately oversized safe box and compress the run. */
+/* Forced-landscape text ranges can report a small glyph overhang.
+   Anchor the longest summary to a generous left safe area instead of centering it. */
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :first-child > :last-child,
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-board-summary__meta {
   width: 260px !important;
@@ -62,17 +62,23 @@ html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .
   max-height: 25px !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
-  padding: 0 12px !important;
-  font-size: 7px !important;
-  line-height: 7px !important;
-  text-align: center !important;
+  justify-content: flex-start !important;
+  padding: 0 10px 0 34px !important;
+  font-size: 8px !important;
+  line-height: 8px !important;
+  text-align: left !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: clip !important;
-  letter-spacing: -0.12em !important;
-  word-spacing: -2px !important;
+  letter-spacing: -0.08em !important;
+  word-spacing: -1px !important;
   transform: none !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-board-summary__meta span {
+  display: inline !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(2) > * > :first-child > :last-child,
