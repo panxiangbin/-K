@@ -83,6 +83,7 @@ body.game-screen-clean-v1 .trick-action-card__body {
 }
 
 body.game-screen-clean-v1 .game-table-hand-dock {
+  position: relative !important;
   height: var(--clean-dock-h) !important;
   min-height: var(--clean-dock-h) !important;
   max-height: var(--clean-dock-h) !important;
@@ -138,29 +139,40 @@ body.game-screen-clean-v1 [data-hand-interaction='true'] [data-card-id] {
   flex: 0 0 auto !important;
 }
 
-body.game-screen-clean-v1 .game-hand-actions {
+/* Pin the five real buttons to the dock bottom. This bypasses legacy two-row mobile grid placement. */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-actions {
+  position: absolute !important;
+  z-index: 60 !important;
+  right: 8px !important;
+  bottom: 0 !important;
+  left: 8px !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
   height: 44px !important;
   min-height: 44px !important;
   max-height: 44px !important;
   display: grid !important;
-  grid-template-columns: minmax(94px, 1fr) repeat(4, 70px) minmax(120px, 1.35fr) !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(120px, 1.45fr) !important;
   grid-template-rows: 40px !important;
   align-items: center !important;
   gap: 6px !important;
   padding: 2px 0 !important;
-  overflow: visible !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  background: transparent !important;
 }
 
-body.game-screen-clean-v1 .game-hand-sort-legend {
-  display: flex !important;
-  min-width: 0 !important;
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-sort-legend {
+  display: none !important;
 }
 
-body.game-screen-clean-v1 .game-hand-action,
-body.game-screen-clean-v1 .game-hand-action[data-action-priority='utility'],
-body.game-screen-clean-v1 .game-hand-action[data-action-priority='secondary'],
-body.game-screen-clean-v1 .game-hand-action[data-action-priority='primary'] {
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-action,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-action[data-action-priority='utility'],
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-action[data-action-priority='secondary'],
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-action[data-action-priority='primary'] {
   grid-column: auto !important;
+  grid-row: 1 !important;
   width: 100% !important;
   min-width: 0 !important;
   max-width: none !important;
@@ -168,6 +180,7 @@ body.game-screen-clean-v1 .game-hand-action[data-action-priority='primary'] {
   min-height: 40px !important;
   max-height: 40px !important;
   padding-inline: 8px !important;
+  margin: 0 !important;
 }
 
 /* Keep temporary feedback in the header instead of covering the table. */
