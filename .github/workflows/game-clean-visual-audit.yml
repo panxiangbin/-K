@@ -1,0 +1,86 @@
+name: Clean game visual audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'client/**'
+      - 'server/**'
+      - '.github/workflows/game-clean-visual-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Chromium and WebKit real-play visual audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
+
+      - name: Install and test client
+        working-directory: client
+        run: |
+          npm ci --include=dev --no-audit --no-fund
+          npm test
+          DEPLOY_TARGET=github-pages PAGES_BASE_PATH=/pan/50k/ npm run build
+
+      - name: Install server
+        working-directory: server
+        run: npm ci --include=dev --no-audit --no-fund
+
+      - name: Install Playwright browsers
+        working-directory: client
+        run: |
+          npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.54.1
+          npx playwright install --with-deps chromium webkit
+
+      - name: Start local backend and Pages preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd server && npm start > /tmp/henan50k-server.log 2>&1 & echo $! > /tmp/henan50k-server.pid)
+          (cd client && npx vite preview --host 127.0.0.1 --port 4173 > /tmp/henan50k-preview.log 2>&1 & echo $! > /tmp/henan50k-preview.pid)
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:4173/pan/50k/ >/dev/null && curl -fsS http://127.0.0.1:3002/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/henan50k-server.log || true
+          cat /tmp/henan50k-preview.log || true
+          exit 1
+
+      - name: Play three turns and stress all long pattern labels
+        working-directory: client
+        env:
+          GAME_CLEAN_AUDIT_URL: http://127.0.0.1:4173/pan/50k
+        run: node game-clean-live-audit.mjs
+
+      - name: Upload clean game screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clean-game-visual-audit-${{ github.run_attempt }}
+          path: client/game-clean-audit-artifacts
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Print local service logs on failure
+        if: failure()
+        run: |
+          cat /tmp/henan50k-server.log || true
+          cat /tmp/henan50k-preview.log || true
