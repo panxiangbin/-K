@@ -5,4 +5,6 @@
  * 保留以下回归关键词，供静态契约测试确认审计覆盖范围：
  * playLegalTurn；number <= 3；四王炸弹；八张同点炸弹；普通七张。
  */
+process.env.GAME_TECH_AUDIT_URL ||= process.env.GAME_CLEAN_AUDIT_URL || '';
+process.env.GAME_TECH_AUDIT_OUTPUT_DIR ||= 'game-clean-audit-artifacts';
 await import('./game-tech-live-audit-v2.mjs');
