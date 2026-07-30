@@ -50,27 +50,28 @@ body.game-screen-clean-v1 .rules-help-launcher[data-surface='game'] {
   display: none !important;
 }
 
-/* The test runs inside a rotated forced-landscape canvas. Keep both glyph width and line box well inside the pill. */
+/* Forced-landscape font rasterization can overhang a glyph by a few pixels.
+   Give the longest summary a deliberately oversized safe box and compress the run. */
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :first-child > :last-child,
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-board-summary__meta {
-  width: 220px !important;
-  min-width: 220px !important;
-  max-width: 220px !important;
+  width: 260px !important;
+  min-width: 260px !important;
+  max-width: 260px !important;
   height: 25px !important;
   min-height: 25px !important;
   max-height: 25px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 0 4px !important;
-  font-size: 8px !important;
-  line-height: 8px !important;
+  padding: 0 12px !important;
+  font-size: 7px !important;
+  line-height: 7px !important;
   text-align: center !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: clip !important;
-  letter-spacing: -0.06em !important;
-  word-spacing: -1px !important;
+  letter-spacing: -0.12em !important;
+  word-spacing: -2px !important;
   transform: none !important;
 }
 
