@@ -48,20 +48,24 @@ jobs:
           npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.54.1
           npx playwright install --with-deps chromium webkit
 
-      - name: Start local backend and Pages preview
+      - name: Start local backend and nested Pages preview
         shell: bash
         run: |
           set -euo pipefail
-          (cd server && npm start > /tmp/henan50k-server.log 2>&1 & echo $! > /tmp/henan50k-server.pid)
-          (cd client && npx vite preview --host 127.0.0.1 --port 4173 > /tmp/henan50k-preview.log 2>&1 & echo $! > /tmp/henan50k-preview.pid)
-          for attempt in {1..60}; do
-            if curl -fsS http://127.0.0.1:4173/pan/50k/ >/dev/null && curl -fsS http://127.0.0.1:3002/ >/dev/null; then
+          preview_root="${RUNNER_TEMP}/henan-50k-clean-preview"
+          mkdir -p "${preview_root}/pan/50k"
+          cp -R client/dist/. "${preview_root}/pan/50k/"
+          (cd server && npm start > "${RUNNER_TEMP}/henan-50k-server.log" 2>&1 &)
+          (python3 -m http.server 4173 --bind 127.0.0.1 --directory "${preview_root}" > "${RUNNER_TEMP}/henan-50k-preview.log" 2>&1 &)
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:3002/healthz >/dev/null \
+              && curl --fail --silent http://127.0.0.1:4173/pan/50k/ >/dev/null; then
               exit 0
             fi
             sleep 1
           done
-          cat /tmp/henan50k-server.log || true
-          cat /tmp/henan50k-preview.log || true
+          cat "${RUNNER_TEMP}/henan-50k-server.log" || true
+          cat "${RUNNER_TEMP}/henan-50k-preview.log" || true
           exit 1
 
       - name: Play three turns and stress all long pattern labels
@@ -82,5 +86,5 @@ jobs:
       - name: Print local service logs on failure
         if: failure()
         run: |
-          cat /tmp/henan50k-server.log || true
-          cat /tmp/henan50k-preview.log || true
+          cat "${RUNNER_TEMP}/henan-50k-server.log" || true
+          cat "${RUNNER_TEMP}/henan-50k-preview.log" || true
