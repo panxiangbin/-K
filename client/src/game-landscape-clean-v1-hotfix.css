@@ -1,0 +1,15 @@
+/* Final geometry correction for the clean landscape table. */
+body.game-screen-clean-v1 .game-table-shell,
+body.game-screen-clean-v1 .game-table-header,
+body.game-screen-clean-v1 .game-table-stage,
+body.game-screen-clean-v1 .game-table-hand-dock {
+  box-sizing: border-box !important;
+}
+
+body.game-screen-clean-v1 .game-table-shell {
+  max-height: 100% !important;
+}
+
+body.game-screen-clean-v1 .game-table-hand-dock {
+  overflow: hidden !important;
+}
