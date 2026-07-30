@@ -7,7 +7,8 @@ body.game-screen-clean-v1 .game-table-hand-dock {
 }
 
 body.game-screen-clean-v1 .game-table-shell {
-  max-height: 100% !important;
+  height: var(--app-height, 100%) !important;
+  max-height: var(--app-height, 100%) !important;
 }
 
 body.game-screen-clean-v1 .game-table-hand-dock {
