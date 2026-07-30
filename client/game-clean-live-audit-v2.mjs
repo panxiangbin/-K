@@ -130,19 +130,43 @@ function verifyLayout(data, label) {
 
 async function playLegalTurn(page, label, number) {
   const clear = page.getByRole('button', { name: /^清空$/ });
-  if (await clear.isEnabled().catch(() => false)) await clear.tap();
-  await page.waitForFunction(() => (document.querySelector('.game-table-header__turn')?.textContent || '').includes('轮到你'), null, { timeout: 45_000 });
-  const before = await page.locator('[data-card-id]').count();
-  await page.getByRole('button', { name: /^提示$/ }).tap();
-  await page.waitForFunction(() => /出牌\(\d+\)/.test(document.querySelector('.btn-play')?.textContent || ''), null, { timeout: 10_000 });
-  const selectedText = (await page.locator('.game-hand-selection-status').textContent())?.replace(/\s+/g, ' ').trim() || '';
-  await page.locator('.btn-play').tap();
-  await page.waitForFunction(value => document.querySelectorAll('[data-card-id]').length < value, before, { timeout: 20_000 });
-  const after = await page.locator('[data-card-id]').count();
-  const boardText = (await page.locator('.game-table-trick-board').textContent())?.replace(/\s+/g, ' ').trim() || '';
-  assert(after < before, `${label}:第${number}次出牌后手牌没有减少`);
-  assert(/单张|对子|三张|四张|五张|六张|七张|五十K|炸弹/.test(boardText), `${label}:第${number}次出牌后牌型没有显示`);
-  return { number, before, after, selectedText, boardText };
+  const hint = page.getByRole('button', { name: /^提示$/ });
+  const pass = page.getByRole('button', { name: /^过牌$/ });
+  const play = page.locator('.btn-play');
+
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    await page.waitForFunction(() => (document.querySelector('.game-table-header__turn')?.textContent || '').includes('轮到你'), null, { timeout: 45_000 });
+    if (await clear.isEnabled().catch(() => false)) await clear.tap();
+
+    const before = await page.locator('[data-card-id]').count();
+    await hint.tap();
+    await page.waitForTimeout(350);
+
+    const selectedByHint = await page.evaluate(() => /出牌\(\d+\)/.test(document.querySelector('.btn-play')?.textContent || ''));
+    if (!selectedByHint) {
+      if (await pass.isEnabled().catch(() => false)) {
+        await pass.tap();
+        await page.waitForFunction(() => !(document.querySelector('.game-table-header__turn')?.textContent || '').includes('轮到你'), null, { timeout: 10_000 }).catch(() => {});
+        continue;
+      }
+
+      const firstCard = page.locator('[data-card-id]').first();
+      assert(await firstCard.count(), `${label}:第${number}次出牌没有可选手牌`);
+      await firstCard.tap();
+      await page.waitForFunction(() => /出牌\(\d+\)/.test(document.querySelector('.btn-play')?.textContent || ''), null, { timeout: 5_000 });
+    }
+
+    const selectedText = (await page.locator('.game-hand-selection-status').textContent())?.replace(/\s+/g, ' ').trim() || '';
+    await play.tap();
+    await page.waitForFunction(value => document.querySelectorAll('[data-card-id]').length < value, before, { timeout: 20_000 });
+    const after = await page.locator('[data-card-id]').count();
+    const boardText = (await page.locator('.game-table-trick-board').textContent())?.replace(/\s+/g, ' ').trim() || '';
+    assert(after < before, `${label}:第${number}次出牌后手牌没有减少`);
+    assert(/单张|对子|三张|四张|五张|六张|七张|五十K|炸弹/.test(boardText), `${label}:第${number}次出牌后牌型没有显示`);
+    return { number, attempt, before, after, selectedText, boardText };
+  }
+
+  throw new Error(`${label}:第${number}次出牌连续8个回合都没有可出的牌`);
 }
 
 async function stressLabels(page, label) {
