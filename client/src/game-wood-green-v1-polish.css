@@ -54,6 +54,7 @@ body.game-screen-clean-v1 .rules-help-launcher[data-surface='game'] {
    Anchor the longest summary to a generous left safe area instead of centering it. */
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :first-child > :last-child,
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-board-summary__meta {
+  box-sizing: border-box !important;
   width: 260px !important;
   min-width: 260px !important;
   max-width: 260px !important;
@@ -61,7 +62,9 @@ html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .
   min-height: 25px !important;
   max-height: 25px !important;
   display: flex !important;
+  flex-wrap: nowrap !important;
   align-items: center !important;
+  align-content: center !important;
   justify-content: flex-start !important;
   padding: 0 10px 0 34px !important;
   font-size: 8px !important;
@@ -77,8 +80,18 @@ html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .
 
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-board-summary__meta span {
   display: inline !important;
+  box-sizing: border-box !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
   padding: 0 !important;
   margin: 0 !important;
+  line-height: 8px !important;
+  align-self: center !important;
+  overflow: visible !important;
 }
 
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(2) > * > :first-child > :last-child,
