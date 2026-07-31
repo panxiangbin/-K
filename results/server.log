@@ -1,0 +1,5 @@
+
+> henan-50k-server@1.0.0 start
+> node -r ./bot-ai-hook.js index.js
+
+河南五十K 服务器运行在端口 10000
