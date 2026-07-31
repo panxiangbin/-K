@@ -1,0 +1,23 @@
+/* 木质绿色牌桌：最长中文牌型标签安全区。 */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-board-summary__meta {
+  padding-inline: 12px !important;
+  font-size: 10px !important;
+  line-height: 16px !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-board-summary__meta span {
+  display: inline-block !important;
+  padding-inline: 1px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board .trick-action-card__header > :last-child {
+  padding-inline: 3px !important;
+  font-size: 10px !important;
+  line-height: 14px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-selection-status > div {
+  padding-inline: 14px !important;
+}

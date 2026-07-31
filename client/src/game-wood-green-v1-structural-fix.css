@@ -1,0 +1,159 @@
+/* Wood green table V1 structural fix.
+ * This file intentionally styles the board by child structure, independent of legacy enhancer classes.
+ */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board {
+  width: min(600px, 97%) !important;
+  height: 120px !important;
+  min-height: 120px !important;
+  max-height: 120px !important;
+  padding: 5px 7px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :first-child {
+  width: 100% !important;
+  height: 25px !important;
+  min-height: 25px !important;
+  max-height: 25px !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(80px, 1fr) auto !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin: 0 0 4px !important;
+  padding: 0 0 4px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :first-child > * {
+  min-width: 0 !important;
+  max-height: 21px !important;
+  box-sizing: border-box !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :first-child > :last-child {
+  min-width: 155px !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(2) {
+  width: 100% !important;
+  height: 79px !important;
+  min-height: 79px !important;
+  max-height: 79px !important;
+  display: grid !important;
+  grid-template-columns: none !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  grid-auto-flow: column !important;
+  grid-auto-columns: minmax(0, 1fr) !important;
+  align-items: stretch !important;
+  gap: 5px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(2) > * {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 79px !important;
+  min-height: 0 !important;
+  max-height: 79px !important;
+  display: block !important;
+  padding: 5px 6px !important;
+  margin: 0 !important;
+  border: 1px solid rgba(215, 180, 107, .3) !important;
+  border-radius: 11px !important;
+  background: rgba(9, 67, 42, .76) !important;
+  color: #f8e9c8 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  opacity: 1 !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(2) > * > :first-child {
+  width: 100% !important;
+  height: 16px !important;
+  min-height: 16px !important;
+  max-height: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 4px !important;
+  margin: 0 0 3px !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  line-height: 14px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(2) > * > :first-child > :first-child {
+  min-width: 0 !important;
+  color: #d8c8a4 !important;
+  font-size: 9px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(2) > * > :first-child > :last-child {
+  flex: 0 0 auto !important;
+  min-width: 72px !important;
+  color: #ffd36c !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(2) > * > :nth-child(2) {
+  width: 100% !important;
+  height: 49px !important;
+  min-height: 0 !important;
+  max-height: 49px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  --mini-card-w: 29px !important;
+  --mini-card-h: 42px !important;
+  --mini-rank-font: 9px !important;
+  --mini-suit-font: 7px !important;
+  --mini-center-font: 13px !important;
+  --trick-card-overlap: -5px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  color: #d8c8a4 !important;
+  font-size: 11px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(2) > * > :nth-child(2) > * {
+  flex: 0 0 auto !important;
+  margin-left: var(--trick-card-overlap) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(2) > * > :nth-child(2) > :first-child {
+  margin-left: 0 !important;
+}
+
+/* Accessibility status injected by the old module must never affect layout if it remains in cached DOM. */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board > :nth-child(n+3) {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+}

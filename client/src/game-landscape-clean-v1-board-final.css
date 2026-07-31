@@ -1,63 +1,577 @@
-/* Final compact board rows: all four action cells and their cards must fit above the hand dock. */
+/* 河南五十K：木质绿色牌桌正式版 V1
+ * 目标：参考传统棋牌桌视觉，优先保证 36 张手牌全部出现、末张完整、按钮独立一排。
+ */
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 {
+  background: #2b1409 !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-shell {
+  --clean-header-h: 44px !important;
+  --clean-dock-h: 154px !important;
+  --table-side-w: 84px !important;
+  --table-gap: 6px !important;
+  --card-w: 43px !important;
+  --card-h: 74px !important;
+  --card-rank-font: 15px !important;
+  --card-suit-font: 10px !important;
+  --card-center-font: 24px !important;
+  --card-selected-offset: -8px !important;
+  --hand-overlap: -24.5px !important;
+  grid-template-rows: var(--clean-header-h) minmax(0, 1fr) var(--clean-dock-h) !important;
+  border: 3px solid #5b2a12 !important;
+  border-radius: 0 !important;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(109, 181, 123, .18), transparent 52%),
+    repeating-linear-gradient(7deg, rgba(255,255,255,.018) 0 1px, transparent 1px 4px),
+    linear-gradient(145deg, #17613d 0%, #0f5535 52%, #0a432b 100%) !important;
+  box-shadow:
+    inset 0 0 0 2px #c48736,
+    inset 0 0 34px rgba(0, 0, 0, .34) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-shell::before {
+  opacity: .2 !important;
+  background-image:
+    radial-gradient(ellipse at center, transparent 0 39%, rgba(228, 199, 131, .34) 39.4% 39.8%, transparent 40.2%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 34px) !important;
+  background-size: 100% 100%, 34px 34px !important;
+}
+
+/* 顶部木质栏 */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-header {
+  height: var(--clean-header-h) !important;
+  min-height: var(--clean-header-h) !important;
+  grid-template-columns: 132px minmax(0, 1fr) 228px !important;
+  gap: 8px !important;
+  padding: 4px 8px !important;
+  border: 0 !important;
+  border-bottom: 2px solid #c48736 !important;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 2px, transparent 2px 28px),
+    linear-gradient(180deg, #6d3719 0%, #4b240f 100%) !important;
+  box-shadow: 0 3px 0 #2f1408, 0 5px 14px rgba(0,0,0,.3) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-header__actions {
+  gap: 5px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-header .top-action,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-room-copy {
+  min-width: 58px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 10px !important;
+  border: 1px solid #d5a353 !important;
+  border-radius: 13px !important;
+  background: linear-gradient(180deg, #8a4a24, #5b2b14) !important;
+  color: #fff2cf !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.12), 0 2px 4px rgba(0,0,0,.25) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-header .top-action.danger {
+  border-color: #d5a353 !important;
+  background: linear-gradient(180deg, #7b3f20, #4d2412) !important;
+  color: #ffe4bd !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-header__room {
+  justify-self: center !important;
+  min-width: 230px !important;
+  max-width: 360px !important;
+  padding: 6px 22px !important;
+  border: 1px solid #d9a64f !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #7b421f, #51270f) !important;
+  color: #ffe8ae !important;
+  font-size: 16px !important;
+  letter-spacing: .08em !important;
+  text-shadow: 0 2px 2px rgba(0,0,0,.45) !important;
+  box-shadow: inset 0 0 0 2px rgba(50,19,5,.42) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-header__room span {
+  color: #f4d38d !important;
+  font-size: 12px !important;
+  letter-spacing: 0 !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-header__turn {
+  min-width: 220px !important;
+  max-width: 228px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  border: 1px solid #e0b55d !important;
+  border-radius: 15px !important;
+  background: linear-gradient(180deg, #8b4a22, #5a2b13) !important;
+  color: #ffe8b3 !important;
+  font-size: 13px !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,.45) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-header__turn[data-turn-state='self'] {
+  border-color: #ffd061 !important;
+  background: linear-gradient(180deg, #ffd35c, #e6a72e) !important;
+  color: #442800 !important;
+  box-shadow: 0 0 12px rgba(255,196,62,.34) !important;
+  text-shadow: none !important;
+}
+
+/* 牌桌主体 */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-stage {
+  grid-template-columns: var(--table-side-w) minmax(0, 1fr) var(--table-side-w) !important;
+  gap: var(--table-gap) !important;
+  padding: 8px 8px 5px !important;
+  background: transparent !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-player-rail {
+  align-items: center !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-player-seat {
+  width: 76px !important;
+  min-height: 128px !important;
+  padding: 8px 4px !important;
+  gap: 4px !important;
+  border: 2px solid #b9792d !important;
+  border-radius: 15px !important;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 2px, transparent 2px 18px),
+    linear-gradient(180deg, #693719 0%, #42200f 100%) !important;
+  color: #ffe6b1 !important;
+  box-shadow: inset 0 0 0 2px rgba(43,16,4,.55), 0 5px 12px rgba(0,0,0,.28) !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-player-seat > div:first-child {
+  border: 2px solid #e5b55c !important;
+  background: linear-gradient(145deg, #976033, #4a2c1a) !important;
+  color: #fff4d6 !important;
+  box-shadow: 0 2px 7px rgba(0,0,0,.35) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-player-seat > div:nth-child(2) {
+  color: #fff0c5 !important;
+  font-size: 11px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-player-seat > div:nth-child(3) {
+  color: #ffb13b !important;
+  font-size: 13px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-player-seat > div:nth-child(4) {
+  color: #d8c4a3 !important;
+  font-size: 11px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-player-seat--top {
+  width: auto !important;
+  min-width: 176px !important;
+  min-height: 38px !important;
+  height: 38px !important;
+  flex-direction: row !important;
+  padding: 3px 12px !important;
+  border-radius: 13px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-top-seat-host {
+  height: 40px !important;
+  min-height: 40px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-center-column {
+  grid-template-rows: auto minmax(0, 1fr) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-center-column > :last-child > div:first-child {
+  width: 96% !important;
+  height: 94% !important;
+  border: 1px solid rgba(224, 181, 93, .32) !important;
+  border-radius: 36px !important;
+  background: radial-gradient(ellipse at center, rgba(255,255,255,.035), rgba(0,0,0,.08)) !important;
+  box-shadow: inset 0 0 24px rgba(0,0,0,.16) !important;
+}
+
+/* 中央出牌区：不再使用大片白色面板 */
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-trick-board {
-  height: 176px !important;
-  min-height: 0 !important;
-  max-height: 176px !important;
+  width: min(560px, 96%) !important;
+  height: 142px !important;
+  min-height: 142px !important;
+  max-height: 142px !important;
+  padding: 7px 9px !important;
+  border: 1px solid rgba(221, 177, 83, .55) !important;
+  border-radius: 18px !important;
+  background: rgba(5, 54, 33, .72) !important;
+  color: #fff1cf !important;
+  box-shadow: inset 0 0 18px rgba(0,0,0,.22), 0 5px 12px rgba(0,0,0,.16) !important;
   overflow: hidden !important;
 }
 
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-board-summary {
-  height: 27px !important;
-  min-height: 27px !important;
-  max-height: 27px !important;
-  margin: 0 0 4px !important;
-  padding: 0 0 4px !important;
-  box-sizing: border-box !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  grid-template-columns: auto minmax(90px, 1fr) auto !important;
+  gap: 7px !important;
+  margin: 0 0 5px !important;
+  padding: 0 0 5px !important;
+  border-bottom: 1px solid rgba(224,181,93,.35) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-board-summary__title {
+  color: #ffd675 !important;
+  font-size: 14px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-board-summary__turn,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-board-summary__meta {
+  min-height: 22px !important;
+  padding: 2px 7px !important;
+  border: 1px solid rgba(223, 184, 103, .42) !important;
+  border-radius: 999px !important;
+  background: rgba(31, 91, 60, .72) !important;
+  color: #f3dfb5 !important;
+  font-size: 11px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-board-summary__meta span {
+  color: #ffd36b !important;
 }
 
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-grid {
-  height: 131px !important;
-  min-height: 131px !important;
-  max-height: 131px !important;
-  grid-template-rows: repeat(2, 63px) !important;
-  grid-auto-rows: 63px !important;
+  height: 96px !important;
+  min-height: 96px !important;
+  max-height: 96px !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(2, 45px) !important;
+  grid-auto-rows: 45px !important;
   gap: 5px !important;
   overflow: hidden !important;
 }
 
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card {
-  height: 63px !important;
-  min-height: 63px !important;
-  max-height: 63px !important;
-  padding: 4px 6px !important;
-  box-sizing: border-box !important;
+  height: 45px !important;
+  min-height: 45px !important;
+  max-height: 45px !important;
+  padding: 3px 6px !important;
+  border: 1px solid rgba(215, 180, 107, .28) !important;
+  border-radius: 10px !important;
+  background: rgba(9, 67, 42, .72) !important;
+  color: #f8e9c8 !important;
+  box-shadow: none !important;
   overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card.is-latest-play {
+  border-color: #e6b64d !important;
+  background: rgba(91, 92, 37, .76) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,214,109,.12) !important;
 }
 
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card__header {
-  height: 16px !important;
-  min-height: 16px !important;
-  max-height: 16px !important;
+  height: 14px !important;
+  min-height: 14px !important;
+  max-height: 14px !important;
   margin: 0 0 2px !important;
   line-height: 1 !important;
-  overflow: visible !important;
 }
 
-html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card__body {
-  height: 37px !important;
-  min-height: 37px !important;
-  max-height: 37px !important;
-  --mini-card-w: 25px !important;
-  --mini-card-h: 35px !important;
-  --mini-rank-font: 9px !important;
-  --mini-suit-font: 7px !important;
-  --mini-center-font: 13px !important;
-  overflow: hidden !important;
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card__header > :first-child {
+  color: #d8c8a4 !important;
+  font-size: 9px !important;
 }
 
-html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-board-summary__meta,
 html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card__header > :last-child {
+  max-width: 130px !important;
+  color: #ffd36c !important;
+  font-size: 10px !important;
   white-space: nowrap !important;
   overflow: visible !important;
   text-overflow: clip !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card__body {
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
+  --mini-card-w: 22px !important;
+  --mini-card-h: 30px !important;
+  --mini-rank-font: 8px !important;
+  --mini-suit-font: 6px !important;
+  --mini-center-font: 11px !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card[data-card-count='4'] .trick-action-card__body { --trick-card-overlap: -2px !important; }
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card[data-card-count='5'] .trick-action-card__body { --trick-card-overlap: -4px !important; }
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card[data-card-count='6'] .trick-action-card__body { --trick-card-overlap: -6px !important; }
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card[data-card-count='7'] .trick-action-card__body { --trick-card-overlap: -8px !important; }
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .trick-action-card[data-card-count='8'] .trick-action-card__body { --trick-card-overlap: -10px !important; }
+
+/* 手牌区：左侧自己信息，右侧一次铺开全部手牌，按钮单独一排 */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock {
+  position: relative !important;
+  height: var(--clean-dock-h) !important;
+  min-height: var(--clean-dock-h) !important;
+  max-height: var(--clean-dock-h) !important;
+  display: grid !important;
+  grid-template-columns: 88px minmax(0, 1fr) !important;
+  grid-template-rows: 24px 80px 44px !important;
+  gap: 1px 5px !important;
+  padding: 2px 7px 3px !important;
+  border: 0 !important;
+  border-top: 2px solid #c48736 !important;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 2px, transparent 2px 30px),
+    linear-gradient(180deg, #6b3619 0%, #43200e 100%) !important;
+  box-shadow: 0 -3px 0 #2d1207, 0 -7px 14px rgba(0,0,0,.26) !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock > :first-child {
+  grid-column: 1 !important;
+  grid-row: 1 / 3 !important;
+  width: 88px !important;
+  min-width: 88px !important;
+  height: 105px !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-self-seat {
+  position: relative !important;
+  width: 84px !important;
+  min-width: 84px !important;
+  height: 102px !important;
+  min-height: 102px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 1px !important;
+  padding: 40px 4px 5px !important;
+  border: 2px solid #b9792d !important;
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, #74401f, #44200f) !important;
+  color: #ffe7b7 !important;
+  box-shadow: inset 0 0 0 2px rgba(41,14,3,.48) !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-self-seat::before {
+  content: '我';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  transform: translateX(-50%);
+  border: 2px solid #e4b557;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #a46c3c, #54301b);
+  color: #fff2cf;
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35);
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-self-seat > div {
+  color: #ffe9bf !important;
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-self-seat > div:first-child {
+  display: none !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-self-seat > div:nth-child(2) {
+  max-width: 74px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-self-seat > div:nth-child(3) {
+  color: #ffb43f !important;
+  font-size: 11px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-selection-status {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-selection-status > div {
+  max-width: calc(100% - 10px) !important;
+  padding: 2px 12px !important;
+  border: 1px solid rgba(226, 183, 92, .55) !important;
+  border-radius: 999px !important;
+  background: rgba(37, 90, 57, .9) !important;
+  color: #ffe09a !important;
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+  text-shadow: none !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-surface,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 [data-hand-interaction='true'] {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  width: 100% !important;
+  height: 80px !important;
+  min-height: 80px !important;
+  max-height: 80px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  padding: 3px 4px 2px !important;
+  border: 1px solid #b9792d !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, #f5e4bf, #d7b77a) !important;
+  box-shadow: inset 0 0 0 2px rgba(255,248,223,.42), inset 0 -8px 12px rgba(89,48,16,.12) !important;
+  overflow: hidden !important;
+  touch-action: none !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-surface > div,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 [data-hand-interaction='true'] > div {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 76px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  overflow: visible !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-surface [data-card-id],
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 [data-hand-interaction='true'] [data-card-id] {
+  width: auto !important;
+  min-width: 0 !important;
+  flex: 0 0 auto !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-surface [data-card-id] > div {
+  border-radius: 6px !important;
+  box-shadow: 0 2px 4px rgba(54,27,7,.28) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-surface [data-card-id]:last-child {
+  z-index: 8 !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-actions {
+  position: static !important;
+  grid-column: 1 / 3 !important;
+  grid-row: 3 !important;
+  width: 100% !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  grid-template-rows: 40px !important;
+  gap: 7px !important;
+  padding: 2px 0 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-sort-legend {
+  display: none !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-hand-action,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock .btn-lite,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock .btn-pass,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock .btn-play {
+  grid-column: auto !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  padding: 0 8px !important;
+  margin: 0 !important;
+  border: 1px solid #d2a251 !important;
+  border-radius: 13px !important;
+  background: linear-gradient(180deg, #fff5d8 0%, #e5c58a 100%) !important;
+  color: #4b2a12 !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.75), 0 2px 4px rgba(0,0,0,.24) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock .btn-lite.hint {
+  border-color: #efbd43 !important;
+  background: linear-gradient(180deg, #ffd65e 0%, #e7a82d 100%) !important;
+  color: #4b2a00 !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock .btn-pass {
+  background: linear-gradient(180deg, #f8eed2 0%, #d9ba7b 100%) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock .btn-play {
+  border-color: #ffcf55 !important;
+  background: linear-gradient(180deg, #ffd965 0%, #e7a92f 100%) !important;
+  color: #432600 !important;
+  font-size: 16px !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.72), 0 2px 6px rgba(0,0,0,.3) !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-table-hand-dock button:disabled {
+  opacity: .52 !important;
+  filter: saturate(.55) brightness(.9) !important;
+}
+
+/* 浮层不遮牌桌 */
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-toast-stack {
+  top: 5px !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: 50% !important;
+  width: min(280px, 34%) !important;
+  max-height: 30px !important;
+  transform: translateX(-50%) !important;
+  align-items: center !important;
+  overflow: hidden !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-toast-stack > div {
+  max-height: 28px !important;
+  padding: 4px 8px !important;
+  border-radius: 9px !important;
+  font-size: 10px !important;
+}
+
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-connection,
+html[data-ui-theme='ink-06'] body.game-screen-clean-v1 .game-clean-sound {
+  display: none !important;
 }
