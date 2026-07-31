@@ -47,8 +47,7 @@ export function syncLobbyHomeControls(root = document) {
     return false;
   }
 
-  if (existing?.parentElement === panel) return true;
-  existing?.remove();
+  if (existing?.isConnected) return true;
 
   const controls = document.createElement('nav');
   controls.className = 'lobby-home-controls';
@@ -69,8 +68,10 @@ export function syncLobbyHomeControls(root = document) {
     }),
   );
 
-  panel.prepend(controls);
-  return true;
+  // React only owns #root. Mounting this navigation directly under body avoids
+  // reconciliation errors when Lobby changes between home/solo/room views.
+  root.body?.appendChild(controls);
+  return controls.isConnected;
 }
 
 export function installLobbyHomeControls(root = document) {
